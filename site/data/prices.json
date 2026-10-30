@@ -1,12 +1,12 @@
 {
-  "generated": "2026-10-30T10:15:32Z",
+  "generated": "2026-10-30T11:03:17Z",
   "companies": [
     {
       "id": "socar",
       "name": "SOCAR",
       "color": "#e41e30",
       "source": "https://www.sgp.ge/ge/",
-      "time": "2026-10-30T10:15:32Z",
+      "time": "2026-10-30T11:03:17Z",
       "basis": "read",
       "prices": [
         {
@@ -33,6 +33,16 @@
           "grade": "ნანო ევრო 5 დიზელი",
           "fuel": "diesel",
           "price": 4.96
+        },
+        {
+          "grade": "თხევადი აირი",
+          "fuel": "lpg",
+          "price": 2.09
+        },
+        {
+          "grade": "ბუნებრივი აირი",
+          "fuel": "cng",
+          "price": 1.6
         }
       ]
     },
@@ -41,7 +51,7 @@
       "name": "Rompetrol",
       "color": "#f39200",
       "source": "https://www.rompetrol.ge/",
-      "time": "2026-10-30T10:15:32Z",
+      "time": "2026-10-30T11:03:17Z",
       "basis": "read",
       "prices": [
         {
@@ -76,7 +86,7 @@
       "name": "Lukoil",
       "color": "#8a1538",
       "source": "https://www.lukoil.ge/",
-      "time": "2026-10-30T10:15:32Z",
+      "time": "2026-10-30T11:03:17Z",
       "basis": "read",
       "prices": [
         {
@@ -106,7 +116,7 @@
       "name": "Wissol",
       "color": "#00843d",
       "source": "https://wissol.ge/ka/fuel-prices",
-      "time": "2026-10-30T10:15:32Z",
+      "time": "2026-10-30T11:03:17Z",
       "basis": "read",
       "prices": [
         {

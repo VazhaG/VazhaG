@@ -13,6 +13,8 @@ from scraper.core import ParseError, Reading, to_price
 
 URL = "https://wissol.ge/ka/fuel-prices"
 
+# "ვისოლ გაზი" is not here on purpose: the page does not say which gas it is, and a gas is shown only once its kind
+# is confirmed by Wissol itself (SPEC-0001 REQ-002) — until then it is logged and left out.
 FUEL_BY_NAME = {
     "A1 სუპერი 100": "super",
     "ეკო სუპერი": "super",

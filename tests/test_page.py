@@ -11,7 +11,8 @@ from playwright.sync_api import Page, expect
 
 from support import SITE, Net
 
-FUELS_KA = ["რეგულარი", "პრემიუმი", "სუპერი", "დიზელი", "გაზი"]
+FUELS = ["regular", "premium", "super", "diesel", "lpg", "cng"]  # REQ-002's order
+FUELS_KA = ["რეგულარი", "პრემიუმი", "სუპერი", "დიზელი", "თხევადი აირი", "ბუნებრივი აირი"]
 
 
 class Structure(HTMLParser):
@@ -48,9 +49,12 @@ def test_phone_first_screen_without_prices(page: Page, net: Net) -> None:
     expect(page.locator(".leaflet-container")).to_be_visible()
     expect(page.locator(".leaflet-control-attribution")).to_contain_text("OpenStreetMap")
     fuels = page.locator("input[name=fuel]")
-    expect(fuels).to_have_count(len(FUELS_KA))
+    expect(fuels).to_have_count(len(FUELS))
+    assert [fuels.nth(i).get_attribute("value") for i in range(len(FUELS))] == FUELS
+    expect(page.locator(".chip span")).to_have_text(FUELS_KA)
     for name in FUELS_KA:
         expect(page.get_by_text(name, exact=True)).to_be_visible()
     expect(page.locator("#status")).to_contain_text("ფასები ჯერ არ არის")
+    expect(page.locator("footer")).to_contain_text("ფასი სტანდარტულია")  # REQ-004
     assert page.evaluate("document.documentElement.scrollWidth <= window.innerWidth")
     assert net.outside == []

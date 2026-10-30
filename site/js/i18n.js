@@ -1,6 +1,7 @@
 // Every text the page shows, by language (SPEC-0001 REQ-009). Georgian is the main language.
 
-export const FUELS = ['regular', 'premium', 'super', 'diesel', 'gas'];
+// REQ-002's order; the two gases are separate types (the owner's decision, 2026-10-30).
+export const FUELS = ['regular', 'premium', 'super', 'diesel', 'lpg', 'cng'];
 
 export const TEXT = {
   ka: {
@@ -8,7 +9,8 @@ export const TEXT = {
     'fuel.premium': 'პრემიუმი',
     'fuel.super': 'სუპერი',
     'fuel.diesel': 'დიზელი',
-    'fuel.gas': 'გაზი',
+    'fuel.lpg': 'თხევადი აირი',
+    'fuel.cng': 'ბუნებრივი აირი',
     'status.loading': 'იტვირთება…',
     'status.noPrices': 'ფასები ჯერ არ არის.',
     'status.noFuelPrice': 'ამ საწვავის ფასი არ მოიძებნა.',

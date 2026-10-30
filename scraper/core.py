@@ -9,15 +9,20 @@ import re
 import urllib.request
 from collections.abc import Callable
 from dataclasses import dataclass
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 
 USER_AGENT = "VazhaG-fuel-prices/0.1 (+https://github.com/VazhaG/VazhaG)"
-FUELS = ("regular", "premium", "super", "diesel", "gas")
+# REQ-002: the two gases are separate types, never compared (the owner's decision, 2026-10-30)
+FUELS = ("regular", "premium", "super", "diesel", "lpg", "cng")
 
-# REQ-007: a price outside these limits (GEL), or one that moved more than MAX_JUMP since the last reading of the
-# same grade, is a misreading — the company's previous prices stay and the problem goes to the log.
+# REQ-007: a price outside these limits (GEL), or one that moved more than MAX_JUMP from the same grade's previous
+# price (only a previous price younger than JUMP_WINDOW counts), is a misreading — the company's previous prices stay
+# and the problem goes to the log. A company whose prices are OVERDUE_AFTER old makes the run fail, so GitHub tells
+# the owner.
 MIN_PRICE, MAX_PRICE = 0.50, 15.00
 MAX_JUMP = 0.25
+JUMP_WINDOW = timedelta(days=7)
+OVERDUE_AFTER = timedelta(hours=48)
 
 _PRICE_RE = re.compile(r"\s*(\d+(?:[.,]\d+)?)\s*₾?\s*")
 
@@ -61,6 +66,14 @@ def iso(moment: datetime) -> str:
     return moment.astimezone(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
+def parse_time(text: object) -> datetime | None:
+    try:
+        moment = datetime.fromisoformat(text)  # type: ignore[arg-type]
+    except (TypeError, ValueError):
+        return None
+    return moment if moment.tzinfo else None
+
+
 def company_entry(company: Company, readings: list[Reading], read_at: datetime) -> dict:
     """One company in the data file. `time` is when we read the page: the sites state no time of their own for
     the price list, so its age counts from our reading (SPEC-0001 REQ-006)."""
@@ -75,9 +88,12 @@ def company_entry(company: Company, readings: list[Reading], read_at: datetime) 
     }
 
 
-def problems(readings: list[Reading], previous: dict | None) -> list[str]:
-    """Why these readings cannot be true (REQ-007): a price out of limits, or a jump from the same grade's last price."""
-    before = {(p.get("grade"), p.get("fuel")): p.get("price") for p in (previous or {}).get("prices", [])}
+def problems(readings: list[Reading], previous: dict | None, now: datetime) -> list[str]:
+    """Why these readings cannot be true (REQ-007): a price out of limits, or a jump from the same grade's previous
+    price when that price is younger than JUMP_WINDOW."""
+    then = parse_time((previous or {}).get("time"))
+    recent = then is not None and now - then < JUMP_WINDOW
+    before = {(p.get("grade"), p.get("fuel")): p.get("price") for p in (previous or {}).get("prices", [])} if recent else {}
     found = []
     for r in readings:
         if not MIN_PRICE <= r.price <= MAX_PRICE:
@@ -112,7 +128,7 @@ def refresh(companies: list[Company], previous: dict[str, dict], get: Callable[[
             known = [r for r in readings if r.fuel]
             if not known:
                 raise ParseError("no price matched the fuel table")
-            if found := problems(known, old):
+            if found := problems(known, old, now):
                 raise ParseError("; ".join(found))
         except (OSError, ParseError) as e:
             log.append(f"{c.name}: not read — {e}" + (" (the previous prices stay, with their time)" if old else ""))
@@ -123,3 +139,14 @@ def refresh(companies: list[Company], previous: dict[str, dict], get: Callable[[
         entries.append(company_entry(c, readings, now))
         read += 1
     return entries, log, read
+
+
+def overdue(companies: list[Company], entries: list[dict], now: datetime) -> list[str]:
+    """Switched-on companies whose prices are OVERDUE_AFTER old or missing — the run fails for them (REQ-007)."""
+    times = {e.get("id"): parse_time(e.get("time")) for e in entries}
+    late = []
+    for c in companies:
+        then = times.get(c.id)
+        if c.enabled and (then is None or now - then >= OVERDUE_AFTER):
+            late.append(c.name)
+    return late

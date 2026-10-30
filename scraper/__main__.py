@@ -3,7 +3,9 @@
     python -m scraper [--only socar,…] [--out site/data/prices.json]
 
 A company that cannot be read keeps its previous prices, with their time (SPEC-0001 AC-005).
-Exit 0 when at least one company was read now; 1 when none was — then the data file is left as it was.
+Exit 0 when every switched-on company's prices are younger than 48 hours. Exit 1 otherwise, so the scheduled run
+turns red and GitHub tells the owner: either no company was read now (the data file is left as it was), or some
+company has not been read for 48 hours (the file is written with everyone else's new prices).
 """
 
 from __future__ import annotations
@@ -15,7 +17,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 from scraper.companies import COMPANIES
-from scraper.core import fetch, iso, refresh
+from scraper.core import fetch, iso, overdue, refresh
 
 DEFAULT_OUT = Path(__file__).resolve().parent.parent / "site" / "data" / "prices.json"
 
@@ -51,6 +53,9 @@ def main(argv: list[str] | None = None) -> int:
     args.out.parent.mkdir(parents=True, exist_ok=True)
     data = {"generated": iso(now), "companies": entries}
     args.out.write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    if late := overdue(COMPANIES, entries, now):
+        print(f"not read for 48 hours or more: {', '.join(late)}", file=sys.stderr)
+        return 1
     return 0
 
 

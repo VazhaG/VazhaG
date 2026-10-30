@@ -109,6 +109,19 @@ def test_a_colour_from_the_data_must_be_a_plain_hex_colour(page: Page, net: Net)
 
 
 def test_no_price_for_the_chosen_fuel_says_so(page: Page, net: Net) -> None:
-    open_with(page, net, [company("a", "Alpha", 1, [price("diesel", 4.0)])], "გაზი")
+    open_with(page, net, [company("a", "Alpha", 1, [price("diesel", 4.0)])], "ბუნებრივი აირი")
     expect(page.locator(ROWS)).to_have_count(0)
     expect(page.locator("#status")).to_contain_text("ამ საწვავის ფასი არ მოიძებნა")
+
+
+def test_the_two_gases_are_never_mixed(page: Page, net: Net) -> None:
+    # AC-006: LPG and CNG are separate types (the owner's decision, 2026-10-30)
+    open_with(page, net, [company("s", "SOCAR", 1, [
+        price("lpg", 2.09, "თხევადი აირი"), price("cng", 1.60, "ბუნებრივი აირი"), price("diesel", 4.9),
+    ])], "თხევადი აირი")
+    rows = page.locator(ROWS)
+    expect(rows).to_have_count(1)
+    expect(rows.first).to_contain_text("2.09 ₾")
+    page.get_by_text("ბუნებრივი აირი", exact=True).first.click()
+    expect(rows).to_have_count(1)
+    expect(rows.first).to_contain_text("1.60 ₾")

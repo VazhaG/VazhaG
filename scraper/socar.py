@@ -15,13 +15,15 @@ from scraper.core import ParseError, Reading
 
 URL = "https://www.sgp.ge/ge/"
 
-# The page's own fuel codes -> our common types. LPG and CNG are left out until the owner decides what "გაზი" means.
+# The page's own fuel codes -> our common types; the two gases stay separate (SPEC-0001 REQ-002).
 FUEL_BY_CODE = {
     "SUPER": "super",
     "PREMIUM": "premium",
     "EURREG": "regular",
     "DIESEL": "diesel",
     "EURODSL": "diesel",
+    "LPG": "lpg",
+    "CNG": "cng",
 }
 
 _CHUNK_RE = re.compile(r'self\.__next_f\.push\(\[1,("(?:[^"\\]|\\.)*")\]\)', re.DOTALL)
