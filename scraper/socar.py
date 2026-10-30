@@ -42,12 +42,12 @@ def parse(html: str) -> list[Reading]:
     data = _page_data(html)
     at = data.find(_KEY)
     if at < 0:
-        raise ParseError("SOCAR: the page data holds no GetCurrentPrices")
+        raise ParseError("the page data holds no GetCurrentPrices")
     try:
         block, _ = json.JSONDecoder().raw_decode(data, at + len(_KEY))
         rows = block["Results"]
     except (json.JSONDecodeError, KeyError, TypeError) as e:
-        raise ParseError(f"SOCAR: GetCurrentPrices is not the expected shape ({e!r})") from e
+        raise ParseError(f"GetCurrentPrices is not the expected shape ({e!r})") from e
     readings = []
     for row in rows:
         try:
@@ -55,8 +55,8 @@ def parse(html: str) -> list[Reading]:
             grade = str(row["FuelNameGeo"]).strip()
             price = float(row["FuelUnitPrice"])
         except (KeyError, TypeError, ValueError) as e:
-            raise ParseError(f"SOCAR: a price row is not the expected shape ({e!r})") from e
+            raise ParseError(f"a price row is not the expected shape ({e!r})") from e
         readings.append(Reading(grade=grade, fuel=FUEL_BY_CODE.get(code), price=price))
     if not readings:
-        raise ParseError("SOCAR: GetCurrentPrices has no rows")
+        raise ParseError("GetCurrentPrices has no rows")
     return readings

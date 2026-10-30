@@ -1,0 +1,611 @@
+<!-- Test fixture: https://www.lukoil.ge/ as read on 2026-10-30; the whole page. The kept parts are unchanged. -->
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <link rel="stylesheet" href="https://www.lukoil.ge/css/app.css">
+    <script src="https://www.lukoil.ge/js/app.js" defer></script>
+    <link href='https://unpkg.com/boxicons@2.1.2/css/boxicons.min.css' rel='stylesheet'>
+    <script src="https://cdn.tiny.cloud/1/no-api-key/tinymce/6/tinymce.min.js" referrerpolicy="origin"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.8.0/dist/leaflet.css"
+    integrity="sha512-hoalWLoI8r4UszCkZ5kL8vayOGVae1oxXe/2A4AO6J9+580uKHDO3JdHb7NzwwzK5xr/Fs0W40kiNHxM9vyTtQ=="
+    crossorigin=""/>
+    <script src="https://unpkg.com/leaflet@1.8.0/dist/leaflet.js"
+    integrity="sha512-BB3hKbKWOc9Ez/TAwyWxNXeoV9c1v6FIeYiBieIWkpLjauysF18NzgR1MBNBXf8/KABdlkX68nAhlwcDFLGPCQ=="
+    crossorigin=""></script>
+    <title>Lukoil || Georgia</title>
+</head>
+
+<body class="overflow-x-hidden">
+    <div class="w-full h-48 fixed top-0 left-0 z-50 bg-white">
+    <div class="w-screen h-8 bg-lk-main flex justify-center items-center">
+        <div class="w-11/12 lg:w-3/5 h-full grid grid-cols-5">
+            <span class="col-span-2 flex items-center px-4 lg:px-0">
+                <a href="http://lukoil.com">
+                    <p class="text-white text-sm whitespace-nowrap">გლობალური ბიზნესი</p>
+                </a>
+            </span>
+            <span class="col-span-3 lg:flex justify-end items-center space-x-6 hidden">
+                <a href="/">
+                    <p class="text-white text-sm duration-200 hover:text-black">მთავარი</p>
+                </a>
+                <a href="/vacancies">
+                    <p class="text-white text-sm duration-200 hover:text-black">ვაკანსიები</p>
+                </a>
+                <a href="/tenders">
+                    <p class="text-white text-sm duration-200 hover:text-black">ტენდერები</p>
+                </a>
+                <div class="h-full items-center hidden xl:flex">
+                    <input type="text" class="h-2/3">
+                    <span class="w-8 h-2/3 bg-white flex justify-around items-center">
+                        <span class="h-2/3 w-[1px] bg-lk-main"></span>
+                        <i class='bx bx-search-alt-2 text-sm text-lk-main'></i>
+                    </span>
+                </div>
+                <span class="w-[1px] h-2/3 bg-white"></span>
+                                <a href="/lang/en">
+                    <p class="text-md text-white">EN</p>
+                </a>
+                                            </span>
+        </div>
+    </div>
+
+    <div class="w-screen h-24 border-t-[1px] border-b-[1px] border-lk-main mt-7 flex justify-center items-center">
+        <div class="w-11/12 lg:w-3/5 h-full grid grid-cols-8">
+            <div class="col-span-2 w-full h-full flex justify-start items-center">
+                <a href="/">
+                    <img src="https://brandlogos.net/wp-content/uploads/2022/01/lukoil-logo-brandlogo.net_.png" width="70"
+                    alt="Logo">
+                </a>
+            </div>
+            <div class="hidden col-span-6 w-full h-full lg:flex justify-end items-end">
+                <div class="w-40 h-1/2 flex justify-center items-center">
+                    <p class="text-black text-lg cursor-pointer hover:text-lk-main duration-200">
+                        <a href="/cards">
+                        ბარათები</a>
+                    </p>
+                </div>
+                <div class="w-40 h-1/2 flex justify-center items-center">
+                    <p class="text-black text-lg cursor-pointer hover:text-lk-main duration-200">
+                        <a href="/stations">
+                        სადგურები
+                        </a>
+                    </p>
+                </div>
+                <div class="company">
+                    <p class="text-black link text-lg cursor-pointer group-hover:text-lk-main duration-200">
+                        კომპანია
+                    </p>
+                    <div class="company-dropdown">
+                        <div class="company-links">
+                            <p class="text-white text-lg cursor-pointer">
+                                <a href="/management">
+                                        მენეჯმენტი
+                                </a>
+                            </p>
+                        </div>
+                        <div class="company-links">
+                            <a href="/about-us">
+                                <p class="text-white text-lg cursor-pointer">
+                                    ჩვენ შესახებ
+                                </p>
+                            </a>
+                        </div>
+                        <div class="company-links">
+                            <a href="/contact">
+                                <p class="text-white text-lg cursor-pointer">
+                                    კონტაქტი
+                                </p>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                <div class="w-40 h-1/2 flex justify-center items-center">
+                    <p class="text-black text-lg cursor-pointer hover:text-lk-main duration-200">
+                        <a href="/news">
+                        სიახლეები</a>
+                    </p>
+                </div>
+                                <div class="cabinet">
+                    <p class="text-black link text-lg cursor-pointer group-hover:text-lk-main">
+                        კაბინეტი
+                    </p>
+                    <div class="cabinet-dropdown">
+                        <div class="cabinet-links">
+                            <a href="/login">
+                                <p class="text-white text-lg cursor-pointer">
+                                    შესვლა
+                                </p>
+                            </a>
+                        </div>
+                        <div class="cabinet-links">
+                            <a href="/register">
+                                <p class="text-white text-lg cursor-pointer">
+                                    რეგისტრაცია
+                                </p>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                                                            </div>
+            <span class="col-span-6 w-11/12 h-full flex justify-end items-center px-4 xl:hidden">
+            <div class="w-12 h-10 flex flex-col justify-between items-center" id="burger">
+                <div class="w-11/12 h-2 bg-black"></div>
+                <div class="w-11/12 h-2 bg-black"></div>
+                <div class="w-11/12 h-2 bg-black"></div>
+            </div>
+            </span>
+            
+        </div>
+    </div>
+</div>
+
+<style>
+    .cabinet-dropdown {
+        position: absolute;
+        right: 0;
+        bottom: -8rem;
+        width: 160px;
+        height: 128px;
+        display: none;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        transition-duration: 0.4ms
+    }
+
+    .cabinet:hover .cabinet-dropdown {
+        display: flex;
+    }
+
+    .cabinet {
+        /* w-40 h-1/2 flex justify-center items-center relative */
+        width: 160px;
+        height: 50%;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        position: relative;
+    }
+
+    .cabinet-links {
+        /* */
+        width: 100%;
+        height: 64px;
+        background-color: rgb(220,63,55);
+        transition-duration: 0.4ms;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+    }
+    .cabinet-links:hover {
+        background-color: rgb(239 ,68 ,68);
+    }
+    .company-dropdown {
+        position: absolute;
+        right: 0;
+        bottom: -180px;
+        width: 160px;
+        height: 180px;
+        display: none;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        transition-duration: 0.4ms
+    }
+
+    .company:hover .company-dropdown {
+        display: flex;
+    }
+
+    .company {
+        /* w-40 h-1/2 flex justify-center items-center relative */
+        width: 160px;
+        height: 50%;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        position: relative;
+    }
+
+    .company-links {
+        /* */
+        width: 100%;
+        height: 64px;
+        background-color: rgb(220,63,55);
+        transition-duration: 0.4ms;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+    }
+    .company-links:hover {
+        background-color: rgb(239 ,68 ,68);
+    }
+
+    .link:hover {
+        color: rgb(220,63,55);
+    }
+
+</style>
+    <div class="w-screen h-auto min-h-[calc(100vh-250px)] mt-[250px] flex justify-start items-center flex-col">
+    <div class="w-11/12 lg:w-3/5 overflow-hidden relative p-8 mb-4 bg-lk-main text-white flex flex-col justify-start items-start">
+            <h2 class="mb-4 text-xl w-full text-center">შეტყობინება მედია-საშუალებებისთვის</h2>
+            <p class="mb-4">შპს &quot;ლუკოილ-ჯორჯია&quot; გატყობინებთ ინტერნეტში ახალი ტიპის თაღლითობის შესახებ, სსს ლუკოილის ყოფილი პრეზიდენტის ხსენებითა და კომპანიის კორპორატიული სტილისა და ლოგოს გამოყენებით.</p>
+            <p class="mb-4">ამგვარად, სოციალურ ქსელებში Facebook-სა და Instagram-ზე გამოჩნდა ვიდეო, რომელიც ცრუ ინფორმაციას გვაწვდის LUKOIL-ის მიერ მოქალაქეებისგან პირადი სახსრების მოსაზიდად სპეციალური საინვესტიციო ფონდის (პლატფორმის) შექმნის შესახებ. ვიდეოში არასწორად არის გამოყენებული რეალური სატელევიზიო ინტერვიუს ფრაგმენტები, ასევე კომპანიის კორპორატიული ვიდეოები. </p>
+            <p class="mb-4">შპს &quot;ლუკოილ-ჯორჯია&quot; ყურადღებას ამახვილებს იმ ფაქტზე, რომ კომპანიას არ შეუქმნია საინვესტიციო პლატფორმა ფიზიკური პირებისთვის და მოგიწოდებთ, თავი შეიკავოთ გადაუმოწმებელ ფონდებში ინვესტირების შეთავაზებებისგან.</p>
+            <p class="mb-4">შეგახსენებთ გამოიჩინოთ სიფრთხილე და გადამოწმოთ ინფორმაცია სსს &quot;ლუკოილ&quot;-ის ოფიციალურ ვებგვერდზე  <a href="www.lukoil.ru">www.lukoil.ru</a> (რუსული ვერსია), <a href="www.lukoil.com">www.lukoil.com</a> (ინგლისური ვერსია) და <a href="www.lukoil.ge">www.lukoil.ge</a>.</p>
+            <p class="mb-0">შპს &quot;ლუკოილ-ჯორჯია&quot; არ არის პასუხისმგებელი არასასურველ შედეგებზე, რომლებიც შეიძლება წარმოიშვას სხვა წყაროებიდან ინფორმაციის გამოყენების შედეგად. </p>
+        </div>
+        <div class="w-11/12 lg:w-3/5 carousel-container overflow-hidden relative -mt-8">
+    <button id="prevBtn" class="text-6xl text-white duration-200 hover:bg-opacity-70 w-20 h-full absolute z-10 left-0"><i class='bx bx-chevrons-left hover:text-lk-main duration-200' ></i></button>
+    <button id="nextBtn" class="text-6xl text-white duration-200 hover:bg-opacity-70 w-20 h-full absolute z-10 right-0"><i class='bx bx-chevrons-right hover:text-lk-main duration-200'></i></button>
+    <div class="w-full h-[500px] flex justify-start items-center carousel-slide">
+        <img src="storage/carousel/dk7VTr6kzUjC3HG9LlDGLBTJxdE4czvOYd4WFykF.jpg" alt="" id="lastClone" class="w-full h-full object-contain object-center">
+                    <img src="storage/carousel/o2gIYGAziufuYsIWHjEBfd1M2zXmiTUYAUOQSWs6.jpg" alt="" class="w-full h-full object-contain object-center">
+                    <img src="storage/carousel/vBYKG3NrjiSZbuNPdUpq1hf1loQtRQa4BdGaVpkn.jpg" alt="" class="w-full h-full object-contain object-center">
+                    <img src="storage/carousel/dk7VTr6kzUjC3HG9LlDGLBTJxdE4czvOYd4WFykF.jpg" alt="" class="w-full h-full object-contain object-center">
+                <img src="storage/carousel/o2gIYGAziufuYsIWHjEBfd1M2zXmiTUYAUOQSWs6.jpg" alt="" id="firstClone" class="w-full h-full object-contain object-center">
+    </div>
+</div>
+
+
+
+<script>
+    const carouselSlide = document.querySelector(".carousel-slide");
+const carouselImages = document.querySelectorAll(".carousel-slide img");
+
+//buttons
+
+const prevBtn = document.querySelector("#prevBtn");
+const nextBtn = document.querySelector("#nextBtn");
+//counter
+
+let counter = 1;
+const size = carouselImages[0].clientWidth;
+
+carouselSlide.style.transform = "translateX(" + (-size * counter) + "px)";
+//button listeners
+
+nextBtn.addEventListener("click", () => {
+    if (counter >= carouselImages.length - 1) return
+    carouselSlide.style.transition = "transform 0.4s ease-in-out";
+    counter++;
+    carouselSlide.style.transform = "translateX(" + (-size * counter) + "px)";
+});
+prevBtn.addEventListener("click", () => {
+    if (counter <= 0) return
+    carouselSlide.style.transition = "transform 0.4s ease-in-out";
+    counter--;
+    carouselSlide.style.transform = "translateX(" + (-size * counter) + "px)";
+});
+
+carouselSlide.addEventListener("transitionend", () => {
+    if (carouselImages[counter].id === "lastClone") {
+        carouselSlide.style.transition = "none";
+        counter = carouselImages.length - 2;
+        carouselSlide.style.transform = "translateX(" + (-size * counter) + "px)";
+    }
+    if (carouselImages[counter].id === "firstClone") {
+        carouselSlide.style.transition = "none";
+        counter = carouselImages.length - counter;
+        carouselSlide.style.transform = "translateX(" + (-size * counter) + "px)";
+    }
+});
+
+</script>
+        <div class="w-11/12 lg:w-3/5 h-auto flex flex-col justify-center items-center lg:grid lg:grid-cols-5 lg:gap-10">
+    <span class="bg-white border-[1px] border-lk-main w-48 h-48 col-span-1 flex flex-col p-4 mt-4  ">
+        <div class="w-full h-3/5 flex justify-center items-center">
+            <img src="https://www.lukoil.ge/images/price.jpg" alt="Price">
+        </div>
+        <div class="mt-4 w-full h-2/5 flex justify-center items-center text-xl text-lk-main flex-col">
+            <p>0.00</p>
+            <p>Super Ecto 100</p>
+        </div>
+    </span>
+    <span class="bg-white border-[1px] border-lk-main w-48 h-48 col-span-1 flex flex-col p-4 mt-4 ">
+        <div class="w-full h-3/5 flex justify-center items-center">
+            <img src="https://www.lukoil.ge/images/price.jpg" alt="Price">
+        </div>
+        <div class="mt-4 w-full h-2/5 flex justify-center items-center text-xl text-lk-main flex-col">
+            <p>4.65</p>
+            <p>Super Ecto</p>
+        </div>
+    </span>
+    <span class="bg-white border-[1px] border-lk-main w-48 h-48 col-span-1 flex flex-col p-4 mt-4 ">
+        <div class="w-full h-3/5 flex justify-center items-center">
+            <img src="https://www.lukoil.ge/images/price.jpg" alt="Price">
+        </div>
+        <div class="mt-4 w-full h-2/5 flex justify-center items-center text-xl text-lk-main flex-col">
+            <p>4.32</p>
+            <p class="text-center">Premium Avangard</p>
+        </div>
+    </span>
+    <span class="bg-white border-[1px] border-lk-main w-48 h-48 col-span-1 flex flex-col p-4 mt-4 ">
+        <div class="w-full h-3/5 flex justify-center items-center">
+            <img src="https://www.lukoil.ge/images/price.jpg" alt="Price">
+        </div>
+        <div class="mt-4 w-full h-2/5 flex justify-center items-center text-xl text-lk-main flex-col">
+            <p>4.02</p>
+            <p>Euro Regular</p>
+        </div>
+    </span>
+    <span class="bg-white border-[1px] border-lk-main w-48 h-48 col-span-1 flex flex-col p-4 mt-4 ">
+        <div class="w-full h-3/5 flex justify-center items-center">
+            <img src="https://www.lukoil.ge/images/price.jpg" alt="Price">
+        </div>
+        <div class="mt-4 w-full h-2/5 flex justify-center items-center text-xl text-lk-main flex-col">
+            <p>5.02</p>
+            <p>Euro Diesel</p>
+        </div>
+    </span>
+</div>
+<div class="w-11/12 lg:w-3/5 h-10 flex justify-start items-center mt-6">
+    <a href="/prices-history">
+        <p class="text-lk-main text-lg font-semibold hover:text-black duration-150">
+            ფასების ისტორია
+        </p>
+    </a>
+</div>
+        <div class="w-screen h-auto mt-7 flex justify-center items-center">
+    <div class="w-11/12 lg:w-3/5 h-full block lg:grid lg:grid-cols-4 lg:gap-5">
+                    <span class="w-full h-[500px] lg:col-span-2 mt-8">
+    <div class="w-full h-20 flex items-center justify-start p-4 border-b-2 border-white bg-gray-100 mt-8 py-2">
+        <p class="text-lk-main text-md">„ლუკოილ-ჯორჯიამ“ ცრუ ინფორმაცია უარყო</p>
+    </div>
+    <div class="w-full h-1/2 mt-2 flex justify-center items-center bg-gray-100">
+        <img src="/storage/thumbnails/9S1PL2mdLW1SaO6NMCine7lhCpEY4lx0QssARu3p.jpg" alt="Poster" class="w-full h-full object-center object-cover">
+    </div>
+    <div class="w-full h-5/12 p-4 flex flex-col bg-gray-100">
+        <div class="w-full h-1/2">
+            <p class="text-black text-md">„ლუკოილ-ჯორჯია“ უარყოფს „ტვ პირველის“ მიერ ჩვენს მისამართზე ჩამოსული ტვირთის შესახებ გავრცელებულ ცრუ ინფორმაციას. გაცნობებთ, რომ ფოთის საზღვაო პორტში შემოვიდა გემი, რომელიც დატვირთულია „ლუკოილის“ ნავთობგადამამუშავებელ ქარხანაში წარმოებული დიზელის საწვავით.</p>
+        </div>
+        <div class="w-full h-1/2 grid grid-cols-2">
+            <div class="col-span-1 w-full h-full flex justify-start items-center">2025-10-10 18:49:44</div>
+            <div class="col-span-1 w-full h-full flex justify-center items-center">
+                <a class="w-1/2 h-10 flex justify-center items-center" href="/posts/30">
+                    <button class="w-full h-full text-white bg-lk-main rounded-lg hover:bg-red-700 duration-200">სრულად</button>
+                </a>
+            </div>
+        </div>
+    </div>
+</span>
+                    <span class="w-full h-[500px] lg:col-span-2 mt-8">
+    <div class="w-full h-20 flex items-center justify-start p-4 border-b-2 border-white bg-gray-100 mt-8 py-2">
+        <p class="text-lk-main text-md">შპს „ლუკოილ-ჯორჯია“ აცხადებს ტენდერს</p>
+    </div>
+    <div class="w-full h-1/2 mt-2 flex justify-center items-center bg-gray-100">
+        <img src="/storage/thumbnails/S3iinoPgcgcY1wxpdt8tMIdMs3m3DA9v0vv65Lkm.jpg" alt="Poster" class="w-full h-full object-center object-cover">
+    </div>
+    <div class="w-full h-5/12 p-4 flex flex-col bg-gray-100">
+        <div class="w-full h-1/2">
+            <p class="text-black text-md">შპს ,,ლუკოილ-ჯორჯია“ აცხადებს ტენდერს საკანცელარიო პროდუქციის  და პირადი ჰიგიენის საშუალებების  შესყიდვის თაობაზე</p>
+        </div>
+        <div class="w-full h-1/2 grid grid-cols-2">
+            <div class="col-span-1 w-full h-full flex justify-start items-center">2023-12-08 15:03:20</div>
+            <div class="col-span-1 w-full h-full flex justify-center items-center">
+                <a class="w-1/2 h-10 flex justify-center items-center" href="/posts/29">
+                    <button class="w-full h-full text-white bg-lk-main rounded-lg hover:bg-red-700 duration-200">სრულად</button>
+                </a>
+            </div>
+        </div>
+    </div>
+</span>
+                    <span class="w-full h-[500px] lg:col-span-2 mt-8">
+    <div class="w-full h-20 flex items-center justify-start p-4 border-b-2 border-white bg-gray-100 mt-8 py-2">
+        <p class="text-lk-main text-md">საქართველოს 6 ქალაქში ლუკოილის ოფიციალური ავტოგასამართი სადგური გაიხსნა!</p>
+    </div>
+    <div class="w-full h-1/2 mt-2 flex justify-center items-center bg-gray-100">
+        <img src="/storage/thumbnails/o0ObMXLXXzl9DpCqkbWo0bcA6hBHWtHJKKb10qQG.jpg" alt="Poster" class="w-full h-full object-center object-cover">
+    </div>
+    <div class="w-full h-5/12 p-4 flex flex-col bg-gray-100">
+        <div class="w-full h-1/2">
+            <p class="text-black text-md">ლუკოილი სწრაფი ტემპით განაგრძობს ავტოგასამართი სადგურების ქსელის გაფართოებას მთელი ქვეყნის მასშტაბით, რათა მომხმარებელს ნებისმიერ რეგიონში შესაძლებლობა ქონდეს ისარგებლოს ევრო 5 სტანდარტის საწვავითა და კომფორტული მომსახურებით.</p>
+        </div>
+        <div class="w-full h-1/2 grid grid-cols-2">
+            <div class="col-span-1 w-full h-full flex justify-start items-center">2022-10-03 11:40:05</div>
+            <div class="col-span-1 w-full h-full flex justify-center items-center">
+                <a class="w-1/2 h-10 flex justify-center items-center" href="/posts/25">
+                    <button class="w-full h-full text-white bg-lk-main rounded-lg hover:bg-red-700 duration-200">სრულად</button>
+                </a>
+            </div>
+        </div>
+    </div>
+</span>
+                    <span class="w-full h-[500px] lg:col-span-2 mt-8">
+    <div class="w-full h-20 flex items-center justify-start p-4 border-b-2 border-white bg-gray-100 mt-8 py-2">
+        <p class="text-lk-main text-md">ლუკოილში ბარათების სისტემა განახლდა!</p>
+    </div>
+    <div class="w-full h-1/2 mt-2 flex justify-center items-center bg-gray-100">
+        <img src="/storage/thumbnails/miOX0DHOmYTcjrI4vVnFKHPRfQMAQgmWPsPNecKY.jpg" alt="Poster" class="w-full h-full object-center object-cover">
+    </div>
+    <div class="w-full h-5/12 p-4 flex flex-col bg-gray-100">
+        <div class="w-full h-1/2">
+            <p class="text-black text-md">ლუკოილ ჯორჯიას განახლებულმა გუნდმა, მოსვლის დღიდან მნიშვნელოვანია ნაბიჯები გადადგა, რათა მომხმარებელს მათ კომფორტზე ორიენტირებული მომსახურება შესთავაზოს.</p>
+        </div>
+        <div class="w-full h-1/2 grid grid-cols-2">
+            <div class="col-span-1 w-full h-full flex justify-start items-center">2022-07-20 10:11:16</div>
+            <div class="col-span-1 w-full h-full flex justify-center items-center">
+                <a class="w-1/2 h-10 flex justify-center items-center" href="/posts/22">
+                    <button class="w-full h-full text-white bg-lk-main rounded-lg hover:bg-red-700 duration-200">სრულად</button>
+                </a>
+            </div>
+        </div>
+    </div>
+</span>
+                    <span class="w-full h-[500px] lg:col-span-2 mt-8">
+    <div class="w-full h-20 flex items-center justify-start p-4 border-b-2 border-white bg-gray-100 mt-8 py-2">
+        <p class="text-lk-main text-md">მინერალური ძრავის ზეთი VS სინთეტიკური ძრავის ზეთი</p>
+    </div>
+    <div class="w-full h-1/2 mt-2 flex justify-center items-center bg-gray-100">
+        <img src="/storage/thumbnails/5jWWeqsPRhz4HcY0oncwhwJXyeXcNX5bnH4at9Um.jpg" alt="Poster" class="w-full h-full object-center object-cover">
+    </div>
+    <div class="w-full h-5/12 p-4 flex flex-col bg-gray-100">
+        <div class="w-full h-1/2">
+            <p class="text-black text-md">როდესაც მიდიხართ საავტომობილო ზეთის შესაძენად, იცით თუ არა რეალურად რაში იხდით? როცა მომსახურე გეკითხებათ სინთეტიკურს თუ მინერალურ ზეთს ირჩევთ, რამდენად გესმით განსხვავება?</p>
+        </div>
+        <div class="w-full h-1/2 grid grid-cols-2">
+            <div class="col-span-1 w-full h-full flex justify-start items-center">2022-07-20 10:10:36</div>
+            <div class="col-span-1 w-full h-full flex justify-center items-center">
+                <a class="w-1/2 h-10 flex justify-center items-center" href="/posts/21">
+                    <button class="w-full h-full text-white bg-lk-main rounded-lg hover:bg-red-700 duration-200">სრულად</button>
+                </a>
+            </div>
+        </div>
+    </div>
+</span>
+                    <span class="w-full h-[500px] lg:col-span-2 mt-8">
+    <div class="w-full h-20 flex items-center justify-start p-4 border-b-2 border-white bg-gray-100 mt-8 py-2">
+        <p class="text-lk-main text-md">რატომ იორთქლება თქვენი ავტომობილის ფარები ?</p>
+    </div>
+    <div class="w-full h-1/2 mt-2 flex justify-center items-center bg-gray-100">
+        <img src="/storage/thumbnails/XWMFl4LdXsjhKVNgHiTGaELhYvgX5tPAeCuH1FBK.jpg" alt="Poster" class="w-full h-full object-center object-cover">
+    </div>
+    <div class="w-full h-5/12 p-4 flex flex-col bg-gray-100">
+        <div class="w-full h-1/2">
+            <p class="text-black text-md">შეგიმჩნევიათ თუ არა, რომ თქვენი ავტომობილის  ფარები, დროთა განმავლობაში, უფრო იბურება, მიუხედავად იმისა, რომ თქვენს მანქანას უვლით?</p>
+        </div>
+        <div class="w-full h-1/2 grid grid-cols-2">
+            <div class="col-span-1 w-full h-full flex justify-start items-center">2022-07-20 10:09:29</div>
+            <div class="col-span-1 w-full h-full flex justify-center items-center">
+                <a class="w-1/2 h-10 flex justify-center items-center" href="/posts/20">
+                    <button class="w-full h-full text-white bg-lk-main rounded-lg hover:bg-red-700 duration-200">სრულად</button>
+                </a>
+            </div>
+        </div>
+    </div>
+</span>
+                    <span class="w-full h-[500px] lg:col-span-2 mt-8">
+    <div class="w-full h-20 flex items-center justify-start p-4 border-b-2 border-white bg-gray-100 mt-8 py-2">
+        <p class="text-lk-main text-md">რა ტიპის საბურავი გჭირდებათ?</p>
+    </div>
+    <div class="w-full h-1/2 mt-2 flex justify-center items-center bg-gray-100">
+        <img src="/storage/thumbnails/b6bN681dL9SmArJnUHlQguhSqxEctC275WoSJAoh.jpg" alt="Poster" class="w-full h-full object-center object-cover">
+    </div>
+    <div class="w-full h-5/12 p-4 flex flex-col bg-gray-100">
+        <div class="w-full h-1/2">
+            <p class="text-black text-md">მაშინ, როდესაც ბაზარზე საბურავების მრავალფეროვანია არჩევანია, შეარჩიო
+საუკეთესო ალტერნატივია საკმაოდ რთულია.</p>
+        </div>
+        <div class="w-full h-1/2 grid grid-cols-2">
+            <div class="col-span-1 w-full h-full flex justify-start items-center">2022-07-20 10:08:39</div>
+            <div class="col-span-1 w-full h-full flex justify-center items-center">
+                <a class="w-1/2 h-10 flex justify-center items-center" href="/posts/19">
+                    <button class="w-full h-full text-white bg-lk-main rounded-lg hover:bg-red-700 duration-200">სრულად</button>
+                </a>
+            </div>
+        </div>
+    </div>
+</span>
+                    <span class="w-full h-[500px] lg:col-span-2 mt-8">
+    <div class="w-full h-20 flex items-center justify-start p-4 border-b-2 border-white bg-gray-100 mt-8 py-2">
+        <p class="text-lk-main text-md">როგორ შევარჩიოთ თქვენი ავტომობილისთვის რეკომენდირებული საწვავი?</p>
+    </div>
+    <div class="w-full h-1/2 mt-2 flex justify-center items-center bg-gray-100">
+        <img src="/storage/thumbnails/03LjTWKL5Lx0P3hIuc5CQgZ0nnX6pMuH2GxGV4NW.jpg" alt="Poster" class="w-full h-full object-center object-cover">
+    </div>
+    <div class="w-full h-5/12 p-4 flex flex-col bg-gray-100">
+        <div class="w-full h-1/2">
+            <p class="text-black text-md">შეარჩიო ავტომობილისთვის საუკეთესო საწვავი საკმაოდ რთული ამოცანაა - რატომ?
+რადგან ყველა საწვავი არ არის ერთნაირი.</p>
+        </div>
+        <div class="w-full h-1/2 grid grid-cols-2">
+            <div class="col-span-1 w-full h-full flex justify-start items-center">2022-07-20 10:06:58</div>
+            <div class="col-span-1 w-full h-full flex justify-center items-center">
+                <a class="w-1/2 h-10 flex justify-center items-center" href="/posts/18">
+                    <button class="w-full h-full text-white bg-lk-main rounded-lg hover:bg-red-700 duration-200">სრულად</button>
+                </a>
+            </div>
+        </div>
+    </div>
+</span>
+            </div>
+</div>
+</div>
+    <div class="w-screen h-[400px] bg-lk-main absolute mt-20 flex flex-col justify-center items-center overflow-x-hidden">
+    <div class="w-11/12 lg:w-3/5 h-14 border-b-[1px] border-white opacity-70 mb-4 flex items-end justify-end pb-2">
+        <p class="text-white text-sm font-semibold">Always Moving Forward</p>
+    </div>
+    <div class="w-11/12 lg:w-3/5 h-full grid grid-cols-3">
+        <span class="col-span-1 w-full h-full">
+            <div class="w-full h-1/6 flex items-center">
+                <p class="text-lg text-white">თეგები</p>
+            </div>
+            <div class="w-full h-5/6 flex flex-col items-start py-4 space-y-1">
+                <a href="/cards">
+                    <p class="text-white text-md hover:text-black duration-200">ბარათები</p>
+                </a>
+                <a href="/stations">
+                    <p class="text-white text-md hover:text-black duration-200">სადგურები</p>
+                </a>
+                <a href="/news">
+                    <p class="text-white text-md hover:text-black duration-200">სიახლეები</p>
+                </a>
+                                                    <a href="/login">
+                        <p class="text-white text-md hover:text-black duration-200">შესვლა</p>
+                    </a>
+                    <a href="/register">
+                        <p class="text-white text-md hover:text-black duration-200">რეგისტრაცია</p>
+                    </a>
+                            </div>
+        </span>
+        <span class="col-span-1 w-full h-full">
+            <div class="w-full h-1/6 flex items-center">
+                <p class="text-lg text-white">გამოგვყევით</p>
+            </div>
+            <div class="w-full h-5/6 flex space-x-3">
+                <i class='bx bxl-facebook-square text-4xl text-white hover:text-black duration-200'></i>
+                <i class='bx bxl-instagram text-4xl text-white hover:text-black duration-200'></i>
+                <i class='bx bxl-twitter text-4xl text-white hover:text-black duration-200'></i>
+            </div>
+        </span>
+    </div>
+</div>
+    <div class="w-3/4 h-screen bg-lk-main fixed top-0 -right-full duration-200 shadow-2xl flex justify-center items-center z-50" id="sidebar">
+<p class="text-4xl font-bold absolute top-4 left-4 text-white" id="close">X</p>
+<div class="w-full h-4/5 flex flex-col items-center justify-evenly">
+    <a href="/cards">
+        <p class="text-white text-md hover:text-black duration-200 font-semibold"> ბარათები </p>
+    </a>
+    <a href="/stations">
+        <p class="text-white text-md hover:text-black duration-200 font-semibold">სადგურები</p>
+    </a>
+    <a href="/news">
+        <p class="text-white text-md hover:text-black duration-200 font-semibold">სიახლეები</p>
+    </a>
+    <a href="/vacancies">
+        <p class="text-white text-md hover:text-black duration-200 font-semibold">ვაკანსიები</p>
+    </a>
+    <a href="/management">
+        <p class="text-white text-md hover:text-black duration-200 font-semibold">მენეჯმენტი</p>
+    </a>
+    <a href="/about-us">
+        <p class="text-white text-md hover:text-black duration-200 font-semibold">ჩვენ შესახებ</p>
+    </a>
+    <a href="/contact">
+        <p class="text-white text-md hover:text-black duration-200 font-semibold">კონტაქტი</p>
+    </a>
+                <a href="/login">
+            <p class="text-white text-md hover:text-black duration-200 font-semibold">შესვლა</p>
+        </a>
+        <a href="/register">
+            <p class="text-white text-md hover:text-black duration-200 font-semibold">რეგისტრაცია</p>
+        </a>
+    </div>
+</div>
+
+<script>
+        document.getElementById('close').onclick = function () {
+        document.getElementById('sidebar').style.right = "-400px";
+    }
+
+    document.getElementById('burger').onclick = function () {
+        document.getElementById('sidebar').style.right = 0;
+    }
+</script>
+    </body>
+
+</html>

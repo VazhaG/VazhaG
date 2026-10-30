@@ -2,7 +2,8 @@
 
     python -m scraper [--only socar,…] [--out site/data/prices.json]
 
-Exit 0 when at least one company was read, 1 when none was.
+A company that cannot be read keeps its previous prices, with their time (SPEC-0001 AC-005).
+Exit 0 when at least one company was read now; 1 when none was — then the data file is left as it was.
 """
 
 from __future__ import annotations
@@ -14,36 +15,38 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 from scraper.companies import COMPANIES
-from scraper.core import ParseError, company_entry, fetch, iso
+from scraper.core import fetch, iso, refresh
 
 DEFAULT_OUT = Path(__file__).resolve().parent.parent / "site" / "data" / "prices.json"
+
+
+def previous_entries(path: Path) -> dict[str, dict]:
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+        return {e["id"]: e for e in data.get("companies", []) if isinstance(e, dict) and "id" in e}
+    except FileNotFoundError:
+        return {}
+    except (OSError, ValueError, AttributeError) as e:
+        print(f"the previous data file could not be read ({e}) — starting without it", file=sys.stderr)
+        return {}
 
 
 def main(argv: list[str] | None = None) -> int:
     for stream in (sys.stdout, sys.stderr):
         stream.reconfigure(encoding="utf-8")
     ap = argparse.ArgumentParser(prog="python -m scraper")
-    ap.add_argument("--only", help="comma-separated company ids")
+    ap.add_argument("--only", help="comma-separated company ids; the others keep their previous prices")
     ap.add_argument("--out", type=Path, default=DEFAULT_OUT)
     args = ap.parse_args(argv)
-    wanted = set(args.only.split(",")) if args.only else None
+    only = set(args.only.split(",")) if args.only else None
     now = datetime.now(UTC)
-    entries = []
-    for company in COMPANIES:
-        if wanted is not None and company.id not in wanted:
-            continue
-        try:
-            readings = company.parse(fetch(company.url))
-        except (OSError, ParseError) as e:
-            print(f"{company.name}: not read — {e}", file=sys.stderr)
-            continue
-        for r in readings:
-            if r.fuel is None:
-                print(f"{company.name}: „{r.grade}“ is not in the fuel table — left out", file=sys.stderr)
-        entries.append(company_entry(company, readings, now))
-        print(f"{company.name}: {sum(1 for r in readings if r.fuel)} price(s)")
-    if not entries:
-        print("no company was read — the data file is unchanged", file=sys.stderr)
+    entries, log, read = refresh(COMPANIES, previous_entries(args.out), fetch, now, only)
+    for line in log:
+        print(line, file=sys.stderr)
+    for e in entries:
+        print(f"{e['name']}: {len(e['prices'])} price(s), {e['time']}")
+    if not read:
+        print("no company was read now — the data file is unchanged", file=sys.stderr)
         return 1
     args.out.parent.mkdir(parents=True, exist_ok=True)
     data = {"generated": iso(now), "companies": entries}

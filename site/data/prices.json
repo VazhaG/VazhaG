@@ -1,12 +1,12 @@
 {
-  "generated": "2026-10-30T10:08:34Z",
+  "generated": "2026-10-30T10:15:32Z",
   "companies": [
     {
       "id": "socar",
       "name": "SOCAR",
       "color": "#e41e30",
       "source": "https://www.sgp.ge/ge/",
-      "time": "2026-10-30T10:08:34Z",
+      "time": "2026-10-30T10:15:32Z",
       "basis": "read",
       "prices": [
         {
@@ -33,6 +33,116 @@
           "grade": "ნანო ევრო 5 დიზელი",
           "fuel": "diesel",
           "price": 4.96
+        }
+      ]
+    },
+    {
+      "id": "rompetrol",
+      "name": "Rompetrol",
+      "color": "#f39200",
+      "source": "https://www.rompetrol.ge/",
+      "time": "2026-10-30T10:15:32Z",
+      "basis": "read",
+      "prices": [
+        {
+          "grade": "efix სუპერი",
+          "fuel": "super",
+          "price": 4.68
+        },
+        {
+          "grade": "efix ევრო პრემიუმი",
+          "fuel": "premium",
+          "price": 4.38
+        },
+        {
+          "grade": "efix ევრო რეგულარი",
+          "fuel": "regular",
+          "price": 4.08
+        },
+        {
+          "grade": "efix ევრო დიზელი",
+          "fuel": "diesel",
+          "price": 5.04
+        },
+        {
+          "grade": "ევრო დიზელი",
+          "fuel": "diesel",
+          "price": 4.97
+        }
+      ]
+    },
+    {
+      "id": "lukoil",
+      "name": "Lukoil",
+      "color": "#8a1538",
+      "source": "https://www.lukoil.ge/",
+      "time": "2026-10-30T10:15:32Z",
+      "basis": "read",
+      "prices": [
+        {
+          "grade": "Super Ecto",
+          "fuel": "super",
+          "price": 4.65
+        },
+        {
+          "grade": "Premium Avangard",
+          "fuel": "premium",
+          "price": 4.32
+        },
+        {
+          "grade": "Euro Regular",
+          "fuel": "regular",
+          "price": 4.02
+        },
+        {
+          "grade": "Euro Diesel",
+          "fuel": "diesel",
+          "price": 5.02
+        }
+      ]
+    },
+    {
+      "id": "wissol",
+      "name": "Wissol",
+      "color": "#00843d",
+      "source": "https://wissol.ge/ka/fuel-prices",
+      "time": "2026-10-30T10:15:32Z",
+      "basis": "read",
+      "prices": [
+        {
+          "grade": "A1 სუპერი 100",
+          "fuel": "super",
+          "price": 4.83
+        },
+        {
+          "grade": "ეკო სუპერი",
+          "fuel": "super",
+          "price": 4.68
+        },
+        {
+          "grade": "ეკო პრემიუმი",
+          "fuel": "premium",
+          "price": 4.39
+        },
+        {
+          "grade": "ევრო რეგულარი",
+          "fuel": "regular",
+          "price": 4.08
+        },
+        {
+          "grade": "ეკო დიზელი",
+          "fuel": "diesel",
+          "price": 5.07
+        },
+        {
+          "grade": "ევრო დიზელი",
+          "fuel": "diesel",
+          "price": 4.98
+        },
+        {
+          "grade": "დიზელ ენერჯი",
+          "fuel": "diesel",
+          "price": 4.93
         }
       ]
     }
