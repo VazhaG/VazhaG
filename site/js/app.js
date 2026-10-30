@@ -192,7 +192,15 @@ function chooseCity(c) {
 }
 
 // REQ-003: the ★ card, once the page knows where to count from.
-function renderBest(prices, stations, allOff) {
+// REQ-006: an empty result that a switched-off company would have filled says so — not "see the table".
+function filteredOut(result, pricesHidden) {
+  return !result.best && state.off.size > 0 && (pricesHidden
+    || Boolean(cheapestNearby(state.prices, state.stations, state.fuel, state.here, Date.now()).best));
+}
+
+const REASON_TEXT = { gasUnknown: 'best.gasUnknown', filtered: 'companies.filtered', none: 'best.none' };
+
+function renderBest(prices, stations, allOff, pricesHidden) {
   const card = document.getElementById('best');
   markBest(null);
   if (!state.here && !state.asking) {
@@ -206,7 +214,8 @@ function renderBest(prices, stations, allOff) {
     card.replaceChildren(...parts);
     return;
   }
-  const result = allOff ? { reason: 'allOff' } : cheapestNearby(prices, stations, state.fuel, state.here, Date.now());
+  let result = allOff ? { reason: 'allOff' } : cheapestNearby(prices, stations, state.fuel, state.here, Date.now());
+  if (!allOff && filteredOut(result, pricesHidden)) result = { reason: 'filtered' };
   markBest(result.best);
   if (result.reason === 'allOff') {
     parts.push(element('p', 'note', t('companies.allOff')));
@@ -223,7 +232,7 @@ function renderBest(prices, stations, allOff) {
     if (b.stale) parts.push(element('p', 'note', t('price.stale')));
     parts.push(routeButtons(b.lat, b.lng));
   } else {
-    parts.push(element('p', 'note', t(result.reason === 'gasUnknown' ? 'best.gasUnknown' : 'best.none')));
+    parts.push(element('p', 'note', t(REASON_TEXT[result.reason] ?? 'best.none')));
   }
   const all = element('a', 'to-prices', t('sheet.all'));
   all.href = '#prices-title';
@@ -292,9 +301,11 @@ function render() {
   const prices = shown(state.prices);
   const stations = shown(state.stations);
   const allOff = everyCompanyOff();
+  const rows = priceRows(prices, state.fuel, Date.now());
+  const pricesHidden = !rows.length && state.off.size > 0 && priceRows(state.prices, state.fuel, Date.now()).length > 0;
   renderCompanies();
   renderStations(stations);
-  renderBest(prices, stations, allOff);
+  renderBest(prices, stations, allOff, pricesHidden);
   const body = document.querySelector('#price-table tbody');
   if (!state.prices) {
     body.replaceChildren();
@@ -306,9 +317,8 @@ function render() {
     setStatus(t('companies.allOff'));
     return;
   }
-  const rows = priceRows(prices, state.fuel, Date.now());
   body.replaceChildren(...rows.map(rowElement));
-  setStatus(rows.length ? '' : t('status.noFuelPrice'));
+  setStatus(rows.length ? '' : t(pricesHidden ? 'companies.filtered' : 'status.noFuelPrice'));
 }
 
 function showHere(lat, lng) {

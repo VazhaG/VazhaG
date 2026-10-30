@@ -200,3 +200,56 @@ def test_with_every_company_off_the_page_says_to_turn_one_on(page_at: Callable[[
     page.locator(BADGES).first.click()  # SOCAR on again
     expect(circles_of(page, "#e41e30")).to_have_count(1)  # type: ignore[attr-defined]
     expect(page.locator(ROWS)).to_have_count(1)
+
+
+# PLAN-0002 T4: when the filter took the fuel away, the card and the table say so (REQ-006; AC-007)
+FILTERED_KA = "ჩართულ კომპანიებში ამ საწვავის ფასი არ მოიძებნა — ჩართე სხვა კომპანიაც"
+FILTERED_EN = "No price for this fuel among the companies switched on — turn on another company"
+GAS_UNKNOWN_KA = "ფასები ქვემოთ, ცხრილშია"
+
+
+def test_when_only_a_switched_off_company_has_the_fuel_the_page_says_so(page_at: Callable[[float, float], Page],
+                                                                        net: Net) -> None:
+    # Gas: today only SOCAR publishes its price ([[fuel-price-sources]]); SOCAR off and gas chosen
+    page = open_here(page_at, net, [("socar", "SOCAR", "#e41e30", 4.90, 1.0), ("rompetrol", "Rompetrol", "#f39200",
+                                                                                4.95, 2.0)])
+    socar = net.data["prices.json"]["companies"][0]  # type: ignore[index]
+    socar["prices"].append({"grade": "SOCAR თხევადი აირი", "fuel": "lpg", "price": 2.09})
+    net.data["stations.json"]["companies"][0]["stations"][0]["fuels"].append("lpg")  # type: ignore[index]
+    page.reload()
+    page.locator(BADGES).nth(0).click()
+    page.get_by_text("თხევადი აირი", exact=True).first.click()
+    expect(page.locator("#best")).to_contain_text(FILTERED_KA)
+    expect(page.locator("#best")).not_to_contain_text(GAS_UNKNOWN_KA)
+    expect(page.locator(ROWS)).to_have_count(0)
+    expect(page.locator("#status")).to_contain_text(FILTERED_KA)
+    page.get_by_role("button", name="ENG").click()
+    expect(page.locator("#best")).to_contain_text(FILTERED_EN)
+    expect(page.locator("#status")).to_contain_text(FILTERED_EN)
+    page.locator(BADGES).nth(0).click()  # SOCAR on again: the gas is back
+    expect(page.locator(ROWS)).to_have_count(1)
+
+
+def test_when_only_a_switched_off_company_is_near_the_card_says_so(page_at: Callable[[float, float], Page],
+                                                                   net: Net) -> None:
+    page = open_here(page_at, net, [("a", "Alpha", "#e41e30", 4.80, 70.0), ("b", "Beta", "#00843d", 4.95, 2.0)])
+    expect(page.locator("#best")).to_contain_text("Beta")
+    page.locator(BADGES).nth(1).click()
+    expect(page.locator("#best")).to_contain_text(FILTERED_KA)  # Alpha is 70 km away; Beta, switched off, is near
+    expect(page.locator(ROWS)).to_have_count(1)  # Alpha's price itself is still in the table
+
+
+def test_a_gas_price_whose_stations_are_unknown_is_also_told_apart(page_at: Callable[[float, float], Page],
+                                                                   net: Net) -> None:
+    # SOCAR publishes a gas price but no station of it lists gas: with SOCAR on the card says "see the table",
+    # with SOCAR off the table is empty — so the card must not send the visitor there
+    page = open_here(page_at, net, [("socar", "SOCAR", "#e41e30", 4.90, 1.0), ("rompetrol", "Rompetrol", "#f39200",
+                                                                                4.95, 2.0)])
+    socar = net.data["prices.json"]["companies"][0]  # type: ignore[index]
+    socar["prices"].append({"grade": "SOCAR თხევადი აირი", "fuel": "lpg", "price": 2.09})
+    page.reload()
+    page.get_by_text("თხევადი აირი", exact=True).first.click()
+    expect(page.locator("#best")).to_contain_text(GAS_UNKNOWN_KA)
+    page.locator(BADGES).nth(0).click()
+    expect(page.locator("#best")).to_contain_text(FILTERED_KA)
+    expect(page.locator("#best")).not_to_contain_text(GAS_UNKNOWN_KA)
