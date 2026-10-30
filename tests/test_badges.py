@@ -6,6 +6,9 @@ AC-001, AC-009, AC-010, AC-011).
 
 from __future__ import annotations
 
+from collections.abc import Callable
+from datetime import UTC, datetime
+
 from playwright.sync_api import Page, expect
 
 from support import SITE, TILE_HOST, Net
@@ -100,3 +103,100 @@ def test_an_unknown_colour_or_an_empty_name_still_makes_a_readable_badge(page: P
     assert badges.nth(0).evaluate("b => getComputedStyle(b).backgroundColor") == rgb("#94a3b8")
     assert badges.nth(0).evaluate("b => getComputedStyle(b).color") == "rgb(15, 23, 42)"
     assert net.outside == []
+
+
+# PLAN-0002 T3: the row as the filter — the map, the ★ and the table at once (REQ-003, REQ-005; AC-003, AC-004,
+# AC-006). The page's clock stands at the data's time, so the prices are fresh whatever today is.
+NOW = datetime(2026, 10, 30, 12, 0, tzinfo=UTC)
+HERE = (41.70, 44.80)
+KM_PER_DEGREE = 111.195  # one degree of latitude
+FOUR = [("socar", "SOCAR", "#e41e30", 4.90, 1.0), ("rompetrol", "Rompetrol", "#f39200", 4.95, 2.0),
+        ("lukoil", "Lukoil", "#8a1538", 5.00, 3.0), ("wissol", "Wissol", "#00843d", 5.05, 4.0)]
+ROWS = "#price-table tbody tr"
+
+
+def north(km: float) -> float:
+    return round(HERE[0] + km / KM_PER_DEGREE, 6)
+
+
+def open_here(page_at: Callable[[float, float], Page], net: Net,
+              companies: list[tuple[str, str, str, float, float]]) -> Page:
+    """Each company: (id, name, colour, its diesel price, how far north of the visitor its one station is in km)."""
+    prices, stations = [], []
+    for cid, name, color, price, km in companies:
+        prices.append(prices_of(cid, name, color) | {"prices": [{"grade": f"{name} დიზელი", "fuel": "diesel",
+                                                                 "price": price}]})
+        stations.append(stations_of(cid, name, color) | {"stations": [{"name": "", "address": f"{km} კმ",
+                                                                       "lat": north(km), "lng": HERE[1],
+                                                                       "fuels": ["diesel"]}]})
+    net.data["prices.json"] = {"generated": TIME, "companies": prices}
+    net.data["stations.json"] = {"generated": TIME, "companies": stations}
+    page = page_at(*HERE)
+    page.clock.set_fixed_time(NOW)
+    page.goto(net.base)
+    page.get_by_text("დიზელი", exact=True).first.click()
+    return page
+
+
+def circles_of(page: Page, color: str) -> object:
+    return page.locator(f'path.station[fill="{color}"]')
+
+
+def centre(box: dict | None) -> tuple[float, float]:
+    assert box
+    return box["x"] + box["width"] / 2, box["y"] + box["height"] / 2
+
+
+def test_a_badge_switches_its_company_off_and_on_everywhere(page_at: Callable[[float, float], Page],
+                                                            net: Net) -> None:
+    page = open_here(page_at, net, FOUR)
+    rompetrol = page.locator(BADGES).nth(1)
+    expect(circles_of(page, "#f39200")).to_have_count(1)  # type: ignore[attr-defined]
+    expect(page.locator(ROWS)).to_have_count(4)
+    rompetrol.click()
+    expect(rompetrol).to_have_attribute("aria-pressed", "false")
+    assert rompetrol.evaluate("b => getComputedStyle(b).backgroundColor") == "rgba(0, 0, 0, 0)"  # only the frame
+    assert rompetrol.evaluate("b => getComputedStyle(b).textDecorationLine") == "line-through"
+    expect(circles_of(page, "#f39200")).to_have_count(0)  # type: ignore[attr-defined]
+    expect(page.locator(ROWS)).to_have_count(3)
+    expect(page.locator("#price-table")).not_to_contain_text("Rompetrol")
+    rompetrol.click()
+    expect(rompetrol).to_have_attribute("aria-pressed", "true")
+    expect(circles_of(page, "#f39200")).to_have_count(1)  # type: ignore[attr-defined]
+    expect(page.locator(ROWS)).to_have_count(4)
+
+
+def test_the_star_moves_to_the_cheapest_company_still_on(page_at: Callable[[float, float], Page], net: Net) -> None:
+    # Gamma is the cheapest of all, but 15 km away: the ★ reaches it only when nothing nearer is on
+    page = open_here(page_at, net, [("a", "Alpha", "#e41e30", 4.80, 1.0), ("b", "Beta", "#00843d", 4.95, 3.0),
+                                    ("g", "Gamma", "#8a1538", 4.70, 15.0)])
+    card, alpha, beta = page.locator("#best"), page.locator(BADGES).nth(0), page.locator(BADGES).nth(1)
+    expect(card).to_contain_text("Alpha")
+    alpha.click()
+    expect(card).to_contain_text("Beta")
+    (px, py), (sx, sy) = centre(page.locator(".best-pin").bounding_box()), centre(
+        circles_of(page, "#00843d").bounding_box())  # type: ignore[attr-defined]
+    assert abs(px - sx) < 3 and abs(py - sy) < 3  # the ★ on the map moved with the card
+    beta.click()
+    expect(card).to_contain_text("Gamma")
+    expect(card).to_contain_text("15.0 კმ")  # nothing on within 5 or 10 km: the zone grew to 20 km
+    alpha.click()
+    expect(card).to_contain_text("Alpha")
+
+
+def test_with_every_company_off_the_page_says_to_turn_one_on(page_at: Callable[[float, float], Page],
+                                                             net: Net) -> None:
+    page = open_here(page_at, net, FOUR)
+    for badge in page.locator(BADGES).all():
+        badge.click()
+    expect(page.locator("path.station")).to_have_count(0)
+    expect(page.locator(".best-pin")).to_have_count(0)
+    expect(page.locator("#best")).to_contain_text("ჩართე ერთი კომპანია მაინც")
+    expect(page.locator(ROWS)).to_have_count(0)
+    expect(page.locator("#status")).to_contain_text("ჩართე ერთი კომპანია მაინც")
+    page.get_by_role("button", name="ENG").click()
+    expect(page.locator("#best")).to_contain_text("Turn on at least one company")
+    expect(page.locator("#status")).to_contain_text("Turn on at least one company")
+    page.locator(BADGES).first.click()  # SOCAR on again
+    expect(circles_of(page, "#e41e30")).to_have_count(1)  # type: ignore[attr-defined]
+    expect(page.locator(ROWS)).to_have_count(1)

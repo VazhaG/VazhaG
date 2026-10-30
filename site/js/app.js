@@ -98,9 +98,9 @@ function stationWindow(s) {
   return box;
 }
 
-function renderStations() {
+function renderStations(stations) {
   state.markers.clearLayers();
-  for (const s of stationsFor(state.stations, state.fuel)) {
+  for (const s of stationsFor(stations, state.fuel)) {
     L.circleMarker([s.lat, s.lng], {
       radius: 7,
       color: '#ffffff',
@@ -138,8 +138,26 @@ function renderCompanies() {
     badge.setAttribute('aria-pressed', String(!state.off.has(c.id)));
     badge.style.setProperty('--company', c.color);
     badge.style.setProperty('--ink', inkOn(c.color));
+    badge.addEventListener('click', () => toggleCompany(c.id));
     return badge;
   }));
+}
+
+// REQ-003: a badge switches its company off or on — the map, the ★ and the table follow at once.
+function toggleCompany(id) {
+  if (state.off.has(id)) state.off.delete(id);
+  else state.off.add(id);
+  render();
+}
+
+function shown(data) {
+  return data && { ...data, companies: (data.companies ?? []).filter((c) => !state.off.has(String(c?.id))) };
+}
+
+// REQ-005: every company in the row switched off.
+function everyCompanyOff() {
+  const ids = companiesOf(state.prices, state.stations).map((c) => c.id);
+  return ids.length > 0 && ids.every((id) => state.off.has(id));
 }
 
 // AC-003: the fixed city list, in the page's language, alphabetically.
@@ -174,7 +192,7 @@ function chooseCity(c) {
 }
 
 // REQ-003: the ★ card, once the page knows where to count from.
-function renderBest() {
+function renderBest(prices, stations, allOff) {
   const card = document.getElementById('best');
   markBest(null);
   if (!state.here && !state.asking) {
@@ -188,9 +206,11 @@ function renderBest() {
     card.replaceChildren(...parts);
     return;
   }
-  const result = cheapestNearby(state.prices, state.stations, state.fuel, state.here, Date.now());
+  const result = allOff ? { reason: 'allOff' } : cheapestNearby(prices, stations, state.fuel, state.here, Date.now());
   markBest(result.best);
-  if (result.best) {
+  if (result.reason === 'allOff') {
+    parts.push(element('p', 'note', t('companies.allOff')));
+  } else if (result.best) {
     const b = result.best;
     const who = element('p', 'who');
     const dot = element('span', 'dot');
@@ -269,16 +289,24 @@ function rowElement(row) {
 }
 
 function render() {
+  const prices = shown(state.prices);
+  const stations = shown(state.stations);
+  const allOff = everyCompanyOff();
   renderCompanies();
-  renderStations();
-  renderBest();
+  renderStations(stations);
+  renderBest(prices, stations, allOff);
   const body = document.querySelector('#price-table tbody');
   if (!state.prices) {
     body.replaceChildren();
     setStatus(t('status.noPrices'));
     return;
   }
-  const rows = priceRows(state.prices, state.fuel, Date.now());
+  if (allOff) {
+    body.replaceChildren();
+    setStatus(t('companies.allOff'));
+    return;
+  }
+  const rows = priceRows(prices, state.fuel, Date.now());
   body.replaceChildren(...rows.map(rowElement));
   setStatus(rows.length ? '' : t('status.noFuelPrice'));
 }

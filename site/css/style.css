@@ -241,6 +241,12 @@ h1 {
   cursor: pointer;
 }
 
+.badge[aria-pressed="false"] {
+  background: transparent; /* switched off: only the company's frame stays, and the name is crossed out */
+  color: var(--text);
+  text-decoration: line-through;
+}
+
 .badge:focus-visible {
   outline: 2px solid var(--text);
   outline-offset: 2px;
