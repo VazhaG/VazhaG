@@ -43,6 +43,7 @@ export const TEXT = {
     'note.tiles':
       'რუკის სურათები OpenStreetMap-ის სერვერიდან იტვირთება იმ არეალისთვის, რომელსაც ეკრანი აჩვენებს; '
       + 'შენი ზუსტი მდებარეობა არსად იგზავნება.',
+    'note.storage': 'ენა და კომპანიების არჩევანი მხოლოდ შენს ტელეფონში ინახება.',
     'note.cities': 'ქალაქების კოორდინატები:',
     'lang.group': 'ენა',
   },
@@ -82,6 +83,7 @@ export const TEXT = {
     'note.standard': 'Standard prices; self-service and card prices may be lower.',
     'note.tiles':
       'Map images load from the OpenStreetMap server for the area on the screen; your exact location is never sent.',
+    'note.storage': 'The language and the companies you choose are kept only on your phone.',
     'note.cities': 'City coordinates:',
     'lang.group': 'Language',
   },

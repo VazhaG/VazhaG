@@ -12,7 +12,9 @@ const LOCATE = { enableHighAccuracy: false, timeout: 10000, maximumAge: 300000 }
 const NEAR_ZOOM = 12;
 // a station's window opens clear of the fuel choice on the map's top and of the sheet over its lower edge
 const POPUP = { autoPanPaddingTopLeft: [12, 72], autoPanPaddingBottomRight: [12, 48] };
-const LANG_KEY = 'fuel-map.lang'; // the chosen language stays on this phone; nothing else is stored
+// What stays on this phone, and nothing else: the chosen language, and the companies switched off (SPEC-0002 REQ-004)
+const LANG_KEY = 'fuel-map.lang';
+const OFF_KEY = 'fuel-map.off';
 // Georgian time, written the Georgian way ("30.10 15:00") — the browser's own "ka" format gives "10-30".
 const TIME_PARTS = new Intl.DateTimeFormat('en-GB', {
   timeZone: 'Asia/Tbilisi',
@@ -147,7 +149,27 @@ function renderCompanies() {
 function toggleCompany(id) {
   if (state.off.has(id)) state.off.delete(id);
   else state.off.add(id);
+  saveOff();
   render();
+}
+
+// REQ-004: only the list of companies switched off is kept; with every company on, nothing is.
+function saveOff() {
+  try {
+    if (state.off.size) localStorage.setItem(OFF_KEY, JSON.stringify([...state.off]));
+    else localStorage.removeItem(OFF_KEY);
+  } catch {
+    // a private window or a blocked storage: the choice works for this visit only
+  }
+}
+
+function savedOff() {
+  try {
+    const ids = JSON.parse(localStorage.getItem(OFF_KEY) ?? '[]');
+    return new Set(Array.isArray(ids) ? ids.filter((id) => typeof id === 'string') : []);
+  } catch {
+    return new Set(); // blocked or broken: every company on
+  }
 }
 
 function shown(data) {
@@ -405,6 +427,7 @@ function validCities(data) {
 
 async function main() {
   setLang(savedLanguage() ?? 'ka');
+  state.off = savedOff();
   applyStatic();
   for (const button of document.querySelectorAll('.lang button')) {
     button.addEventListener('click', () => setLanguage(button.dataset.lang));

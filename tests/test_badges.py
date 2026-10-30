@@ -6,6 +6,7 @@ AC-001, AC-009, AC-010, AC-011).
 
 from __future__ import annotations
 
+import json
 from collections.abc import Callable
 from datetime import UTC, datetime
 
@@ -253,3 +254,55 @@ def test_a_gas_price_whose_stations_are_unknown_is_also_told_apart(page_at: Call
     page.locator(BADGES).nth(0).click()
     expect(page.locator("#best")).to_contain_text(FILTERED_KA)
     expect(page.locator("#best")).not_to_contain_text(GAS_UNKNOWN_KA)
+
+
+# PLAN-0002 T5: the choice stays on the phone — only the companies switched off (REQ-004; AC-005, AC-011)
+STORED_OFF = "localStorage.getItem('fuel-map.off')"
+STORAGE_KA = "ენა და კომპანიების არჩევანი მხოლოდ შენს ტელეფონში ინახება"
+STORAGE_EN = "The language and the companies you choose are kept only on your phone"
+
+
+def reopen(page: Page) -> None:
+    """The page opened again: the badges come with the data, and the fuel is the first one again."""
+    page.reload()
+    expect(page.locator(BADGES)).to_have_count(4)
+    page.get_by_text("დიზელი", exact=True).first.click()
+
+
+def test_the_choice_is_remembered_on_the_phone_and_nowhere_else(page_at: Callable[[float, float], Page],
+                                                                 net: Net) -> None:
+    page = open_here(page_at, net, FOUR)
+    assert page.evaluate(STORED_OFF) is None  # everything on: nothing stored
+    page.locator(BADGES).nth(1).click()
+    page.locator(BADGES).nth(2).click()
+    assert json.loads(page.evaluate(STORED_OFF)) == ["rompetrol", "lukoil"]
+    assert set(page.evaluate("Object.keys(localStorage)")) == {"fuel-map.off"}
+    assert page.context.cookies() == []
+    reopen(page)
+    pressed = [b.get_attribute("aria-pressed") for b in page.locator(BADGES).all()]
+    assert pressed == ["true", "false", "false", "true"]
+    expect(page.locator(ROWS)).to_have_count(2)
+    assert not [u for u in net.requests if "rompetrol" in u or "lukoil" in u] and net.bodies == []
+    page.locator(BADGES).nth(1).click()
+    page.locator(BADGES).nth(2).click()
+    assert page.evaluate(STORED_OFF) is None  # all on again: the list is gone
+    expect(page.locator("footer")).to_contain_text(STORAGE_KA)
+    page.get_by_role("button", name="ENG").click()
+    expect(page.locator("footer")).to_contain_text(STORAGE_EN)
+
+
+def test_a_broken_or_blocked_store_leaves_every_company_on(page_at: Callable[[float, float], Page],
+                                                           net: Net) -> None:
+    page = open_here(page_at, net, FOUR)
+    for stored in ('{not json', '"rompetrol"', '[42, null]', '["ghost"]'):  # broken, not a list, not names, gone
+        page.evaluate("v => localStorage.setItem('fuel-map.off', v)", stored)
+        reopen(page)
+        pressed = {b.get_attribute("aria-pressed") for b in page.locator(BADGES).all()}
+        assert pressed == {"true"}, stored
+        expect(page.locator(ROWS)).to_have_count(4)
+    page.add_init_script("Storage.prototype.getItem = Storage.prototype.setItem = Storage.prototype.removeItem ="
+                         " () => { throw new Error('blocked'); };")
+    reopen(page)
+    page.locator(BADGES).nth(0).click()  # the choice works for this visit, it just is not kept
+    expect(page.locator(BADGES).nth(0)).to_have_attribute("aria-pressed", "false")
+    expect(page.locator(ROWS)).to_have_count(3)

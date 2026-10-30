@@ -52,7 +52,7 @@ def test_the_visitors_place_never_leaves_the_page(page_at: Callable[[float, floa
     assert net.outside == []  # no script, font or beacon from anywhere else: only the site and the map images
     assert page.context.cookies() == []
     stored = page.evaluate("Object.keys(localStorage)")
-    assert set(stored) <= {"fuel-map.lang"}
+    assert set(stored) <= {"fuel-map.lang", "fuel-map.off"}  # the language and the companies switched off (SPEC-0002)
 
 
 # data: is Leaflet's own empty picture, set on a tile it no longer needs (no request leaves the page)
