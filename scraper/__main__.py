@@ -43,8 +43,11 @@ def write(path: Path, entries: list[dict], now: datetime) -> None:
     body = data.encode("utf-8")
     path.parent.mkdir(parents=True, exist_ok=True)
     part = path.with_name(path.name + ".part")
-    part.write_bytes(body)
-    os.replace(part, path)
+    try:
+        part.write_bytes(body)
+        os.replace(part, path)
+    finally:
+        part.unlink(missing_ok=True)  # a half-written part must not be published with the site
 
 
 def say(line: str) -> None:

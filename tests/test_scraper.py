@@ -73,8 +73,8 @@ def test_cli_writes_the_data_files(tmp_path: Path, monkeypatch: pytest.MonkeyPat
     assert entry["id"] == "socar" and entry["stations"]
 
 
-def test_cli_fails_when_a_company_has_not_been_read_for_48_hours(tmp_path: Path,
-                                                                  monkeypatch: pytest.MonkeyPatch) -> None:
+def test_cli_fails_when_a_company_has_not_been_read_for_48_hours(tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+                                                                  capsys: pytest.CaptureFixture[str]) -> None:
     # AC-005: the run turns red so GitHub tells the owner; the other prices are still written
     old_time = (datetime.now(UTC) - timedelta(hours=50)).strftime("%Y-%m-%dT%H:%M:%SZ")
     out = tmp_path / "prices.json"
@@ -90,6 +90,8 @@ def test_cli_fails_when_a_company_has_not_been_read_for_48_hours(tmp_path: Path,
     monkeypatch.setattr(cli, "COMPANIES", [c for c in COMPANIES if c.id in ("socar", "rompetrol")])
     monkeypatch.setattr(cli, "fetch", only_socar)
     assert cli.main(["--out", str(out), "--stations-out", str(tmp_path / "stations.json")]) == 1
+    # the stations are missing here too and would turn the run red by themselves: the prices rule shows in its line
+    assert "prices not read for 48 hours or more: Rompetrol" in capsys.readouterr().err.splitlines()
     by_id = {e["id"]: e for e in json.loads(out.read_text(encoding="utf-8"))["companies"]}
     assert by_id["rompetrol"] == stale
     assert len(by_id["socar"]["prices"]) == 7
@@ -145,6 +147,23 @@ def test_a_data_file_that_cannot_be_written_whole_stays_as_it_was(tmp_path: Path
     out.write_text('{"companies": []}', encoding="utf-8")
     with pytest.raises(UnicodeEncodeError):
         cli.write(out, [{"name": "\ud83d"}], datetime(2026, 10, 30, tzinfo=UTC))
+    assert out.read_text(encoding="utf-8") == '{"companies": []}'
+    assert [p.name for p in tmp_path.iterdir()] == ["prices.json"]
+
+
+def test_a_write_cut_halfway_leaves_the_old_file_whole(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    # e.g. a full disk: the old file stays whole, not half old and half new, and no part of the new one is left
+    out = tmp_path / "prices.json"
+    out.write_text('{"companies": []}', encoding="utf-8")
+    real = Path.write_bytes
+
+    def cut(self: Path, data: bytes) -> int:
+        real(self, data[: len(data) // 2])
+        raise OSError("No space left on device")
+
+    monkeypatch.setattr(Path, "write_bytes", cut)
+    with pytest.raises(OSError, match="No space"):
+        cli.write(out, [{"name": "ახალი"}], datetime(2026, 10, 30, tzinfo=UTC))
     assert out.read_text(encoding="utf-8") == '{"companies": []}'
     assert [p.name for p in tmp_path.iterdir()] == ["prices.json"]
 

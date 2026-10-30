@@ -45,6 +45,9 @@ MAX_STATIONS = 1000
 # its own, so a page sent a byte at a time would otherwise hold the whole run; the largest page now is about 1 MB.
 DEADLINE_S = 60.0
 MAX_BYTES = 10_000_000
+# One company's prices or stations in a data file: four of them stay under MAX_BYTES, the size at which the next run
+# would refuse the published file (scraper/published.py). The largest entry now is SOCAR's stations, about 46 kB.
+MAX_ENTRY_BYTES = 1_000_000
 
 # one optional tail after the number: two optional runs of spaces side by side would be tried in every split
 _PRICE_RE = re.compile(r"\s*(\d+(?:[.,]\d+)?)\s*(?:₾\s*)?")
@@ -92,7 +95,8 @@ def _download(url: str, timeout: float) -> str:
         body = response.read(MAX_BYTES + 1)
     if len(body) > MAX_BYTES:
         raise ParseError(f"the answer is larger than {MAX_BYTES // 1_000_000} MB")
-    if declared.isdigit() and len(body) < int(declared):  # a limited read does not say the connection was cut
+    # a limited read does not say the connection was cut; "²" is a digit to isdigit(), not to int()
+    if declared.isascii() and declared.isdigit() and len(body) < int(declared):
         raise http.client.IncompleteRead(body, int(declared) - len(body))
     return body.decode(charset, errors="replace")
 
@@ -161,9 +165,11 @@ def _entry(company: Company, source: str, read_at: datetime, key: str, items: li
     entry = {"id": company.id, "name": company.name, "color": company.color, "source": source,
              "time": iso(read_at), "basis": "read", key: items}
     try:
-        json.dumps(entry, ensure_ascii=False).encode("utf-8")
+        size = len(json.dumps(entry, ensure_ascii=False).encode("utf-8"))
     except UnicodeEncodeError as e:  # e.g. half of a UTF-16 pair from a JSON source: the file could not be written
         raise ParseError("the page holds a broken character (half of a UTF-16 pair)") from e
+    if size > MAX_ENTRY_BYTES:
+        raise ParseError(f"the entry is larger than {MAX_ENTRY_BYTES // 1_000_000} MB")
     return entry
 
 

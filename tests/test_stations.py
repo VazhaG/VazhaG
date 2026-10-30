@@ -13,7 +13,17 @@ from datetime import UTC, datetime
 import pytest
 
 from scraper import lukoil, rompetrol, socar, wissol
-from scraper.core import MAX_STATIONS, PETROL, Company, ParseError, Reading, Station, refresh_stations
+from scraper.core import (
+    MAX_BYTES,
+    MAX_ENTRY_BYTES,
+    MAX_STATIONS,
+    PETROL,
+    Company,
+    ParseError,
+    Reading,
+    Station,
+    refresh_stations,
+)
 from support import ROOT
 
 FIXTURES = ROOT / "tests" / "fixtures"
@@ -142,6 +152,17 @@ def test_a_list_older_than_7_days_no_longer_judges_the_new_one() -> None:
     recent = {"a": old_entry("a", 100) | {"time": "2026-10-24T12:00:00Z"}}  # 6 days before NOW
     entries, _log, read = refresh_stations([company("a", [at(41.7, 44.8)] * 10)], recent, get, NOW)
     assert (entries, read) == ([recent["a"]], 0)
+
+
+def test_one_company_larger_than_its_share_of_a_data_file_is_a_misreading() -> None:
+    # Four companies' entries must stay under the size at which the next run would refuse the published file
+    # (scraper/published.py); the largest entry now is SOCAR's stations, about 46 kB (2026-10-30)
+    previous = {"a": old_entry("a", 1)}
+    huge = Station("x" * MAX_ENTRY_BYTES, "მისამართი", 41.7, 44.8, PETROL)
+    entries, log, read = refresh_stations([company("a", [huge])], previous, get, NOW)
+    assert (entries, read) == ([previous["a"]], 0)
+    assert log[0].startswith("A: stations not read — the entry is larger than 1 MB")
+    assert 4 * MAX_ENTRY_BYTES < MAX_BYTES
 
 
 def test_a_broken_character_keeps_the_previous_list() -> None:

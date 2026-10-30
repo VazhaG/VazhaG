@@ -18,6 +18,7 @@ import pytest
 
 from scraper import published
 from scraper.changed import KEEPALIVE, changed, comparable
+from scraper.core import ParseError
 from scraper.published import TRIES, start
 from support import ROOT
 
@@ -97,6 +98,17 @@ def test_a_broken_published_file_does_not_stop_every_run_after_it(tmp_path: Path
     log = start(PUBLISHED, paths, get, no_wait)
     assert [p.read_text(encoding="utf-8") for p in paths] == [REPOSITORY_COPY, FRESH]
     assert log[0].startswith("::warning::the published prices.json is not a data file")
+
+
+def test_a_published_file_too_large_to_take_does_not_stop_every_run_after_it(tmp_path: Path) -> None:
+    paths = repository_copy(tmp_path)
+    get, calls = site_answering({"prices.json": [ParseError("the answer is larger than 10 MB")],
+                                 "stations.json": [FRESH]})
+    log = start(PUBLISHED, paths, get, no_wait)
+    assert [p.read_text(encoding="utf-8") for p in paths] == [REPOSITORY_COPY, FRESH]
+    assert log[0] == ("::warning::the published prices.json could not be taken (the answer is larger than 10 MB) — "
+                      "starting from the repository's")
+    assert len(calls) == 2  # the same file would be as large again: it is not asked twice
 
 
 @pytest.mark.parametrize("failure", [http_error(503), urllib.error.URLError("connection refused"),

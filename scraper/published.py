@@ -5,8 +5,9 @@
 Each published file is written over the repository's copy. That copy is committed only when prices change
 (scraper/changed.py), so its times can be weeks old: starting from it would hide prices read hours ago and turn their
 companies overdue (SPEC-0001 REQ-006, REQ-007). It stays the start only when the site has no such file yet (404,
-before the first publication) or the published one is not a data file, so that one broken file cannot stop every run
-after it. Any other failure, after TRIES tries, exits 1: nothing is read or published in that run.
+before the first publication) or the published one cannot be taken (not a data file, larger than the reader takes),
+so that one broken file cannot stop every run after it. Any other failure, after TRIES tries, exits 1: nothing is read
+or published in that run.
 """
 
 from __future__ import annotations
@@ -19,7 +20,7 @@ import urllib.error
 from collections.abc import Callable
 from pathlib import Path
 
-from scraper.core import fetch, one_line
+from scraper.core import ParseError, fetch, one_line
 
 TRIES = 3
 WAIT_S = 5.0
@@ -57,7 +58,11 @@ def start(base: str, paths: list[Path], get: Callable[[str], str], wait: Callabl
     """Write each published file over the repository's copy; the lines say where each one starts from."""
     log = []
     for path in paths:
-        text = download(base + path.name, get, wait)
+        try:
+            text = download(base + path.name, get, wait)
+        except ParseError as e:  # e.g. larger than the reader takes: the same file would come again on every try
+            log.append(f"::warning::the published {path.name} could not be taken ({e}) — starting from the repository's")
+            continue
         if text is None:
             log.append(f"no published {path.name} yet — starting from the repository's")
         elif not is_data(text):
