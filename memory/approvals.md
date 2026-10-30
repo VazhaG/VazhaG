@@ -13,3 +13,4 @@ status: living
 |---|---|---|---|---|
 | 2026-10-30 09:28 +0000 | intent | draft → accepted | intent.md | — |
 | 2026-10-30 09:38 +0000 | SPEC-0001 | review → approved | docs/specs/SPEC-0001-fuel-prices-map.md | — |
+| 2026-10-30 09:41 +0000 | ADR-0012 | proposed → accepted | docs/adr/ADR-0012-static-site-github-actions-pages.md | — |

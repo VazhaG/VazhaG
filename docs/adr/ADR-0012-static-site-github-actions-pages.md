@@ -2,7 +2,7 @@
 id: ADR-0012
 type: adr
 title: სტეკი — სტატიკური საიტი (HTML, CSS, JavaScript, Leaflet + OpenStreetMap), ფასების შემოწმება Python-ით GitHub Actions-ში, ჰოსტინგი GitHub Pages
-status: proposed
+status: accepted
 date: 2026-10-30
 deciders: მფლობელი (`/approve`); შემთავაზებელი — Claude
 related:
