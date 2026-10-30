@@ -2,7 +2,7 @@
 id: SPEC-0001
 type: spec
 title: საწვავის ფასების რუკა — პირველი ვერსია
-status: draft
+status: approved
 created: 2026-10-30
 updated: 2026-10-30
 intent: "[[intent]]"
