@@ -1,0 +1,353 @@
+{
+ "GetBranches": {
+  "Status": "1",
+  "Message": "Success",
+  "Results": [
+   {
+    "AgsId": 1,
+    "AgsNameGe": "აეროპორტი 1",
+    "AgsNameEng": "Aeroporti - 1",
+    "RegionId": 1,
+    "RegionNameGe": "თბილისი",
+    "RegionNameEng": "Tbilisi",
+    "RegionDistrictNameGe": "თბილისი",
+    "RegionDistrictNameEng": "Tbilisi",
+    "AgsAddressGe": "ქ. თბილისი, კახეთის გზატკეცილზე, მარცხენა მხარეს, N44762 სამხედრო ნაწილის მიმდებარედ",
+    "AgsAddressEng": "Tbilisi, Kakheti highway, left side, N44762 nearbody of military part",
+    "BrandIds": [
+     1
+    ],
+    "Latitude": "41.68782",
+    "Longitude": "44.89672",
+    "Services": [
+     {
+      "ServiceId": 1,
+      "ServiceNameGe": "ვეი-მარტი",
+      "ServiceNameEng": "Way-Mart"
+     },
+     {
+      "ServiceId": 8,
+      "ServiceNameGe": "სერვის ბლოკი",
+      "ServiceNameEng": "Service Block"
+     },
+     {
+      "ServiceId": 15,
+      "ServiceNameGe": "საპირფარეშო",
+      "ServiceNameEng": "WC"
+     }
+    ],
+    "Fuels": [
+     {
+      "FuelCode": "PREMIUM",
+      "FuelNameGe": "ნანო პრემიუმი",
+      "FuelNameEng": "Nano Premium"
+     },
+     {
+      "FuelCode": "DIESEL",
+      "FuelNameGe": "ევრო 5 დიზელი",
+      "FuelNameEng": "Euro 5 Diesel"
+     },
+     {
+      "FuelCode": "EURODSL",
+      "FuelNameGe": "ნანო ევრო 5 დიზელი",
+      "FuelNameEng": "Nano Euro 5 Diesel"
+     },
+     {
+      "FuelCode": "EURREG",
+      "FuelNameGe": "ნანო ევრო რეგულარი",
+      "FuelNameEng": "Nano Euro Regular"
+     }
+    ],
+    "ImageUrls": [
+     {
+      "ImageUrlId": 5,
+      "LanguageId": 1,
+      "Url": "https://sgp.ge/uploads/content_files/aeroporti-1.png"
+     }
+    ],
+    "AvailablePayments": [
+     {
+      "PayTypeId": 4,
+      "PaymentTypeGe": "საწვავის ბარათი",
+      "PaymentTypeEng": "Fuel card"
+     },
+     {
+      "PayTypeId": 3,
+      "PaymentTypeGe": "ტალონი",
+      "PaymentTypeEng": "Coupon"
+     },
+     {
+      "PayTypeId": 5,
+      "PaymentTypeGe": "ენერჯი ქარდი",
+      "PaymentTypeEng": "Energy card"
+     },
+     {
+      "PayTypeId": 1,
+      "PaymentTypeGe": "ნაღდი",
+      "PaymentTypeEng": "Cash"
+     },
+     {
+      "PayTypeId": 2,
+      "PaymentTypeGe": "უნაღდო",
+      "PaymentTypeEng": "Bank card"
+     }
+    ]
+   },
+   {
+    "AgsId": 2,
+    "AgsNameGe": "აეროპორტი 2",
+    "AgsNameEng": "Aeroporti -2",
+    "RegionId": 1,
+    "RegionNameGe": "თბილისი",
+    "RegionNameEng": "Tbilisi",
+    "RegionDistrictNameGe": "თბილისი",
+    "RegionDistrictNameEng": "Tbilisi",
+    "AgsAddressGe": "ქ. თბილისი, სავაჭრო-საბითუმო ბაზა ,,ცეკავშირი მიმდებარედ",
+    "AgsAddressEng": "Tbilisi, near trade-wholesale base",
+    "BrandIds": [
+     3,
+     7
+    ],
+    "Latitude": "41.69277",
+    "Longitude": "44.96093",
+    "Services": [
+     {
+      "ServiceId": 1,
+      "ServiceNameGe": "ვეი-მარტი",
+      "ServiceNameEng": "Way-Mart"
+     },
+     {
+      "ServiceId": 3,
+      "ServiceNameGe": "ელ. დამტენები",
+      "ServiceNameEng": "Charger"
+     },
+     {
+      "ServiceId": 15,
+      "ServiceNameGe": "საპირფარეშო",
+      "ServiceNameEng": "WC"
+     },
+     {
+      "ServiceId": 2,
+      "ServiceNameGe": "ხელით რეცხვა",
+      "ServiceNameEng": "Car Wash"
+     }
+    ],
+    "Fuels": [
+     {
+      "FuelCode": "PREMIUM",
+      "FuelNameGe": "ნანო პრემიუმი",
+      "FuelNameEng": "Nano Premium"
+     },
+     {
+      "FuelCode": "DIESEL",
+      "FuelNameGe": "ევრო 5 დიზელი",
+      "FuelNameEng": "Euro 5 Diesel"
+     },
+     {
+      "FuelCode": "EURODSL",
+      "FuelNameGe": "ნანო ევრო 5 დიზელი",
+      "FuelNameEng": "Nano Euro 5 Diesel"
+     },
+     {
+      "FuelCode": "EURREG",
+      "FuelNameGe": "ნანო ევრო რეგულარი",
+      "FuelNameEng": "Nano Euro Regular"
+     }
+    ],
+    "ImageUrls": [
+     {
+      "ImageUrlId": 1201,
+      "LanguageId": 1,
+      "Url": "https://s-cont-01.sgp.ge/public/sgp/aeroporti 2.JPG"
+     }
+    ],
+    "AvailablePayments": [
+     {
+      "PayTypeId": 4,
+      "PaymentTypeGe": "საწვავის ბარათი",
+      "PaymentTypeEng": "Fuel card"
+     },
+     {
+      "PayTypeId": 3,
+      "PaymentTypeGe": "ტალონი",
+      "PaymentTypeEng": "Coupon"
+     },
+     {
+      "PayTypeId": 2,
+      "PaymentTypeGe": "უნაღდო",
+      "PaymentTypeEng": "Bank card"
+     },
+     {
+      "PayTypeId": 1,
+      "PaymentTypeGe": "ნაღდი",
+      "PaymentTypeEng": "Cash"
+     }
+    ]
+   },
+   {
+    "AgsId": 36,
+    "AgsNameGe": "შეშელიძე 1",
+    "AgsNameEng": "Sheshelidze 1",
+    "RegionId": 1,
+    "RegionNameGe": "თბილისი",
+    "RegionNameEng": "Tbilisi",
+    "RegionDistrictNameGe": "თბილისი",
+    "RegionDistrictNameEng": "Tbilisi",
+    "AgsAddressGe": "თბილისის გლდანის რაიონი / სარაჯიშვილის ქ. ",
+    "AgsAddressEng": "Tbilisi Gldani district / Sarajishvili street",
+    "BrandIds": [
+     1
+    ],
+    "Latitude": "41.78493",
+    "Longitude": "44.79866",
+    "Services": [
+     {
+      "ServiceId": 1,
+      "ServiceNameGe": "ვეი-მარტი",
+      "ServiceNameEng": "Way-Mart"
+     },
+     {
+      "ServiceId": 8,
+      "ServiceNameGe": "სერვის ბლოკი",
+      "ServiceNameEng": "Service Block"
+     }
+    ],
+    "Fuels": [
+     {
+      "FuelCode": "CNG",
+      "FuelNameGe": "ბუნებრივი აირი",
+      "FuelNameEng": "CNG"
+     },
+     {
+      "FuelCode": "LPG",
+      "FuelNameGe": "თხევადი აირი",
+      "FuelNameEng": "LPG"
+     },
+     {
+      "FuelCode": "PREMIUM",
+      "FuelNameGe": "ნანო პრემიუმი",
+      "FuelNameEng": "Nano Premium"
+     },
+     {
+      "FuelCode": "SUPER",
+      "FuelNameGe": "ნანო სუპერი",
+      "FuelNameEng": "Nano Super"
+     },
+     {
+      "FuelCode": "DIESEL",
+      "FuelNameGe": "ევრო 5 დიზელი",
+      "FuelNameEng": "Euro 5 Diesel"
+     },
+     {
+      "FuelCode": "EURODSL",
+      "FuelNameGe": "ნანო ევრო 5 დიზელი",
+      "FuelNameEng": "Nano Euro 5 Diesel"
+     },
+     {
+      "FuelCode": "EURREG",
+      "FuelNameGe": "ნანო ევრო რეგულარი",
+      "FuelNameEng": "Nano Euro Regular"
+     }
+    ],
+    "ImageUrls": [
+     {
+      "ImageUrlId": 1227,
+      "LanguageId": 1,
+      "Url": "https://s-cont-01.sgp.ge/public/sgp/sheshelidze 1.JPG"
+     }
+    ],
+    "AvailablePayments": [
+     {
+      "PayTypeId": 4,
+      "PaymentTypeGe": "საწვავის ბარათი",
+      "PaymentTypeEng": "Fuel card"
+     },
+     {
+      "PayTypeId": 3,
+      "PaymentTypeGe": "ტალონი",
+      "PaymentTypeEng": "Coupon"
+     },
+     {
+      "PayTypeId": 5,
+      "PaymentTypeGe": "ენერჯი ქარდი",
+      "PaymentTypeEng": "Energy card"
+     },
+     {
+      "PayTypeId": 1,
+      "PaymentTypeGe": "ნაღდი",
+      "PaymentTypeEng": "Cash"
+     },
+     {
+      "PayTypeId": 2,
+      "PaymentTypeGe": "უნაღდო",
+      "PaymentTypeEng": "Bank card"
+     }
+    ]
+   },
+   {
+    "AgsId": 1112,
+    "AgsNameGe": "ბელიაშვილი 2",
+    "AgsNameEng": "Beliashvili 2",
+    "RegionId": 1,
+    "RegionNameGe": "თბილისი",
+    "RegionNameEng": "Tbilisi",
+    "RegionDistrictNameGe": "თბილისი",
+    "RegionDistrictNameEng": "Tbilisi",
+    "AgsAddressGe": "ქ. თბილისი, აკაკი ბელიაშვილის N66",
+    "AgsAddressEng": "Tbilisi, A beliashvili N66",
+    "BrandIds": [
+     7
+    ],
+    "Latitude": "41.7697378",
+    "Longitude": "44.778998",
+    "Services": [
+     {
+      "ServiceId": 3,
+      "ServiceNameGe": "ელ. დამტენები",
+      "ServiceNameEng": "Charger"
+     },
+     {
+      "ServiceId": 17,
+      "ServiceNameGe": "სწ. ელ. დამტენები",
+      "ServiceNameEng": "Fast Charger"
+     },
+     {
+      "ServiceId": 1,
+      "ServiceNameGe": "ვეი-მარტი",
+      "ServiceNameEng": "Way-Mart"
+     },
+     {
+      "ServiceId": 8,
+      "ServiceNameGe": "სერვის ბლოკი",
+      "ServiceNameEng": "Service Block"
+     }
+    ],
+    "Fuels": [],
+    "ImageUrls": [
+     {
+      "ImageUrlId": 3363,
+      "LanguageId": 1,
+      "Url": "https://s-cont-01.sgp.ge/public/sgp/ElBeliahvili2Ge.jpg"
+     },
+     {
+      "ImageUrlId": 3364,
+      "LanguageId": 1,
+      "Url": "https://s-cont-01.sgp.ge/public/sgp/ElBeliahvili2EN.jpg"
+     }
+    ],
+    "AvailablePayments": [
+     {
+      "PayTypeId": 1,
+      "PaymentTypeGe": "ნაღდი",
+      "PaymentTypeEng": "Cash"
+     },
+     {
+      "PayTypeId": 2,
+      "PaymentTypeGe": "უნაღდო",
+      "PaymentTypeEng": "Bank card"
+     }
+    ]
+   }
+  ]
+ }
+}

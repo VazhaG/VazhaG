@@ -1,0 +1,10 @@
+# The project's own Python settings: the price reader (scraper/) and the tests (tests/) — ADR-0012.
+# The engine's tools/ are not part of this; they carry their own checks (tools/gates/).
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff]
+target-version = "py312"
+line-length = 120
+src = [".", "tests"]  # so `scraper` and the tests' own `support` count as this project's modules

@@ -131,20 +131,18 @@ what = "tools/gates/drill.py: every guard, hook and gate is broken on purpose an
 [[gate]]
 id = "lint"
 level = 1
-enabled = false
-cmd = ["{venv_python}", "-m", "ruff", "check", "src"]
+enabled = true  # owner's yes, 2026-10-30 — ADR-0012, PLAN-0001 T1
+cmd = ["{venv_python}", "-m", "ruff", "check", "scraper", "tests"]
 pre_commit = true
-reason = "no project code yet — the stack ADR names the linter and its command (e.g. `npm run lint` for a Node stack)"
-what = "the stack's linter: lint errors are failures"
+what = "the stack's linter (ADR-0012): ruff on the price reader and the tests; the page's HTML goes through djlint inside `unit` (tests/test_html_lint.py), because a gate runs one command"
 
 [[gate]]
 id = "unit"
 level = 1
-enabled = false
+enabled = true  # owner's yes, 2026-10-30 — ADR-0012, PLAN-0001 T1
 cmd = ["{venv_python}", "-m", "pytest", "-q"]
 pre_commit = true
-reason = "no tests yet — switched on together with the first test (e.g. `npm test` for a Node stack)"
-what = "the stack's tests: every unit test passes"
+what = "the stack's tests (ADR-0012): pytest — the price reader's tests and the page in a real browser (Playwright)"
 
 # ── Level 2 — behaviour evals (switched on when the agent answers questions) ──
 [[gate]]
