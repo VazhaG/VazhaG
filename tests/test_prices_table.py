@@ -97,6 +97,19 @@ def test_text_from_a_company_site_is_shown_only_as_text(page: Page, net: Net) ->
     assert net.outside == []
 
 
+def test_the_time_says_it_is_our_reading_unless_the_company_gave_it(page: Page, net: Net) -> None:
+    # REQ-006: with no time from the source, the age counts from our reading — and the page says so
+    open_with(page, net, [
+        company("r", "Ours", 1, [price("diesel", 4.1)]),
+        company("s", "Theirs", 1, [price("diesel", 4.2)], basis="source"),
+    ], "დიზელი")
+    expect(page.locator("#price-table th").nth(2)).to_have_text("შემოწმდა")
+    expect(page.locator("footer")).to_contain_text("საიტები ფასის თარიღს არ აქვეყნებენ")
+    rows = page.locator(ROWS)
+    expect(rows.nth(0)).not_to_contain_text("კომპანიის თარიღი")
+    expect(rows.nth(1)).to_contain_text("კომპანიის თარიღი")
+
+
 def test_a_colour_from_the_data_must_be_a_plain_hex_colour(page: Page, net: Net) -> None:
     # The map's circles (T4) put the colour into an SVG attribute, where the browser would not drop `url(…)`.
     page.goto(net.base)

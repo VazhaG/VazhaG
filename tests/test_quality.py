@@ -6,17 +6,27 @@ seconds on a slow mobile network), §6 (text contrast WCAG AA, 4.5 : 1 — a hyp
 
 from __future__ import annotations
 
+import json
 import time
 from collections.abc import Callable
+from datetime import datetime
 
 from playwright.sync_api import Page, expect
 
-from support import Net
+from support import SITE, Net
 
 # An odd place in Tbilisi, so its digits cannot turn up by chance in a station's or a tile's address.
 VISITOR = (41.723457, 44.766531)
 SLOW_4G = {"offline": False, "latency": 150, "downloadThroughput": 1.6 * 1024 * 1024 / 8,
            "uploadThroughput": 750 * 1024 / 8}  # Lighthouse's "slow 4G": 150 ms, 1.6 Mbit/s down, 750 kbit/s up
+
+
+def at_data_time(page: Page) -> Page:
+    """The page's clock at the moment the committed data was read, so its prices are fresh whatever today is — the
+    repository copy is committed only when prices change (scraper/changed.py)."""
+    generated = json.loads((SITE / "data" / "prices.json").read_text(encoding="utf-8"))["generated"]
+    page.clock.set_fixed_time(datetime.fromisoformat(generated))
+    return page
 
 
 def visitor_traces() -> list[str]:
@@ -26,7 +36,7 @@ def visitor_traces() -> list[str]:
 
 def test_the_visitors_place_never_leaves_the_page(page_at: Callable[[float, float], Page], net: Net) -> None:
     net.real_data = True
-    page = page_at(*VISITOR)
+    page = at_data_time(page_at(*VISITOR))
     page.goto(net.base)
     card = page.locator("#best")
     expect(card.locator("a.go-google")).to_be_visible()
@@ -47,7 +57,7 @@ def test_the_visitors_place_never_leaves_the_page(page_at: Callable[[float, floa
 def test_the_card_shows_within_10_seconds_on_a_slow_mobile_network(page_at: Callable[[float, float], Page],
                                                                     net: Net) -> None:
     net.real_data = True
-    page = page_at(*VISITOR)
+    page = at_data_time(page_at(*VISITOR))
     cdp = page.context.new_cdp_session(page)
     cdp.send("Network.enable")
     cdp.send("Network.emulateNetworkConditions", SLOW_4G)
@@ -85,7 +95,7 @@ CONTRAST_JS = """() => {
 
 def test_every_text_has_wcag_aa_contrast(page_at: Callable[[float, float], Page], net: Net) -> None:
     net.real_data = True
-    page = page_at(*VISITOR)
+    page = at_data_time(page_at(*VISITOR))
     page.goto(net.base)
     expect(page.locator("#best a.go-google")).to_be_visible()
     page.get_by_text("დიზელი", exact=True).first.click()  # a chosen chip: white on violet

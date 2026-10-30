@@ -50,6 +50,8 @@ def parse(html: str) -> list[Reading]:
         rows = block["Results"]
     except (json.JSONDecodeError, KeyError, TypeError) as e:
         raise ParseError(f"GetCurrentPrices is not the expected shape ({e!r})") from e
+    if not isinstance(rows, list):
+        raise ParseError(f"GetCurrentPrices.Results is {type(rows).__name__}, not a list")
     readings = []
     for row in rows:
         try:

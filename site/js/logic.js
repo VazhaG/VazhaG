@@ -37,6 +37,7 @@ export function priceRows(data, fuel, now) {
         grade: String(p.grade ?? ''),
         price: p.price,
         time: c.time,
+        basis: c.basis === 'source' ? 'source' : 'read', // REQ-006: whose time it is
         stale: state === 'stale',
       });
     }

@@ -31,7 +31,9 @@ export const TEXT = {
     'table.title': 'ფასები კომპანიების მიხედვით',
     'table.company': 'კომპანია',
     'table.price': 'ფასი',
-    'table.time': 'განახლდა',
+    'table.time': 'შემოწმდა',
+    'time.source': 'კომპანიის თარიღი',
+    'note.times': 'დრო გვიჩვენებს, როდის წაიკითხა ჩვენმა პროგრამამ ფასი კომპანიის საიტზე: საიტები ფასის თარიღს არ აქვეყნებენ.',
     'note.source': 'ფასები მოდის კომპანიების ოფიციალური საიტებიდან და სადგურზე შეიძლება განსხვავდებოდეს.',
     'note.standard': 'ფასი სტანდარტულია; თვითმომსახურებისა და ბარათის ფასი შეიძლება დაბალი იყოს.',
     'note.tiles':
@@ -65,7 +67,9 @@ export const TEXT = {
     'table.title': 'Prices by company',
     'table.company': 'Company',
     'table.price': 'Price',
-    'table.time': 'Updated',
+    'table.time': 'Checked',
+    'time.source': "the company's date",
+    'note.times': "The time is when our program read the price on the company's site: the sites publish no date.",
     'note.source': "Prices come from the companies' official websites and may differ at the station.",
     'note.standard': 'Standard prices; self-service and card prices may be lower.',
     'note.tiles':

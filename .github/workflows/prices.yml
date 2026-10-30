@@ -32,15 +32,8 @@ jobs:
       - name: Install the reader
         run: python -m pip install -r requirements.txt
       - name: Start from the published data — its times are the last good readings
-        run: |
-          for f in prices stations; do
-            if curl -fsS --max-time 30 -o "$RUNNER_TEMP/$f.json" "https://vazhag.github.io/VazhaG/data/$f.json" \
-               && python -c "import json, sys; json.load(open(sys.argv[1], encoding='utf-8'))" "$RUNNER_TEMP/$f.json"; then
-              cp "$RUNNER_TEMP/$f.json" "site/data/$f.json"
-            else
-              echo "no published $f.json yet — starting from the repository's"
-            fi
-          done
+        # The repository's copy only before the first publication; a failed download stops the run (scraper/published.py)
+        run: python -m scraper.published https://vazhag.github.io/VazhaG/data/ site/data/prices.json site/data/stations.json
       - name: Read the companies
         id: read
         run: |

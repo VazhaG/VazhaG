@@ -6,6 +6,7 @@ SPEC-0001: REQ-006, REQ-007, AC-005.
 
 from __future__ import annotations
 
+import http.client
 from datetime import UTC, datetime, timedelta
 
 import pytest
@@ -56,6 +57,32 @@ def test_one_failure_does_not_stop_the_others() -> None:
     assert any(line.startswith("DOWN:") and "connection refused" in line for line in log)
 
 
+def test_any_kind_of_failure_keeps_that_company_out_and_the_others_in() -> None:
+    # REQ-007: a page in a shape nobody foresaw, a connection cut mid-page, an unknown charset
+    def odd_page(html: str) -> list[Reading]:
+        raise TypeError("'NoneType' object is not iterable")
+
+    def network(url: str) -> str:
+        if url.startswith("https://cut."):
+            raise http.client.IncompleteRead(b"<html>")
+        if url.startswith("https://charset."):
+            raise LookupError("unknown encoding: x-nonsense")
+        return "<html></html>"
+
+    companies = [Company(id="odd", name="ODD", color="#123456", url="https://odd.example/", parse=odd_page),
+                 company("cut", [Reading("დიზელი", "diesel", 4.9)]),
+                 company("charset", [Reading("დიზელი", "diesel", 4.9)]),
+                 company("good", [Reading("დიზელი", "diesel", 4.95)])]
+    previous = {c: old_entry(c, 4.9) for c in ("odd", "cut", "charset", "good")}
+    entries, log, read = refresh(companies, previous, network, NOW)
+    by_id = {e["id"]: e for e in entries}
+    assert read == 1 and by_id["good"]["time"] == "2026-10-30T12:00:00Z"
+    for cid in ("odd", "cut", "charset"):
+        assert by_id[cid] == previous[cid]
+    assert any(line.startswith("ODD: not read — TypeError") for line in log)
+    assert any(line.startswith("CUT: not read — IncompleteRead") for line in log)
+
+
 def test_a_failed_company_with_no_previous_prices_is_simply_absent() -> None:
     entries, log, read = refresh([company("new", None)], {}, fetch_all, NOW)
     assert (entries, read) == ([], 0)
@@ -72,10 +99,15 @@ def test_price_limits(value: float, ok: bool) -> None:
     assert (problems(diesel(value), None, NOW) == []) is ok
 
 
-@pytest.mark.parametrize(("value", "ok"), [(5.00, True), (3.00, True), (5.01, False), (2.99, False)])
-def test_jump_limit_from_the_previous_price(value: float, ok: bool) -> None:
-    # AC-005: at most 25 % from the same grade's previous price, 4.00 GEL
-    assert (problems(diesel(value), old_entry("a", 4.00), NOW) == []) is ok
+@pytest.mark.parametrize(("before", "value", "ok"), [
+    (4.00, 5.00, True), (4.00, 3.00, True), (4.00, 5.01, False), (4.00, 2.99, False),
+    # exactly a quarter, where binary fractions round up: 1.20 / 4.80 is 0.25000000000000006
+    (4.80, 6.00, True), (4.80, 3.60, True), (4.80, 6.01, False), (4.80, 3.59, False),
+    (2.40, 3.00, True), (1.20, 1.50, True),
+])
+def test_jump_limit_from_the_previous_price(before: float, value: float, ok: bool) -> None:
+    # AC-005: at most 25 % from the same grade's previous price
+    assert (problems(diesel(value), old_entry("a", before), NOW) == []) is ok
 
 
 def test_a_tenth_of_the_price_inside_the_limits_is_caught_by_the_jump_rule() -> None:

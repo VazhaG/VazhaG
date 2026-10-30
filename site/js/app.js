@@ -210,6 +210,7 @@ function rowElement(row) {
   const who = element('td', 'who');
   who.append(dot, element('strong', '', row.company), element('span', 'grade', row.grade));
   const when = element('td', 'time', formatTime(row.time));
+  if (row.basis === 'source') when.append(element('span', 'note', t('time.source')));
   if (row.stale) when.append(element('span', 'note', t('price.stale')));
   tr.append(who, element('td', 'price', priceText(row.price)), when);
   return tr;

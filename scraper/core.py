@@ -134,7 +134,11 @@ def problems(readings: list[Reading], previous: dict | None, now: datetime) -> l
             found.append(f"„{r.grade}“ {r.price:.2f} ₾ is outside {MIN_PRICE:.2f}–{MAX_PRICE:.2f} ₾")
             continue
         old = before.get((r.grade, r.fuel))
-        if isinstance(old, (int, float)) and old > 0 and abs(r.price - old) / old > MAX_JUMP:
+        if not isinstance(old, (int, float)) or old <= 0:
+            continue
+        # counted in tetri, so exactly a quarter stays a quarter (1.20 / 4.80 is 0.25000000000000006 in floats)
+        old_tetri, new_tetri = round(old * 100), round(r.price * 100)
+        if abs(new_tetri - old_tetri) > old_tetri * MAX_JUMP:
             found.append(f"„{r.grade}“ jumped from {old:.2f} to {r.price:.2f} ₾")
     return found
 
@@ -165,9 +169,10 @@ def _round(companies: list[Company], previous: dict[str, dict], only: set[str] |
             continue
         try:
             entry, notes = read(c, old)
-        except (OSError, ParseError) as e:
+        except Exception as e:  # noqa: BLE001 — whatever one company's page does, the others are still read (REQ-007)
             stay = f" (the previous {what} stay, with their time)" if old else ""
-            log.append(f"{c.name}: {label}not read — {e}{stay}")
+            why = str(e) if isinstance(e, ParseError) else f"{type(e).__name__}: {e}"
+            log.append(f"{c.name}: {label}not read — {why}{stay}")
             if old:
                 entries.append(old)
             continue

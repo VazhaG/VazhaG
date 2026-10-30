@@ -42,6 +42,7 @@ def test_socar_gases_are_two_separate_types() -> None:
     "<html><body>nothing here</body></html>",
     '<script>self.__next_f.push([1,"\\"GetCurrentPrices\\":{\\"Status\\":\\"1\\"}"])</script>',
     '<script>self.__next_f.push([1,"\\"GetCurrentPrices\\":{\\"Results\\":[]}"])</script>',
+    '<script>self.__next_f.push([1,"\\"GetCurrentPrices\\":{\\"Results\\":null}"])</script>',
     '<script>self.__next_f.push([1,"\\"GetCurrentPrices\\":{\\"Results\\":[{\\"FuelCode\\":\\"SUPER\\"}]}"])</script>',
 ])
 def test_socar_page_in_another_shape_is_an_error(html: str) -> None:

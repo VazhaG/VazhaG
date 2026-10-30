@@ -5,12 +5,19 @@ SPEC-0001: REQ-006, REQ-007, AC-005; ADR-0012.
 
 from __future__ import annotations
 
+import http.client
 import json
 import re
+import urllib.error
+from collections.abc import Callable
 from datetime import timedelta
 from pathlib import Path
 
+import pytest
+
+from scraper import published
 from scraper.changed import KEEPALIVE, changed, comparable
+from scraper.published import TRIES, start
 from support import ROOT
 
 WORKFLOW = ROOT / ".github" / "workflows" / "prices.yml"
@@ -32,9 +39,106 @@ def test_every_action_is_pinned_to_a_commit() -> None:
         assert re.fullmatch(r"actions/[\w-]+@[0-9a-f]{40}", ref), ref
 
 
+PUBLISHED = "https://vazhag.github.io/VazhaG/data/"
+REPOSITORY_COPY = '{"generated": "2026-10-01T09:00:00Z", "companies": []}'
+FRESH = '{"generated": "2026-10-30T09:00:00Z", "companies": []}'
+
+
+def repository_copy(tmp_path: Path) -> list[Path]:
+    paths = [tmp_path / "prices.json", tmp_path / "stations.json"]
+    for path in paths:
+        path.write_text(REPOSITORY_COPY, encoding="utf-8")
+    return paths
+
+
+def http_error(code: int) -> urllib.error.HTTPError:
+    return urllib.error.HTTPError(PUBLISHED, code, "test", None, None)  # type: ignore[arg-type]
+
+
+def site_answering(answers: dict[str, list[object]]) -> tuple[Callable[[str], str], list[str]]:
+    """A stand-in for the published site: each file's answers in order — a text, or a failure to raise."""
+    calls: list[str] = []
+
+    def get(url: str) -> str:
+        calls.append(url)
+        answer = answers[url.removeprefix(PUBLISHED)].pop(0)
+        if isinstance(answer, Exception):
+            raise answer
+        return str(answer)
+
+    return get, calls
+
+
+def no_wait(seconds: float) -> None:
+    pass
+
+
+def test_the_run_starts_from_the_published_files(tmp_path: Path) -> None:
+    paths = repository_copy(tmp_path)
+    get, _ = site_answering({"prices.json": [FRESH], "stations.json": [FRESH]})
+    start(PUBLISHED, paths, get, no_wait)
+    assert [p.read_text(encoding="utf-8") for p in paths] == [FRESH, FRESH]
+
+
+def test_before_the_first_publication_the_repository_copy_is_the_start(tmp_path: Path) -> None:
+    paths = repository_copy(tmp_path)
+    get, calls = site_answering({"prices.json": [http_error(404)], "stations.json": [http_error(404)]})
+    log = start(PUBLISHED, paths, get, no_wait)
+    assert [p.read_text(encoding="utf-8") for p in paths] == [REPOSITORY_COPY, REPOSITORY_COPY]
+    assert len(calls) == 2  # "not there" is an answer: it is not asked again
+    assert "no published prices.json yet — starting from the repository's" in log
+
+
+@pytest.mark.parametrize("broken", ["<html><body>Page not found</body></html>", "[]", '{"companies": "x"}'])
+def test_a_broken_published_file_does_not_stop_every_run_after_it(tmp_path: Path, broken: str) -> None:
+    paths = repository_copy(tmp_path)
+    get, _ = site_answering({"prices.json": [broken], "stations.json": [FRESH]})
+    log = start(PUBLISHED, paths, get, no_wait)
+    assert [p.read_text(encoding="utf-8") for p in paths] == [REPOSITORY_COPY, FRESH]
+    assert log[0].startswith("::warning::the published prices.json is not a data file")
+
+
+@pytest.mark.parametrize("failure", [http_error(503), urllib.error.URLError("connection refused"),
+                                     http.client.IncompleteRead(b'{"generated"')])
+def test_any_other_failure_stops_the_run_after_three_tries(tmp_path: Path, failure: Exception) -> None:
+    # The repository copy's times can be weeks old (scraper/changed.py): starting from it now would hide prices read
+    # hours ago and turn their companies overdue, so the run stops instead and nothing old is published again.
+    paths = repository_copy(tmp_path)
+    get, calls = site_answering({"prices.json": [failure] * TRIES})
+    waits: list[float] = []
+    with pytest.raises(type(failure)):
+        start(PUBLISHED, paths, get, waits.append)
+    assert len(calls) == TRIES == 3
+    assert len(waits) == TRIES - 1
+    assert paths[0].read_text(encoding="utf-8") == REPOSITORY_COPY
+
+
+def test_a_failure_that_passes_is_tried_again(tmp_path: Path) -> None:
+    paths = repository_copy(tmp_path)
+    get, calls = site_answering({"prices.json": [http_error(502), FRESH], "stations.json": [FRESH]})
+    start(PUBLISHED, paths, get, no_wait)
+    assert [p.read_text(encoding="utf-8") for p in paths] == [FRESH, FRESH]
+    assert len(calls) == 3
+
+
+def test_a_stopped_start_is_a_red_run_with_its_reason(tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+                                                       capsys: pytest.CaptureFixture[str]) -> None:
+    paths = repository_copy(tmp_path)
+
+    def down(url: str) -> str:
+        raise urllib.error.URLError("connection refused")
+
+    monkeypatch.setattr(published, "fetch", down)
+    monkeypatch.setattr(published, "WAIT_S", 0)
+    assert published.main([PUBLISHED, *map(str, paths)]) == 1
+    out = capsys.readouterr().out
+    assert out.startswith("::error::") and "connection refused" in out
+
+
 def test_the_run_reads_publishes_and_turns_red_on_a_bad_reading() -> None:
     text = WORKFLOW.read_text(encoding="utf-8")
-    assert "python -m scraper\n" in text
+    start_at = text.index(f"python -m scraper.published {PUBLISHED} site/data/prices.json site/data/stations.json\n")
+    assert start_at < text.index("python -m scraper\n")
     assert "python -m scraper.changed site/data/prices.json site/data/stations.json" in text
     assert "path: site" in text
     assert 'run: test "$STATUS" = "0"' in text
