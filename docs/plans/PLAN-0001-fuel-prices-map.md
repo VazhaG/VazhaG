@@ -2,7 +2,7 @@
 id: PLAN-0001
 type: plan
 title: საწვავის ფასების რუკა — პირველი ვერსიის აშენება
-status: in-progress
+status: draft
 created: 2026-10-30
 updated: 2026-10-30
 spec: "[[SPEC-0001-fuel-prices-map]]"
