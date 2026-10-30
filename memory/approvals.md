@@ -17,3 +17,4 @@ status: living
 | 2026-10-30 09:42 +0000 | PLAN-0001 | draft → approved | docs/plans/PLAN-0001-fuel-prices-map.md | — |
 | 2026-10-30 10:59 +0000 | SPEC-0001 | review → approved | docs/specs/SPEC-0001-fuel-prices-map.md | — |
 | 2026-10-30 11:00 +0000 | PLAN-0001 | draft → approved | docs/plans/PLAN-0001-fuel-prices-map.md | — |
+| 2026-10-30 17:45 +0000 | intent | draft → accepted | intent.md | /approve spec 0001 /approve plan 0001 |
