@@ -2,7 +2,7 @@
 id: intent
 type: intent
 title: განზრახვა — რას ვაშენებთ, ვისთვის და რატომ
-status: draft
+status: accepted
 version: "0.17"
 updated: 2026-10-30
 kind: website
