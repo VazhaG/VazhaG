@@ -249,12 +249,13 @@ h1 {
   flex: none;
   min-width: 44px;
   min-height: 44px;
-  padding: 8px 14px;
+  padding: 8px 10px; /* four companies fit a phone's width in one line */
   border: 2px solid var(--company);
   border-radius: 999px;
   background: var(--company);
   color: var(--ink);
   font: inherit;
+  font-size: 0.9rem;
   font-weight: 700;
   cursor: pointer;
 }
