@@ -143,9 +143,12 @@ def test_the_card_shows_the_best_station_with_both_navigation_buttons(page_at: C
 
 def test_the_cheapest_station_is_marked_with_a_star_on_the_map(page_at: Callable[[float, float], Page],
                                                                net: Net) -> None:
-    # intent §5: on the map the cheapest is marked with ★; the mark follows the fuel choice
-    prices = [prices_of("a", [("ევრო დიზელი", "diesel", 4.97), ("ბუნებრივი აირი", "cng", 1.6)])]
-    page = open_here(page_at, net, prices, [stations_of("a", [at_km(1.2, name="ვაკე")])], "დიზელი")
+    # intent §5: on the map the cheapest is marked with ★; the mark follows the fuel choice. A nearer, dearer
+    # station comes first, so a ★ on the first or the nearest station would be caught
+    prices = [prices_of("b", [("დიზელი B", "diesel", 5.20)]),
+              prices_of("a", [("ევრო დიზელი", "diesel", 4.97), ("ბუნებრივი აირი", "cng", 1.6)])]
+    stations = [stations_of("b", [at_km(0.5)]), stations_of("a", [at_km(1.2, name="ვაკე")])]
+    page = open_here(page_at, net, prices, stations, "დიზელი")
     pin = page.locator(".best-pin")
     expect(pin).to_have_count(1)
     expect(pin).to_have_text("★")
@@ -154,7 +157,7 @@ def test_the_cheapest_station_is_marked_with_a_star_on_the_map(page_at: Callable
         assert box
         return box["x"] + box["width"] / 2, box["y"] + box["height"] / 2
 
-    (px, py), (sx, sy) = centre(pin.bounding_box()), centre(page.locator("path.station").first.bounding_box())
+    (px, py), (sx, sy) = centre(pin.bounding_box()), centre(page.locator("path.station").nth(1).bounding_box())
     assert abs(px - sx) < 3 and abs(py - sy) < 3
     pin.dispatch_event("click")
     expect(page.locator(".leaflet-popup-content")).to_contain_text("ვაკე")
@@ -170,8 +173,11 @@ def test_all_prices_takes_the_card_down_to_the_table(page_at: Callable[[float, f
     expect(link).to_have_text("ყველა ფასი")
     expect(link).to_have_attribute("href", "#prices-title")
     expect(link).to_be_in_viewport(ratio=1)  # whole, on the first screen with the card (375 × 812)
+    assert page.evaluate("window.scrollY") == 0
+    page.emulate_media(reduced_motion="reduce")  # no smooth scrolling: the jump is done when the click is
     link.click()
     expect(page.locator("#prices-title")).to_be_in_viewport()
+    assert page.evaluate("window.scrollY") > 0  # the page scrolled down to the table, as far as it goes
 
 
 def test_the_card_says_when_nothing_is_within_50_km_or_gas_is_unknown(page_at: Callable[[float, float], Page],

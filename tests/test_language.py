@@ -40,7 +40,10 @@ def test_the_switch_turns_the_whole_page_english_and_back(page: Page, net: Net) 
                                           {"ka": "ბათუმი", "en": "Batumi", "lat": 41.64077, "lng": 41.6306}]}
     page.goto(net.base)
     expect(page.locator("#city")).to_be_visible()  # no place was allowed: the city list is shown
+    page.locator("#city").select_option(label="ბათუმი")  # the card fills in, its "all prices" link with it
+    expect(page.locator("#best a.to-prices")).to_have_text("ყველა ფასი")
     page.get_by_role("button", name="ENG").click()
+    expect(page.locator("#best a.to-prices")).to_have_text("All prices")
     expect(page.locator("html")).to_have_attribute("lang", "en")
     expect(page.locator("h1")).to_contain_text("Fuel prices")
     expect(page.locator(".chip span")).to_have_text(["Regular", "Premium", "Super", "Diesel", "LPG", "CNG"])
