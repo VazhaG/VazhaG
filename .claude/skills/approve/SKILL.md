@@ -1,0 +1,32 @@
+---
+name: approve
+description: Owner-only. Approve (or reject) a project document — intent, spec, plan or ADR — or set the byte budget of the text every session loads, and record it in memory/approvals.md. Usage /approve [intent | spec N | plan N | adr N | reject adr N reason | budget N]; with no arguments it lists what is waiting for the owner.
+disable-model-invocation: true
+allowed-tools: Bash(bash .claude/hooks/py.sh tools/approve.py *)
+argument-hint: "[intent | spec N | plan N | adr N | reject adr N <reason> | budget N]"
+---
+
+# /approve — the owner's decision
+
+The owner has just run this command. The result below comes from `tools/approve.py`; it has ALREADY
+been applied (or refused). Nothing is waiting for you to approve.
+
+Result:
+
+!`bash .claude/hooks/py.sh tools/approve.py '$ARGUMENTS'`
+
+Your job now:
+
+1. Tell the owner the result in 1–3 Georgian sentences: what was approved, rejected or refused, and
+   the next step the result names. Plain words; gloss a technical term the first time.
+2. If the result starts with ✅ — save it at once, without asking: `git add -u` plus the approved
+   document's own path (a new document may still be untracked), then a CHECKPOINT commit whose command and
+   message do not name the ledger file (the guard refuses a command that does). Do not edit the approved
+   document. Then go straight on to the next step the result names — the approval is the
+   person's go-ahead, so never ask "shall I save?" or "shall I continue?".
+3. If it starts with ❌ — explain in plain Georgian what is missing and offer to fix it (for example a
+   broken link or a missing `spec:` link); the owner then runs /approve again.
+
+Never run `tools/approve.py` yourself, never edit `memory/approvals.md`, never set an approval status
+by hand — the guard refuses it and the LEDGER gate flags it. (Owner's note: avoid the `'` character
+inside the note text — it breaks the shell quoting.)
