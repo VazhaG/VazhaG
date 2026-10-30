@@ -31,6 +31,29 @@ h1 {
   font-size: 1.25rem;
 }
 
+.lang {
+  display: flex;
+  flex: none;
+  border: 1px solid #cbd5e1;
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.lang button {
+  padding: 6px 10px;
+  border: 0;
+  background: var(--white);
+  color: var(--graphite);
+  font: inherit;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.lang button[aria-pressed="true"] {
+  background: var(--violet);
+  color: var(--white);
+}
+
 .fuels {
   display: flex;
   flex-wrap: wrap;

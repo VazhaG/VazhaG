@@ -11,11 +11,15 @@
     </head>
     <body>
         <header class="top">
-            <h1 id="title">⛽ საწვავის ფასები</h1>
+            <h1 id="title" data-i18n="title.h1">⛽ საწვავის ფასები</h1>
+            <div class="lang" role="group" aria-label="ენა / Language">
+                <button type="button" data-lang="ka" aria-pressed="true">ქარ</button>
+                <button type="button" data-lang="en" aria-pressed="false">ENG</button>
+            </div>
         </header>
         <main>
             <fieldset class="fuels" id="fuels">
-                <legend class="visually-hidden" id="fuels-legend">საწვავის ტიპი</legend>
+                <legend class="visually-hidden" id="fuels-legend" data-i18n="fuel.legend">საწვავის ტიპი</legend>
             </fieldset>
             <div id="map" class="map"></div>
             <section id="best" class="best" aria-live="polite" hidden>
@@ -42,6 +46,9 @@
             </p>
             <p id="standard-note" data-i18n="note.standard">
                 ფასი სტანდარტულია; თვითმომსახურებისა და ბარათის ფასი შეიძლება დაბალი იყოს.
+            </p>
+            <p id="tiles-note" data-i18n="note.tiles">
+                რუკის სურათები OpenStreetMap-ის სერვერიდან იტვირთება იმ არეალისთვის, რომელსაც ეკრანი აჩვენებს; შენი ზუსტი მდებარეობა არსად იგზავნება.
             </p>
             <p id="cities-note">
                 <span data-i18n="note.cities">ქალაქების კოორდინატები:</span>

@@ -1,6 +1,6 @@
 // The page: map, fuel choice, the ★ card and prices (SPEC-0001). Texts from the data files are shown only as text
 // (textContent, never innerHTML) — REQ-008. The visitor's place stays in this page: it is never sent (REQ-010).
-import { FUELS, t } from './i18n.js';
+import { FUELS, lang, LANGS, setLang, t } from './i18n.js';
 import { cheapestNearby, placed, priceRows, routeLinks, stationPrices, stationsFor } from './logic.js';
 
 const GEORGIA = [[41.05, 40.0], [43.6, 46.7]]; // south-west and north-east corners: the first view shows it all
@@ -8,6 +8,7 @@ const TILES = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
 const OSM_CREDIT = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors';
 const LOCATE = { enableHighAccuracy: false, timeout: 10000, maximumAge: 300000 }; // REQ-001: 10 seconds at most
 const NEAR_ZOOM = 12;
+const LANG_KEY = 'fuel-map.lang'; // the chosen language stays on this phone; nothing else is stored
 // Georgian time, written the Georgian way ("30.10 15:00") — the browser's own "ka" format gives "10-30".
 const TIME_PARTS = new Intl.DateTimeFormat('en-GB', {
   timeZone: 'Asia/Tbilisi',
@@ -114,11 +115,13 @@ function cityPicker() {
   const select = element('select');
   select.id = 'city';
   select.append(new Option('—', ''));
-  state.cities.forEach((c, i) => {
-    const option = new Option(c.ka, String(i));
+  const collator = new Intl.Collator(lang());
+  const order = state.cities.map((c, i) => [c, i]).sort(([a], [b]) => collator.compare(a[lang()], b[lang()]));
+  for (const [c, i] of order) {
+    const option = new Option(c[lang()], String(i));
     option.selected = state.city === c;
     select.append(option);
-  });
+  }
   select.addEventListener('change', () => {
     const c = state.cities[Number(select.value)];
     if (select.value !== '' && c) chooseCity(c);
@@ -170,6 +173,7 @@ function renderBest() {
 
 function renderFuels() {
   const box = document.getElementById('fuels');
+  for (const old of box.querySelectorAll('label.chip')) old.remove();
   for (const key of FUELS) {
     const label = element('label', 'chip');
     const input = document.createElement('input');
@@ -267,6 +271,39 @@ function locate() {
   );
 }
 
+// REQ-009: the texts the page itself writes, in the chosen language.
+function applyStatic() {
+  document.documentElement.lang = lang();
+  document.title = t('title.page');
+  for (const el of document.querySelectorAll('[data-i18n]')) el.textContent = t(el.dataset.i18n);
+  document.querySelector('.lang').setAttribute('aria-label', t('lang.group'));
+  for (const button of document.querySelectorAll('.lang button')) {
+    button.setAttribute('aria-pressed', String(button.dataset.lang === lang()));
+  }
+}
+
+function setLanguage(code) {
+  setLang(code);
+  try {
+    localStorage.setItem(LANG_KEY, lang());
+  } catch {
+    // a private window or a blocked storage: the choice simply is not remembered
+  }
+  state.map.closePopup();
+  applyStatic();
+  renderFuels();
+  render();
+}
+
+function savedLanguage() {
+  try {
+    const code = localStorage.getItem(LANG_KEY);
+    return LANGS.includes(code) ? code : null;
+  } catch {
+    return null;
+  }
+}
+
 function validCities(data) {
   const collator = new Intl.Collator('ka');
   return (data?.cities ?? [])
@@ -275,6 +312,11 @@ function validCities(data) {
 }
 
 async function main() {
+  setLang(savedLanguage() ?? 'ka');
+  applyStatic();
+  for (const button of document.querySelectorAll('.lang button')) {
+    button.addEventListener('click', () => setLanguage(button.dataset.lang));
+  }
   initMap();
   renderFuels();
   setStatus(t('status.loading'));
