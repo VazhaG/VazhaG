@@ -28,17 +28,21 @@ class Net:
 
     base: str
     data: dict[str, object] = field(default_factory=dict)  # "prices.json" -> JSON content; missing -> 404
+    real_data: bool = False  # serve site/data/ as it is, through the local server
     requests: list[str] = field(default_factory=list)
+    bodies: list[str] = field(default_factory=list)  # what the page sent, if anything
     outside: list[str] = field(default_factory=list)  # requests that would have left the machine
 
     def handle(self, route: Route) -> None:
         url = route.request.url
         self.requests.append(url)
+        if route.request.post_data:
+            self.bodies.append(route.request.post_data)
         if url.startswith(TILE_HOST):
             route.fulfill(status=200, content_type="image/png", body=BLANK_PNG)
         elif url.startswith(self.base):
             path = url[len(self.base):].split("?", 1)[0]
-            if path.startswith("data/"):
+            if path.startswith("data/") and not self.real_data:
                 name = path[len("data/"):]
                 if name in self.data:
                     body = json.dumps(self.data[name], ensure_ascii=False)
