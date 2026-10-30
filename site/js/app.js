@@ -161,12 +161,15 @@ function toggleCompany(id) {
   else state.off.add(id);
   saveOff();
   render();
+  // the row was drawn anew: the pressed badge keeps the focus, for the keyboard and the screen reader
+  document.querySelector(`#companies [data-company="${CSS.escape(id)}"]`)?.focus();
 }
 
-// REQ-004: only the list of companies switched off is kept; with every company on, nothing is.
+// REQ-004: only the list of companies switched off is kept — those the row still shows; with all of them on, nothing.
 function saveOff() {
+  const ids = companiesOf(state.prices, state.stations).map((c) => c.id).filter((id) => state.off.has(id));
   try {
-    if (state.off.size) localStorage.setItem(OFF_KEY, JSON.stringify([...state.off]));
+    if (ids.length) localStorage.setItem(OFF_KEY, JSON.stringify(ids));
     else localStorage.removeItem(OFF_KEY);
   } catch {
     // a private window or a blocked storage: the choice works for this visit only

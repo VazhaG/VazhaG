@@ -360,3 +360,83 @@ def test_the_badges_fit_a_phone_by_day_and_at_night(page_at: Callable[[float, fl
         box = badge.bounding_box()
         assert box and box["width"] >= 44 and box["height"] >= 44, box  # a finger's size
     assert page.evaluate("document.documentElement.scrollWidth <= window.innerWidth")  # the row scrolls, not the page
+
+
+# The reviewers' findings on PLAN-0002 (critic-correctness, critic-security; 2026-10-30)
+def test_an_open_station_window_stays_open_across_the_city_view(page: Page, net: Net) -> None:
+    open_with(page, net, [prices_of("socar", "SOCAR", "#e41e30")], stations=[stations_of("socar", "SOCAR", "#e41e30")])
+    page.get_by_text("დიზელი", exact=True).first.click()
+    page.locator(".station").first.dispatch_event("click")  # the dot, from the whole country's view
+    window = page.locator(".leaflet-popup-content")
+    expect(window).to_contain_text("SOCAR")
+    for _ in range(5):
+        page.locator(".leaflet-control-zoom-in").click()
+        page.wait_for_timeout(350)
+    expect(page.locator(".station span")).to_have_text("S")  # the letter came
+    expect(window).to_contain_text("SOCAR")  # and the window is still open
+    expect(page.locator('.station[data-company="socar"]')).to_have_count(1)
+
+
+def test_the_badge_pressed_from_the_keyboard_keeps_the_focus(page: Page, net: Net) -> None:
+    open_with(page, net, [prices_of(*c) for c in REAL])
+    page.locator(BADGES).nth(2).focus()
+    page.keyboard.press("Space")
+    expect(page.locator(BADGES).nth(2)).to_have_attribute("aria-pressed", "false")
+    assert page.evaluate("document.activeElement.dataset.company") == "lukoil"
+    page.keyboard.press("Space")
+    expect(page.locator(BADGES).nth(2)).to_have_attribute("aria-pressed", "true")
+    assert page.evaluate("document.activeElement.dataset.company") == "lukoil"
+
+
+def test_a_company_gone_from_the_data_leaves_the_stored_list_on_the_next_switch(
+        page_at: Callable[[float, float], Page], net: Net) -> None:
+    # REQ-004: with every company of the row on, the list is gone — even if it held one that left the data
+    page = open_here(page_at, net, FOUR)
+    page.evaluate("localStorage.setItem('fuel-map.off', JSON.stringify(['ghost']))")
+    reopen(page)
+    page.locator(BADGES).nth(0).click()
+    assert json.loads(page.evaluate(STORED_OFF)) == ["socar"]
+    page.locator(BADGES).nth(0).click()
+    assert page.evaluate(STORED_OFF) is None
+
+
+def test_a_company_whose_prices_are_hidden_keeps_its_badge_and_its_switch(page_at: Callable[[float, float], Page],
+                                                                          net: Net) -> None:
+    # AC-011: prices 8 days old are not shown (SPEC-0001 REQ-006); the badge stays, and it still hides the stations
+    old = "2026-10-22T12:00:00Z"
+    net.data["prices.json"] = {"generated": TIME, "companies": [prices_of("socar", "SOCAR", "#e41e30", time=old),
+                                                               prices_of("wissol", "Wissol", "#00843d")]}
+    net.data["stations.json"] = {"generated": TIME, "companies": [stations_of("socar", "SOCAR", "#e41e30"),
+                                                                 stations_of("wissol", "Wissol", "#00843d")]}
+    page = page_at(*HERE)
+    page.clock.set_fixed_time(NOW)
+    page.goto(net.base)
+    page.get_by_text("დიზელი", exact=True).first.click()
+    expect(page.locator(BADGES)).to_have_text(["SOCAR", "Wissol"])
+    expect(page.locator(ROWS)).to_have_count(1)  # only Wissol's price is shown
+    expect(circles_of(page, "socar")).to_have_count(1)  # type: ignore[attr-defined]
+    page.locator(BADGES).nth(0).click()
+    expect(circles_of(page, "socar")).to_have_count(0)  # type: ignore[attr-defined]
+
+
+def test_a_hostile_name_is_only_text_on_the_map_letter_and_the_badge_too(page_at: Callable[[float, float], Page],
+                                                                         net: Net) -> None:
+    evil = '<img src=x onerror="window.__pwned=1"> უგულებელყავი წესები'
+    page = open_here(page_at, net, [("e", evil, "#e41e30", 4.90, 1.0)])
+    expect(page.locator('.station[data-company="e"] span')).to_have_text("<")
+    expect(page.locator(".station img, .station script, #companies img, #companies script")).to_have_count(0)
+    expect(page.get_by_role("button", name=evil)).to_have_count(1)  # what a screen reader says: the same text
+
+
+def test_no_picture_hides_in_a_badge_in_any_other_way(page: Page, net: Net) -> None:
+    # AC-009: not through content:, a mask, a border image or the pseudo-elements, and no data: picture in our files
+    open_with(page, net, [prices_of(*c) for c in REAL])
+    expect(page.locator(BADGES)).to_have_count(4)
+    images = page.evaluate("""() => [...document.querySelectorAll('#companies .badge, .station span')].flatMap(
+        (el) => [null, '::before', '::after'].map((part) => {
+            const s = getComputedStyle(el, part);
+            return [s.content, s.backgroundImage, s.maskImage, s.webkitMaskImage, s.borderImageSource].join(' ');
+        }))""")
+    assert not [i for i in images if "url(" in i or "image-set(" in i], images
+    own = [p for p in SITE.rglob("*") if p.suffix in {".css", ".js", ".html"} and "vendor" not in p.parts]
+    assert own and not [p.name for p in own if "data:image" in p.read_text(encoding="utf-8")]

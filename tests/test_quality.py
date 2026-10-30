@@ -132,10 +132,12 @@ def test_every_text_has_wcag_aa_contrast(page_at: Callable[[float, float], Page]
     page.goto(net.base)
     expect(page.locator("#best a.go-google")).to_be_visible()
     page.get_by_text("დიზელი", exact=True).first.click()  # a chosen chip: white on violet
-    page.locator("#companies .badge").first.click()  # a switched-off badge: its frame and crossed-out name (SPEC-0002)
     expect(page.locator(".station.near span").first).to_have_text(re.compile(r"\S"))  # letters on the map
     page.evaluate("document.querySelector('#price-table tbody tr')?.classList.add('stale')")  # a greyed-out row
-    checked = page.evaluate(CONTRAST_JS)
-    assert len(checked) > 20
+    checked = page.evaluate(CONTRAST_JS)  # every company on: each colour as a badge and as letters on the map
+    page.locator("#companies .badge").first.click()  # a switched-off badge: its frame and crossed-out name (SPEC-0002)
+    expect(page.locator("#companies .badge").first).to_have_attribute("aria-pressed", "false")
+    checked += page.evaluate(CONTRAST_JS)
+    assert len(checked) > 40
     low = [c for c in checked if c["ratio"] < 4.5]
     assert low == [], low
