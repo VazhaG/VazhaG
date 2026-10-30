@@ -128,6 +128,33 @@ export function cheapestNearby(pricesData, stationsData, fuel, here, now) {
   return { reason: 'none' };
 }
 
+// SPEC-0002 REQ-001: one badge per company with a source in either data file — the prices' order first.
+export function companiesOf(...files) {
+  const seen = new Map();
+  for (const data of files) {
+    for (const c of data?.companies ?? []) {
+      if (typeof c?.source !== 'string' || !c.source || c.id == null || seen.has(String(c.id))) continue;
+      seen.set(String(c.id), { id: String(c.id), name: String(c.name ?? ''), color: safeColor(c.color) });
+    }
+  }
+  return [...seen.values()];
+}
+
+// SPEC-0002 REQ-007: the letters' colour that reads best on a company's colour — white or the page's dark ink.
+const DARK_INK = '#0f172a';
+
+function luminance(hex) {
+  return [1, 3, 5]
+    .map((i) => parseInt(hex.slice(i, i + 2), 16) / 255)
+    .map((v) => (v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4))
+    .reduce((sum, v, i) => sum + v * [0.2126, 0.7152, 0.0722][i], 0);
+}
+
+export function inkOn(color) {
+  const l = luminance(safeColor(color));
+  return 1.05 / (l + 0.05) >= (l + 0.05) / (luminance(DARK_INK) + 0.05) ? '#ffffff' : DARK_INK;
+}
+
 // AC-007: the station's own place only — the visitor's is never put into a link (REQ-010).
 export function routeLinks(lat, lng) {
   const ll = encodeURIComponent(`${lat},${lng}`);

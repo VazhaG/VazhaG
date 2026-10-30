@@ -1,7 +1,9 @@
 // The page: map, fuel choice, the ★ card and prices (SPEC-0001). Texts from the data files are shown only as text
 // (textContent, never innerHTML) — REQ-008. The visitor's place stays in this page: it is never sent (REQ-010).
 import { FUELS, lang, LANGS, setLang, t } from './i18n.js';
-import { cheapestNearby, placed, priceRows, routeLinks, stationPrices, stationsFor } from './logic.js';
+import {
+  cheapestNearby, companiesOf, inkOn, placed, priceRows, routeLinks, stationPrices, stationsFor,
+} from './logic.js';
 
 const GEORGIA = [[41.05, 40.0], [43.6, 46.7]]; // south-west and north-east corners: the first view shows it all
 const TILES = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
@@ -38,6 +40,7 @@ const state = {
   markers: null,
   you: null,
   pin: null, // the ★ on the map: the station the card shows (intent §5)
+  off: new Set(), // the companies switched off in the badge row (SPEC-0002)
 };
 
 function element(tag, className, text) {
@@ -122,6 +125,21 @@ function markBest(b) {
   })
     .bindPopup(() => stationWindow(b), POPUP)
     .addTo(state.map);
+}
+
+// SPEC-0002: the badge row above the ★ card — one per company in the data, its colour and name, text only.
+function renderCompanies() {
+  const box = document.getElementById('companies');
+  box.setAttribute('aria-label', t('companies.label'));
+  box.replaceChildren(...companiesOf(state.prices, state.stations).map((c) => {
+    const badge = element('button', 'badge', c.name || '?');
+    badge.type = 'button';
+    badge.dataset.company = c.id;
+    badge.setAttribute('aria-pressed', String(!state.off.has(c.id)));
+    badge.style.setProperty('--company', c.color);
+    badge.style.setProperty('--ink', inkOn(c.color));
+    return badge;
+  }));
 }
 
 // AC-003: the fixed city list, in the page's language, alphabetically.
@@ -251,6 +269,7 @@ function rowElement(row) {
 }
 
 function render() {
+  renderCompanies();
   renderStations();
   renderBest();
   const body = document.querySelector('#price-table tbody');
