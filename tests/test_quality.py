@@ -7,6 +7,7 @@ seconds on a slow mobile network), §6 (text contrast WCAG AA, 4.5 : 1 — a hyp
 from __future__ import annotations
 
 import json
+import re
 import time
 from collections.abc import Callable
 from datetime import datetime
@@ -113,7 +114,7 @@ CONTRAST_JS = """() => {
   const out = [];
   for (const el of document.querySelectorAll(
       'h1, h2, .chip span, .lang button, #best p, #best label, .go a, .to-prices, #price-table th, #price-table td, '
-      + '.foot p, .foot a, .leaflet-control-attribution, .leaflet-control-zoom a')) {
+      + '.foot p, .foot a, .leaflet-control-attribution, .leaflet-control-zoom a, .badge, .station span')) {
     if (!el.textContent.trim() || !el.getClientRects().length) continue;
     const fg = rgb(getComputedStyle(el).color).slice(0, 3);
     const [a, b] = [lum(fg), lum(background(el))].sort((x, y) => y - x);
@@ -131,6 +132,8 @@ def test_every_text_has_wcag_aa_contrast(page_at: Callable[[float, float], Page]
     page.goto(net.base)
     expect(page.locator("#best a.go-google")).to_be_visible()
     page.get_by_text("დიზელი", exact=True).first.click()  # a chosen chip: white on violet
+    page.locator("#companies .badge").first.click()  # a switched-off badge: its frame and crossed-out name (SPEC-0002)
+    expect(page.locator(".station.near span").first).to_have_text(re.compile(r"\S"))  # letters on the map
     page.evaluate("document.querySelector('#price-table tbody tr')?.classList.add('stale')")  # a greyed-out row
     checked = page.evaluate(CONTRAST_JS)
     assert len(checked) > 20

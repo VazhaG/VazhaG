@@ -10,6 +10,7 @@ import json
 from collections.abc import Callable
 from datetime import UTC, datetime
 
+import pytest
 from playwright.sync_api import Page, expect
 
 from support import SITE, TILE_HOST, Net
@@ -342,3 +343,20 @@ def test_from_far_a_station_is_a_small_dot_until_the_city_view(page: Page, net: 
         zoom_out.click()
         page.wait_for_timeout(350)
     expect(mark).to_have_text("")
+
+
+# PLAN-0002 T7: the badges on a phone, by day and at night (REQ-007; AC-008)
+@pytest.mark.parametrize("scheme", ["light", "dark"])
+def test_the_badges_fit_a_phone_by_day_and_at_night(page_at: Callable[[float, float], Page], net: Net,
+                                                    scheme: str) -> None:
+    page = page_at(*HERE)
+    page.emulate_media(color_scheme=scheme)
+    net.data["prices.json"] = {"generated": TIME, "companies": [prices_of(*c) for c in REAL]}
+    page.goto(net.base)
+    badges = page.locator(BADGES)
+    expect(badges).to_have_count(4)
+    badges.nth(1).click()  # one switched off: its size must not change
+    for badge in badges.all():
+        box = badge.bounding_box()
+        assert box and box["width"] >= 44 and box["height"] >= 44, box  # a finger's size
+    assert page.evaluate("document.documentElement.scrollWidth <= window.innerWidth")  # the row scrolls, not the page
