@@ -11,6 +11,7 @@ import time
 from collections.abc import Callable
 from datetime import datetime
 
+import pytest
 from playwright.sync_api import Page, expect
 
 from support import SITE, Net
@@ -111,7 +112,8 @@ CONTRAST_JS = """() => {
   };
   const out = [];
   for (const el of document.querySelectorAll(
-      'h1, h2, .chip span, .lang button, #best p, #best label, .go a, #price-table th, #price-table td, .foot p, .foot a')) {
+      'h1, h2, .chip span, .lang button, #best p, #best label, .go a, .to-prices, #price-table th, #price-table td, '
+      + '.foot p, .foot a, .leaflet-control-attribution, .leaflet-control-zoom a')) {
     if (!el.textContent.trim() || !el.getClientRects().length) continue;
     const fg = rgb(getComputedStyle(el).color).slice(0, 3);
     const [a, b] = [lum(fg), lum(background(el))].sort((x, y) => y - x);
@@ -121,9 +123,11 @@ CONTRAST_JS = """() => {
 }"""
 
 
-def test_every_text_has_wcag_aa_contrast(page_at: Callable[[float, float], Page], net: Net) -> None:
+@pytest.mark.parametrize("scheme", ["light", "dark"])  # the night look follows the phone (the owner, 2026-10-30)
+def test_every_text_has_wcag_aa_contrast(page_at: Callable[[float, float], Page], net: Net, scheme: str) -> None:
     net.real_data = True
     page = at_data_time(page_at(*VISITOR))
+    page.emulate_media(color_scheme=scheme)
     page.goto(net.base)
     expect(page.locator("#best a.go-google")).to_be_visible()
     page.get_by_text("დიზელი", exact=True).first.click()  # a chosen chip: white on violet

@@ -13,7 +13,7 @@ from playwright.sync_api import Page, expect
 from support import SITE, Net
 
 MKHEDRULI = re.compile(r"[ა-ჿ]")
-PAGE_TEXTS = "h1, legend, .chip span, #best h2, #best label, #price-table th, .prices h2, footer p"
+PAGE_TEXTS = "h1, legend, .chip span, #best h2, #best label, #best .to-prices, #price-table th, .prices h2, footer p"
 
 
 def dictionaries(page: Page, net: Net) -> dict:

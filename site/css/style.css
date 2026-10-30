@@ -1,21 +1,56 @@
-/* Look chosen by the owner (intent §5): layout 1 "map on top", palette II "light day". */
+/* Look chosen by the owner (intent §5): layout 1 "map on top", palette II "light day" — in the app style the owner
+   chose on 2026-10-30: the map fills the first screen, the fuel choice floats on it and the sheet with the ★ card
+   rises over its lower edge; at night the page follows the phone's dark mode. */
 :root {
   --white: #ffffff;
   --mist: #f1f5f9;
   --graphite: #334155;
   --violet: #7c3aed;
+  --page: var(--white);
+  --sheet: var(--white);
+  --raised: var(--mist);
+  --text: var(--graphite);
+  --muted: #64748b;
+  --line: #e2e8f0;
+  --accent: var(--violet);
+  --on-accent: var(--white);
+  --link: var(--violet);
+  --shadow: rgb(15 23 42 / 0.16);
+  --header-h: 52px;
+  --overlap: 24px; /* how far the sheet rises over the map */
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --page: #0b1220;
+    --sheet: #0f172a;
+    --raised: #1e293b;
+    --text: #e2e8f0;
+    --muted: #94a3b8;
+    --line: #334155;
+    --link: #c4b5fd;
+    --shadow: rgb(0 0 0 / 0.5);
+    color-scheme: dark;
+  }
 }
 
 * {
   box-sizing: border-box;
 }
 
+@media (prefers-reduced-motion: no-preference) {
+  html {
+    scroll-behavior: smooth;
+  }
+}
+
 body {
   margin: 0;
   font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans Georgian", sans-serif;
-  color: var(--graphite);
-  background: var(--white);
-  line-height: 1.4;
+  color: var(--text);
+  background: var(--page);
+  line-height: 1.45;
 }
 
 .top {
@@ -23,50 +58,82 @@ body {
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  padding: 12px 16px;
+  height: var(--header-h);
+  padding: 0 16px;
+  background: var(--page);
+  border-bottom: 1px solid var(--line);
 }
 
 h1 {
   margin: 0;
-  font-size: 1.25rem;
+  font-size: 1.1rem;
+  font-weight: 700;
 }
 
 .lang {
   display: flex;
   flex: none;
-  border: 1px solid #cbd5e1;
+  border: 1px solid var(--line);
   border-radius: 999px;
   overflow: hidden;
 }
 
 .lang button {
-  padding: 6px 10px;
+  padding: 6px 12px;
   border: 0;
-  background: var(--white);
-  color: var(--graphite);
+  background: var(--page);
+  color: var(--text);
   font: inherit;
   font-size: 0.85rem;
   cursor: pointer;
 }
 
 .lang button[aria-pressed="true"] {
-  background: var(--violet);
-  color: var(--white);
+  background: var(--accent);
+  color: var(--on-accent);
+}
+
+/* The map and the fuel choice on it */
+.stage {
+  position: relative;
+}
+
+.map {
+  z-index: 0;
+  isolation: isolate; /* Leaflet's layers stay under the fuel choice and the sheet */
+  height: calc(100vh - var(--header-h) - 250px); /* the ★ card and "all prices" fit the first screen */
+  height: calc(100svh - var(--header-h) - 250px);
+  min-height: 300px;
+  background: var(--raised);
 }
 
 .fuels {
+  position: absolute;
+  z-index: 2;
+  top: 10px;
+  right: 0;
+  left: 0;
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   gap: 8px;
   min-width: 0;
   margin: 0;
-  padding: 0 16px 12px;
+  padding: 2px 12px 8px;
   border: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+  pointer-events: none; /* the map is still dragged between the chips */
+}
+
+.fuels::-webkit-scrollbar {
+  display: none;
 }
 
 .chip {
   position: relative;
+  flex: none;
   cursor: pointer;
+  pointer-events: auto;
 }
 
 .chip input {
@@ -78,41 +145,71 @@ h1 {
 
 .chip span {
   display: inline-block;
-  padding: 8px 14px;
+  padding: 8px 15px;
   border-radius: 999px;
-  background: var(--mist);
+  background: var(--sheet);
+  color: var(--text);
+  box-shadow: 0 1px 6px var(--shadow);
+  font-size: 0.95rem;
+  font-weight: 500;
   white-space: nowrap;
 }
 
 .chip input:checked + span {
-  background: var(--violet);
-  color: var(--white);
+  background: var(--accent);
+  color: var(--on-accent);
 }
 
 .chip input:focus-visible + span {
-  outline: 2px solid var(--violet);
+  outline: 2px solid var(--accent);
   outline-offset: 2px;
 }
 
-.map {
-  height: 55vh;
-  min-height: 280px;
+.leaflet-container {
+  font-family: inherit;
 }
 
-.status {
-  margin: 0;
-  padding: 12px 16px;
+.leaflet-bottom {
+  bottom: var(--overlap); /* above the part of the map the sheet covers */
 }
 
-.status:empty {
-  display: none;
+.best-pin {
+  display: grid;
+  place-items: center;
+  border: 2px solid var(--white);
+  border-radius: 50%;
+  background: var(--accent);
+  color: var(--on-accent);
+  box-shadow: 0 2px 8px rgb(15 23 42 / 0.35);
+  font-size: 16px;
+  line-height: 1;
 }
 
-.best {
-  margin: 12px 16px 0;
-  padding: 12px 14px;
-  border-radius: 12px;
-  background: var(--mist);
+/* The sheet: the ★ card, then every price */
+.sheet {
+  position: relative;
+  z-index: 1;
+  margin-top: calc(-1 * var(--overlap));
+  padding: 10px 16px 8px;
+  border-radius: 20px 20px 0 0;
+  background: var(--sheet);
+  box-shadow: 0 -4px 18px var(--shadow);
+}
+
+.sheet::before {
+  content: "";
+  display: block;
+  width: 40px;
+  height: 4px;
+  margin: 0 auto 12px;
+  border-radius: 2px;
+  background: var(--line);
+}
+
+.sheet > * {
+  max-width: 640px;
+  margin-right: auto;
+  margin-left: auto;
 }
 
 .best[hidden] {
@@ -120,38 +217,63 @@ h1 {
 }
 
 .best h2 {
-  margin: 0 0 6px;
+  margin: 0 0 8px;
+  font-size: 1.05rem;
 }
 
 .best p {
   margin: 4px 0;
 }
 
+.best .who {
+  font-size: 1rem;
+}
+
 .best .price {
-  font-size: 1.3rem;
-  font-weight: 700;
+  font-size: 1.9rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
 }
 
 .go {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-top: 10px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: 12px;
 }
 
 .go a {
-  display: inline-block;
-  padding: 8px 14px;
-  border-radius: 999px;
-  background: var(--violet);
-  color: var(--white);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 46px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: var(--accent);
+  color: var(--on-accent);
   font-weight: 600;
+  text-align: center;
   text-decoration: none;
 }
 
-.go a:focus-visible {
-  outline: 2px solid var(--graphite);
+.go a:focus-visible,
+.to-prices:focus-visible {
+  outline: 2px solid var(--text);
   outline-offset: 2px;
+}
+
+.to-prices {
+  display: block;
+  margin-top: 12px;
+  padding: 6px;
+  color: var(--link);
+  font-weight: 600;
+  text-align: center;
+  text-decoration: none;
+}
+
+.to-prices::before {
+  content: "˄ ";
 }
 
 .city label {
@@ -162,24 +284,43 @@ h1 {
 .city select {
   width: 100%;
   max-width: 320px;
-  padding: 8px;
-  border: 1px solid #cbd5e1;
-  border-radius: 8px;
-  background: var(--white);
-  color: var(--graphite);
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--sheet);
+  color: var(--text);
   font: inherit;
 }
 
-.foot a {
-  color: var(--violet);
+.status {
+  margin-top: 0;
+  margin-bottom: 0;
+  padding: 4px 0 12px;
+  color: var(--muted);
+}
+
+.status:empty {
+  display: none;
+}
+
+/* The station window on the map */
+.leaflet-popup-content-wrapper,
+.leaflet-popup-tip {
+  background: var(--sheet);
+  color: var(--text);
+}
+
+.leaflet-popup-content {
+  font-size: 0.95rem;
 }
 
 .station-window p {
   margin: 2px 0;
 }
 
-.station-window .address {
-  color: #64748b;
+.station-window .address,
+.prices-here .stale {
+  color: var(--muted);
 }
 
 .prices-here {
@@ -187,16 +328,15 @@ h1 {
   padding-left: 18px;
 }
 
-.prices-here .stale {
-  color: #64748b;
-}
-
+/* Every price */
 .prices {
-  padding: 8px 16px 16px;
+  margin-top: 8px;
+  padding: 4px 0 12px;
+  border-top: 1px solid var(--line);
 }
 
 h2 {
-  margin: 8px 0 12px;
+  margin: 12px 0 8px;
   font-size: 1.05rem;
 }
 
@@ -207,24 +347,28 @@ h2 {
 
 #price-table th {
   padding: 6px 4px;
+  border-bottom: 1px solid var(--line);
+  color: var(--muted);
   font-size: 0.8rem;
   font-weight: 600;
   text-align: left;
-  border-bottom: 1px solid #cbd5e1;
 }
 
 #price-table td {
-  padding: 10px 4px;
+  padding: 12px 4px;
   vertical-align: top;
-  border-bottom: 1px solid var(--mist);
+  border-bottom: 1px solid var(--line);
 }
 
 #price-table .price {
+  font-size: 1.05rem;
   font-weight: 700;
+  font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
 
 #price-table .time {
+  color: var(--muted);
   font-size: 0.85rem;
   white-space: nowrap;
 }
@@ -248,7 +392,7 @@ h2 {
 }
 
 tr.stale {
-  color: #64748b;
+  color: var(--muted);
 }
 
 tr.stale .price {
@@ -256,9 +400,21 @@ tr.stale .price {
 }
 
 .foot {
-  padding: 4px 16px 16px;
-  background: var(--mist);
-  font-size: 0.875rem;
+  padding: 12px 16px 24px;
+  border-top: 1px solid var(--line);
+  background: var(--page);
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.foot p {
+  max-width: 640px;
+  margin-right: auto;
+  margin-left: auto;
+}
+
+.foot a {
+  color: var(--link);
 }
 
 .visually-hidden {
@@ -268,4 +424,32 @@ tr.stale .price {
   overflow: hidden;
   clip: rect(0 0 0 0);
   white-space: nowrap;
+}
+
+/* At night: the map's own pictures darkened, Leaflet's controls in the page's colours */
+@media (prefers-color-scheme: dark) {
+  .leaflet-container {
+    background: var(--page);
+  }
+
+  .leaflet-tile-pane {
+    filter: invert(1) hue-rotate(180deg) brightness(0.9) contrast(0.9);
+  }
+
+  .leaflet-bar a,
+  .leaflet-bar a:hover {
+    border-bottom-color: var(--line);
+    background: var(--raised);
+    color: var(--text);
+  }
+
+  .leaflet-container .leaflet-control-attribution {
+    background: rgb(15 23 42 / 0.85);
+    color: var(--muted);
+  }
+
+  .leaflet-container .leaflet-control-attribution a,
+  .leaflet-container a.leaflet-popup-close-button {
+    color: var(--link);
+  }
 }

@@ -58,3 +58,41 @@ def test_phone_first_screen_without_prices(page: Page, net: Net) -> None:
     expect(page.locator("footer")).to_contain_text("ფასი სტანდარტულია")  # REQ-004
     assert page.evaluate("document.documentElement.scrollWidth <= window.innerWidth")
     assert net.outside == []
+
+
+def test_the_app_style_map_fills_the_screen_with_the_fuel_choice_on_it(page: Page, net: Net) -> None:
+    # Layout 1 of intent §5 in the app style the owner chose (2026-10-30): the fuel choice floats on the map, the
+    # map fills most of the first screen, and the sheet with the ★ card rises over its lower edge
+    page.goto(net.base)
+    expect(page.locator(".leaflet-control-zoom")).to_be_visible()
+    view = page.viewport_size or {"height": 0}
+    m, fuels, zoom, credit, sheet = (page.locator(s).bounding_box() or {} for s in (
+        "#map", "#fuels", ".leaflet-control-zoom", ".leaflet-control-attribution", ".sheet"))
+    assert m["height"] >= 0.55 * view["height"]
+    assert m["y"] <= fuels["y"] and fuels["y"] + fuels["height"] <= m["y"] + m["height"]
+    assert sheet["y"] < m["y"] + m["height"]
+    assert fuels["y"] + fuels["height"] <= zoom["y"] and zoom["y"] + zoom["height"] <= sheet["y"]  # nothing covers it
+    assert credit["y"] + credit["height"] <= sheet["y"]  # OpenStreetMap's credit stays in sight (its licence)
+    assert page.evaluate("document.documentElement.scrollWidth <= window.innerWidth")
+
+
+def test_the_chosen_fuel_is_shown_whole_in_its_row(page: Page, net: Net) -> None:
+    # The six fuels do not fit a phone's width: the row scrolls sideways (never the page), and a fuel chosen at
+    # its far end comes fully into view. Chosen here without Playwright's own scrolling.
+    page.goto(net.base)
+    page.evaluate("""() => { const input = document.querySelector('input[value=cng]');
+                             input.checked = true; input.dispatchEvent(new Event('change', { bubbles: true })); }""")
+    box = page.locator(".chip:has(input[value=cng])").bounding_box()
+    width = (page.viewport_size or {"width": 0})["width"]
+    assert box and box["x"] >= 0 and box["x"] + box["width"] <= width, box
+    assert page.evaluate("document.documentElement.scrollWidth <= window.innerWidth")
+
+
+def test_at_night_the_page_follows_the_phones_dark_mode(page: Page, net: Net) -> None:
+    # the owner's choice (2026-10-30); by day palette II of intent §5 stays
+    background = "getComputedStyle(document.body).backgroundColor.match(/\\d+/g).slice(0, 3).map(Number)"
+    page.emulate_media(color_scheme="dark")
+    page.goto(net.base)
+    assert max(page.evaluate(background)) < 64
+    page.emulate_media(color_scheme="light")
+    assert page.evaluate(background) == [255, 255, 255]  # palette II: white
