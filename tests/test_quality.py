@@ -54,6 +54,34 @@ def test_the_visitors_place_never_leaves_the_page(page_at: Callable[[float, floa
     assert set(stored) <= {"fuel-map.lang"}
 
 
+# data: is Leaflet's own empty picture, set on a tile it no longer needs (no request leaves the page)
+CSP = ("default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data: https://tile.openstreetmap.org; "
+       "connect-src 'self'; base-uri 'none'; form-action 'none'")
+WATCH_CSP = """window.__csp = [];
+document.addEventListener('securitypolicyviolation', (e) => window.__csp.push(`${e.violatedDirective} ${e.blockedURI}`));"""
+
+
+def test_the_page_runs_under_its_own_content_security_policy(page_at: Callable[[float, float], Page],
+                                                             net: Net) -> None:
+    # REQ-008 and REQ-010 do not rest on the code alone: the browser itself refuses a script, a style or a request to
+    # any other place, should a later change let one in
+    net.real_data = True
+    page = at_data_time(page_at(*VISITOR))
+    page.add_init_script(WATCH_CSP)
+    page.goto(net.base)
+    expect(page.locator("meta[http-equiv='Content-Security-Policy']")).to_have_attribute("content", CSP)
+    expect(page.locator("#best a.go-google")).to_be_visible()
+    page.locator("path.station").first.dispatch_event("click")
+    expect(page.locator(".leaflet-popup-content a.go-waze")).to_be_visible()
+    page.get_by_role("button", name="ENG").click()
+    expect(page.locator("#best")).to_contain_text("Cheapest nearby")
+    assert page.evaluate("window.__csp") == []
+    page.evaluate("""() => { const s = document.createElement('script'); s.textContent = 'window.__ran = 1';
+                             document.body.append(s); }""")
+    page.wait_for_function("window.__csp.length > 0")
+    assert page.evaluate("window.__ran") is None
+
+
 def test_the_card_shows_within_10_seconds_on_a_slow_mobile_network(page_at: Callable[[float, float], Page],
                                                                     net: Net) -> None:
     net.real_data = True

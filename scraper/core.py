@@ -7,8 +7,11 @@ REQ-003, REQ-004, REQ-006, REQ-007, AC-002, AC-005.
 
 from __future__ import annotations
 
+import http.client
+import json
 import math
 import re
+import threading
 import urllib.request
 from collections.abc import Callable
 from dataclasses import dataclass
@@ -31,11 +34,21 @@ JUMP_WINDOW = timedelta(days=7)
 OVERDUE_AFTER = timedelta(hours=48)
 
 # AC-002: a station whose place is not inside this box around Georgia (latitude, longitude) is not shown. A station
-# list less than half as long as the last one is a misreading, like an implausible price.
+# list less than half or more than twice as long as the last one (only a list younger than JUMP_WINDOW counts), or
+# longer than MAX_STATIONS, is a misreading, like an implausible price: every phone downloads and draws the whole list
+# (AC-001). A company whose list is OVERDUE_AFTER old makes the run fail, as for prices.
 LAT_RANGE, LNG_RANGE = (41.0, 43.7), (39.9, 46.8)
-MIN_SHARE = 0.5
+MIN_SHARE, MAX_SHARE = 0.5, 2.0
+MAX_STATIONS = 1000
 
-_PRICE_RE = re.compile(r"\s*(\d+(?:[.,]\d+)?)\s*₾?\s*")
+# REQ-007: one source that answers too slowly in all, or too much, fails alone. The socket timeout counts each read on
+# its own, so a page sent a byte at a time would otherwise hold the whole run; the largest page now is about 1 MB.
+DEADLINE_S = 60.0
+MAX_BYTES = 10_000_000
+
+# one optional tail after the number: two optional runs of spaces side by side would be tried in every split
+_PRICE_RE = re.compile(r"\s*(\d+(?:[.,]\d+)?)\s*(?:₾\s*)?")
+_LINE_BREAKS = re.compile(r"[\x00-\x1f\x7f-\x9f  ]")
 
 
 class ParseError(Exception):
@@ -71,17 +84,50 @@ class Company:
     parse_stations: Callable[[str], list[Station]] | None = None
 
 
-def fetch(url: str, timeout: float = 30) -> str:
+def _download(url: str, timeout: float) -> str:
     request = urllib.request.Request(url, headers={"User-Agent": USER_AGENT, "Accept-Language": "ka,en;q=0.8"})
     with urllib.request.urlopen(request, timeout=timeout) as response:
         charset = response.headers.get_content_charset() or "utf-8"
-        return response.read().decode(charset, errors="replace")
+        declared = response.headers.get("Content-Length", "")
+        body = response.read(MAX_BYTES + 1)
+    if len(body) > MAX_BYTES:
+        raise ParseError(f"the answer is larger than {MAX_BYTES // 1_000_000} MB")
+    if declared.isdigit() and len(body) < int(declared):  # a limited read does not say the connection was cut
+        raise http.client.IncompleteRead(body, int(declared) - len(body))
+    return body.decode(charset, errors="replace")
+
+
+def fetch(url: str, timeout: float = 30) -> str:
+    """The page's text, within DEADLINE_S in all; a source that takes longer is left behind (its thread ends with the
+    run) and fails alone."""
+    answer: list[str | BaseException] = []
+
+    def work() -> None:
+        try:
+            answer.append(_download(url, timeout))
+        except BaseException as e:  # noqa: BLE001 — handed to the caller below
+            answer.append(e)
+
+    worker = threading.Thread(target=work, daemon=True)
+    worker.start()
+    worker.join(DEADLINE_S)
+    if not answer:
+        raise TimeoutError(f"no complete answer in {DEADLINE_S:.0f} s")
+    if isinstance(answer[0], BaseException):
+        raise answer[0]
+    return answer[0]
+
+
+def one_line(text: str) -> str:
+    """A log line that text from a source cannot break: the Actions runner takes a line starting with "::" for a
+    command of its own."""
+    return _LINE_BREAKS.sub(" ", text)
 
 
 def to_price(text: str) -> float:
     m = _PRICE_RE.fullmatch(text)
     if not m:
-        raise ParseError(f"{text.strip()!r} is not a price")
+        raise ParseError(f"{text.strip()[:40]!r} is not a price")
     return float(m.group(1).replace(",", "."))
 
 
@@ -112,8 +158,13 @@ def parse_time(text: object) -> datetime | None:
 def _entry(company: Company, source: str, read_at: datetime, key: str, items: list[dict]) -> dict:
     """One company in a data file. `time` is when we read the source: the sites state no time of their own, so the
     age counts from our reading (SPEC-0001 REQ-006)."""
-    return {"id": company.id, "name": company.name, "color": company.color, "source": source,
-            "time": iso(read_at), "basis": "read", key: items}
+    entry = {"id": company.id, "name": company.name, "color": company.color, "source": source,
+             "time": iso(read_at), "basis": "read", key: items}
+    try:
+        json.dumps(entry, ensure_ascii=False).encode("utf-8")
+    except UnicodeEncodeError as e:  # e.g. half of a UTF-16 pair from a JSON source: the file could not be written
+        raise ParseError("the page holds a broken character (half of a UTF-16 pair)") from e
+    return entry
 
 
 def company_entry(company: Company, readings: list[Reading], read_at: datetime) -> dict:
@@ -202,18 +253,23 @@ def refresh(companies: list[Company], previous: dict[str, dict], get: Callable[[
 def refresh_stations(companies: list[Company], previous: dict[str, dict], get: Callable[[str], str], now: datetime,
                      only: set[str] | None = None) -> tuple[list[dict], list[str], int]:
     """The stations round (REQ-001, REQ-003, AC-002): stations without a place in Georgia are left out; a list less
-    than half as long as the previous one is a misreading."""
+    than half or more than twice as long as the previous one, or longer than MAX_STATIONS, is a misreading."""
 
     def read(c: Company, old: dict | None) -> tuple[dict, list[str]]:
         if c.parse_stations is None:
             raise ParseError("no station list for this company")
         stations = c.parse_stations(get(c.stations_url))
         kept = [s for s in stations if placed(s)]
-        before = len((old or {}).get("stations", []))
+        then = parse_time((old or {}).get("time"))
+        before = len((old or {}).get("stations", [])) if then is not None and now - then < JUMP_WINDOW else 0
         if not kept:
             raise ParseError("no station with a place in Georgia")
+        if len(kept) > MAX_STATIONS:
+            raise ParseError(f"{len(kept)} station(s), more than {MAX_STATIONS}")
         if len(kept) < before * MIN_SHARE:
             raise ParseError(f"only {len(kept)} station(s), the last list had {before}")
+        if before and len(kept) > before * MAX_SHARE:
+            raise ParseError(f"{len(kept)} station(s), the last list had {before}")
         dropped = len(stations) - len(kept)
         notes = [f"{c.name}: {dropped} station(s) without a place in Georgia — left out"] if dropped else []
         items = [{"name": s.name, "address": s.address, "lat": s.lat, "lng": s.lng, "fuels": list(s.fuels)}
@@ -224,7 +280,8 @@ def refresh_stations(companies: list[Company], previous: dict[str, dict], get: C
 
 
 def overdue(companies: list[Company], entries: list[dict], now: datetime) -> list[str]:
-    """Switched-on companies whose prices are OVERDUE_AFTER old or missing — the run fails for them (REQ-007)."""
+    """Switched-on companies whose prices (or stations) are OVERDUE_AFTER old or missing — the run fails for them
+    (REQ-007)."""
     times = {e.get("id"): parse_time(e.get("time")) for e in entries}
     late = []
     for c in companies:

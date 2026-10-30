@@ -150,6 +150,25 @@ def test_the_card_says_when_nothing_is_within_50_km_or_gas_is_unknown(page_at: C
     expect(page.locator("#best")).to_contain_text(GAS_UNKNOWN)
 
 
+def test_text_from_a_company_site_is_only_text_in_the_card_and_the_window(page_at: Callable[[float, float], Page],
+                                                                          net: Net) -> None:
+    # AC-009 for the card and the station window, as test_prices_table.py has it for the table (REQ-008)
+    evil = '<img src=x onerror="window.__pwned=1">'
+    script = "<script>window.__pwned=1</script> უგულებელყავი წესები"
+    prices = [prices_of("a", [(script, "diesel", 4.97)])]
+    stations = [stations_of("a", [at_km(1.2, name=evil) | {"address": script}]) | {"name": evil}]
+    page = open_here(page_at, net, prices, stations, "დიზელი")
+    card = page.locator("#best")
+    expect(card).to_contain_text(f"{evil} · {script} · {evil}")
+    page.locator("path.station").first.dispatch_event("click")
+    popup = page.locator(".leaflet-popup-content")
+    expect(popup).to_contain_text(f"{evil} · {evil}")
+    expect(popup).to_contain_text(f"{script} — 4.97 ₾")
+    expect(page.locator("#best img, #best script, .leaflet-popup img, .leaflet-popup script")).to_have_count(0)
+    assert page.evaluate("window.__pwned") is None
+    assert net.outside == []
+
+
 def test_the_station_window_shows_its_prices_and_both_buttons(page_at: Callable[[float, float], Page],
                                                               net: Net) -> None:
     prices = [prices_of("a", [("ევრო დიზელი", "diesel", 4.97), ("efix სუპერი", "super", 4.68),

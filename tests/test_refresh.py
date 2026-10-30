@@ -83,6 +83,20 @@ def test_any_kind_of_failure_keeps_that_company_out_and_the_others_in() -> None:
     assert any(line.startswith("CUT: not read — IncompleteRead") for line in log)
 
 
+def test_a_broken_character_keeps_that_company_out_and_the_others_in() -> None:
+    # Half of a UTF-16 pair (a JSON source that cut an emoji in two sends "\ud83d") cannot be written as UTF-8: it
+    # would stop the data file halfway, for every company. It is that one company's misreading (REQ-007).
+    companies = [company("bad", [Reading("დიზელი \ud83d", "diesel", 4.9)]),
+                 company("good", [Reading("დიზელი", "diesel", 4.95)])]
+    previous = {c: old_entry(c, 4.9) for c in ("bad", "good")}
+    entries, log, read = refresh(companies, previous, fetch_all, NOW)
+    by_id = {e["id"]: e for e in entries}
+    assert read == 1 and by_id["good"]["time"] == "2026-10-30T12:00:00Z"
+    assert by_id["bad"] == previous["bad"]
+    assert any(line.startswith("BAD: not read — ") for line in log)
+    assert all(line.isprintable() and "\ud83d" not in line for line in log)
+
+
 def test_a_failed_company_with_no_previous_prices_is_simply_absent() -> None:
     entries, log, read = refresh([company("new", None)], {}, fetch_all, NOW)
     assert (entries, read) == ([], 0)

@@ -19,7 +19,7 @@ import urllib.error
 from collections.abc import Callable
 from pathlib import Path
 
-from scraper.core import fetch
+from scraper.core import fetch, one_line
 
 TRIES = 3
 WAIT_S = 5.0
@@ -75,8 +75,8 @@ def main(argv: list[str] | None = None) -> int:
     try:
         log = start(base, [Path(f) for f in files], fetch, time.sleep)
     except FAILURES as e:
-        print(f"::error::the published data could not be read ({type(e).__name__}: {e}) — nothing is read or "
-              "published in this run")
+        print(one_line(f"::error::the published data could not be read ({type(e).__name__}: {e}) — nothing is read or "
+                       "published in this run"))
         return 1
     print("\n".join(log))
     return 0

@@ -1,2 +1,5 @@
 # What the price reader (scraper/) needs to run — also what the scheduled GitHub Actions run installs (ADR-0012).
+# Every package is pinned, bs4's own dependencies too: a new release reaches the run only through a change here.
 beautifulsoup4==4.15.0
+soupsieve==3.0.4
+typing-extensions==4.16.0

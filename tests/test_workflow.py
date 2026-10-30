@@ -6,6 +6,7 @@ SPEC-0001: REQ-006, REQ-007, AC-005; ADR-0012.
 from __future__ import annotations
 
 import http.client
+import importlib.metadata
 import json
 import re
 import urllib.error
@@ -133,6 +134,17 @@ def test_a_stopped_start_is_a_red_run_with_its_reason(tmp_path: Path, monkeypatc
     assert published.main([PUBLISHED, *map(str, paths)]) == 1
     out = capsys.readouterr().out
     assert out.startswith("::error::") and "connection refused" in out
+
+
+def test_every_package_the_run_installs_is_pinned() -> None:
+    # The run that installs them can commit to the repository and builds the published site: a new release of any of
+    # them, bs4's own dependencies included, must not reach it unseen
+    lines = [line.strip() for line in (ROOT / "requirements.txt").read_text(encoding="utf-8").splitlines()]
+    pins = dict(line.split("==") for line in lines if line and not line.startswith("#"))
+    assert all(re.fullmatch(r"[\w.-]+", name) and re.fullmatch(r"\d+(\.\d+)+", v) for name, v in pins.items()), pins
+    wanted = {re.split(r"[ ;<>=!~\[]", r, maxsplit=1)[0].lower().replace("_", "-")
+              for name in pins for r in importlib.metadata.requires(name) or [] if "extra ==" not in r}
+    assert wanted <= {name.lower().replace("_", "-") for name in pins}
 
 
 def test_the_run_reads_publishes_and_turns_red_on_a_bad_reading() -> None:

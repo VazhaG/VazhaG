@@ -13,7 +13,7 @@ from datetime import UTC, datetime
 import pytest
 
 from scraper import lukoil, rompetrol, socar, wissol
-from scraper.core import PETROL, Company, ParseError, Reading, Station, refresh_stations
+from scraper.core import MAX_STATIONS, PETROL, Company, ParseError, Reading, Station, refresh_stations
 from support import ROOT
 
 FIXTURES = ROOT / "tests" / "fixtures"
@@ -111,6 +111,46 @@ def test_a_station_list_that_shrank_by_half_is_a_misreading() -> None:
     assert "not read" in log[0]
     entries, _log, read = refresh_stations([company("a", [at(41.7, 44.8)] * 5)], previous, get, NOW)
     assert read == 1 and len(entries[0]["stations"]) == 5
+
+
+def test_a_station_list_twice_as_long_as_the_last_one_is_a_misreading() -> None:
+    # Every visitor's phone downloads and draws the whole list (AC-001's 10 seconds): one that suddenly doubled is not
+    # believed, like one that halved
+    previous = {"a": old_entry("a", 10)}
+    entries, log, read = refresh_stations([company("a", [at(41.7, 44.8)] * 21)], previous, get, NOW)
+    assert (entries, read) == ([previous["a"]], 0)
+    assert log == [("A: stations not read — 21 station(s), the last list had 10 (the previous stations stay, with "
+                    "their time)")]
+    entries, _log, read = refresh_stations([company("a", [at(41.7, 44.8)] * 20)], previous, get, NOW)
+    assert read == 1 and len(entries[0]["stations"]) == 20
+
+
+def test_no_company_list_is_longer_than_max_stations() -> None:
+    # The first list has no previous one to compare with; the longest list now is Wissol's, 147 (2026-10-30)
+    entries, log, read = refresh_stations([company("a", [at(41.7, 44.8)] * (MAX_STATIONS + 1))], {}, get, NOW)
+    assert (entries, read) == ([], 0)
+    assert log == [f"A: stations not read — {MAX_STATIONS + 1} station(s), more than {MAX_STATIONS}"]
+    entries, _log, read = refresh_stations([company("a", [at(41.7, 44.8)] * MAX_STATIONS)], {}, get, NOW)
+    assert read == 1
+
+
+def test_a_list_older_than_7_days_no_longer_judges_the_new_one() -> None:
+    # Otherwise one wrong list that got through would refuse every true list after it, for good
+    stale = {"a": old_entry("a", 100) | {"time": "2026-10-22T12:00:00Z"}}  # 8 days before NOW
+    entries, _log, read = refresh_stations([company("a", [at(41.7, 44.8)] * 10)], stale, get, NOW)
+    assert read == 1 and len(entries[0]["stations"]) == 10
+    recent = {"a": old_entry("a", 100) | {"time": "2026-10-24T12:00:00Z"}}  # 6 days before NOW
+    entries, _log, read = refresh_stations([company("a", [at(41.7, 44.8)] * 10)], recent, get, NOW)
+    assert (entries, read) == ([recent["a"]], 0)
+
+
+def test_a_broken_character_keeps_the_previous_list() -> None:
+    # Half of a UTF-16 pair cannot be written as UTF-8 (see test_refresh.py): that list is a misreading
+    previous = {"a": old_entry("a", 1)}
+    broken = Station("", "მისამართი \udc00", 41.7, 44.8, PETROL)
+    entries, log, read = refresh_stations([company("a", [broken])], previous, get, NOW)
+    assert (entries, read) == ([previous["a"]], 0)
+    assert log[0].startswith("A: stations not read — ") and "\udc00" not in log[0]
 
 
 def test_a_failed_station_list_keeps_the_previous_one() -> None:

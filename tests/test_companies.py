@@ -5,6 +5,7 @@ SPEC-0001: REQ-002, REQ-006, AC-006. Pages come from tests/fixtures/, never the 
 
 from __future__ import annotations
 
+import time
 from types import ModuleType
 
 import pytest
@@ -82,6 +83,15 @@ def test_price_text(text: str, value: float) -> None:
 def test_price_text_in_another_shape_is_an_error(text: str) -> None:
     with pytest.raises(ParseError):
         to_price(text)
+
+
+def test_a_price_text_with_a_long_run_of_spaces_is_judged_at_once() -> None:
+    # Wissol's price cell reaches to_price with its inner spaces (REQ-007): a pattern that tries every way of sharing
+    # a long run of them between two optional parts would hold the whole run for hours on a few megabytes
+    start = time.perf_counter()
+    with pytest.raises(ParseError):
+        to_price("4.95" + " " * 30_000 + "x")
+    assert time.perf_counter() - start < 0.5
 
 
 def test_the_four_companies_and_wissols_switch() -> None:
