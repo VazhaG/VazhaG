@@ -15,6 +15,13 @@ export const TEXT = {
     'status.noPrices': 'ფასები ჯერ არ არის.',
     'status.noFuelPrice': 'ამ საწვავის ფასი არ მოიძებნა.',
     'price.stale': 'შესაძლოა მოძველებულია',
+    'best.title': '★ ყველაზე იაფი ახლოს',
+    'best.none': '50 კმ-ში ამ საწვავის ახალი ფასით სადგური ვერ მოიძებნა.',
+    'best.gasUnknown': 'რომელ სადგურს აქვს აირი, ჯერ ცნობილი არ არის — ფასები ქვემოთ, ცხრილშია.',
+    'unit.km': 'კმ',
+    'go.google': 'Google Maps',
+    'go.waze': 'Waze',
+    'station.noPrice': 'ფასი ჯერ არ არის.',
   },
 };
 

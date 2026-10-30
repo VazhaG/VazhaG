@@ -5,10 +5,10 @@ from __future__ import annotations
 import functools
 import http.server
 import threading
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
 
 import pytest
-from playwright.sync_api import Browser, Page, sync_playwright
+from playwright.sync_api import Browser, BrowserContext, Page, sync_playwright
 
 from support import PHONE, SITE, Net
 
@@ -49,3 +49,20 @@ def page(browser: Browser, net: Net) -> Iterator[Page]:
     pg = context.new_page()
     yield pg
     context.close()
+
+
+@pytest.fixture
+def page_at(browser: Browser, net: Net) -> Iterator[Callable[[float, float], Page]]:
+    """A phone-sized page whose visitor allowed the location and stands at (lat, lng)."""
+    contexts: list[BrowserContext] = []
+
+    def make(lat: float, lng: float) -> Page:
+        context = browser.new_context(viewport=PHONE, locale="ka-GE", permissions=["geolocation"],
+                                      geolocation={"latitude": lat, "longitude": lng})
+        context.route("**/*", net.handle)
+        contexts.append(context)
+        return context.new_page()
+
+    yield make
+    for context in contexts:
+        context.close()

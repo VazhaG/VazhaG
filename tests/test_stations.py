@@ -28,8 +28,11 @@ def test_socar_stations_carry_their_own_fuels() -> None:
     stations = socar.parse_stations(fixture("socar-stations.json"))
     assert len(stations) == 3  # the record with no fuel is not a fuel station
     first = stations[0]
-    assert first == Station("აეროპორტი 1", first.address, 41.68782, 44.89672, ("regular", "premium", "diesel"))
+    assert first == Station("აეროპორტი 1", first.address, 41.68782, 44.89672, ("regular", "premium", "diesel"),
+                            ("ნანო პრემიუმი", "ევრო 5 დიზელი", "ნანო ევრო 5 დიზელი", "ნანო ევრო რეგულარი"))
     assert first.address.startswith("ქ. თბილისი")
+    prices = {r.grade for r in socar.parse(fixture("socar.html"))}
+    assert {g for s in stations for g in s.grades} <= prices  # the station list names fuels as the price list does
     assert any({"lpg", "cng"} <= set(s.fuels) for s in stations)
 
 
@@ -42,6 +45,9 @@ def test_rompetrol_station_fuels_come_from_its_services_and_super_is_assumed() -
         assert not {"lpg", "cng"} & set(s.fuels)
     assert with_premium.name == "ზმკ"
     assert (with_premium.lat, with_premium.lng) == (41.672493, 44.876102)
+    assert "efix ევრო პრემიუმი" in with_premium.grades
+    prices = {r.grade for r in rompetrol.parse(fixture("rompetrol.html"))}
+    assert set(with_premium.grades) | set(without_premium.grades) <= prices  # named as on the price list
 
 
 def test_lukoil_stations_come_from_the_map_markers_with_petrol_assumed() -> None:
@@ -112,6 +118,14 @@ def test_a_failed_station_list_keeps_the_previous_one() -> None:
     entries, log, read = refresh_stations([company("a", None)], previous, get, NOW)
     assert (entries, read) == ([previous["a"]], 0)
     assert log == ["A: stations not read — page changed (the previous stations stay, with their time)"]
+
+
+def test_grades_are_written_only_when_the_list_names_them() -> None:
+    named = Station("", "a", 41.7, 44.8, ("diesel",), ("ევრო დიზელი",))
+    entries, _log, _read = refresh_stations([company("a", [named, at(41.7, 44.8)])], {}, get, NOW)
+    first, second = entries[0]["stations"]
+    assert first["grades"] == ["ევრო დიზელი"]
+    assert "grades" not in second
 
 
 def test_station_entry_shape() -> None:

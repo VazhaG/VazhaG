@@ -1,11 +1,13 @@
-// The page: map, fuel choice and prices (SPEC-0001). Texts from the data files are shown only as text
-// (textContent, never innerHTML) — REQ-008.
+// The page: map, fuel choice, the ★ card and prices (SPEC-0001). Texts from the data files are shown only as text
+// (textContent, never innerHTML) — REQ-008. The visitor's place stays in this page: it is never sent (REQ-010).
 import { FUELS, t } from './i18n.js';
-import { priceRows, stationsFor } from './logic.js';
+import { cheapestNearby, priceRows, routeLinks, stationPrices, stationsFor } from './logic.js';
 
 const GEORGIA = [[41.05, 40.0], [43.6, 46.7]]; // south-west and north-east corners: the first view shows it all
 const TILES = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
 const OSM_CREDIT = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors';
+const LOCATE = { enableHighAccuracy: false, timeout: 10000, maximumAge: 300000 }; // REQ-001: 10 seconds at most
+const NEAR_ZOOM = 12;
 // Georgian time, written the Georgian way ("30.10 15:00") — the browser's own "ka" format gives "10-30".
 const TIME_PARTS = new Intl.DateTimeFormat('en-GB', {
   timeZone: 'Asia/Tbilisi',
@@ -21,13 +23,60 @@ function formatTime(iso) {
   return `${p.day}.${p.month} ${p.hour}:${p.minute}`;
 }
 
-const state = { fuel: FUELS[0], prices: null, stations: null, markers: null };
+const state = { fuel: FUELS[0], prices: null, stations: null, here: null, map: null, markers: null, you: null };
+
+function element(tag, className, text) {
+  const el = document.createElement(tag);
+  if (className) el.className = className;
+  if (text !== undefined) el.textContent = text;
+  return el;
+}
+
+function priceText(price) {
+  return `${price.toFixed(2)} ₾`;
+}
 
 function initMap() {
-  const map = L.map('map', { zoomSnap: 0.25 }).fitBounds(GEORGIA);
-  L.tileLayer(TILES, { maxZoom: 19, attribution: OSM_CREDIT }).addTo(map);
-  state.markers = L.layerGroup().addTo(map);
-  return map;
+  state.map = L.map('map', { zoomSnap: 0.25 }).fitBounds(GEORGIA);
+  L.tileLayer(TILES, { maxZoom: 19, attribution: OSM_CREDIT }).addTo(state.map);
+  state.markers = L.layerGroup().addTo(state.map);
+}
+
+function companyPrices(companyId) {
+  return (state.prices?.companies ?? []).find((c) => String(c?.id) === companyId);
+}
+
+function routeButtons(lat, lng) {
+  const links = routeLinks(lat, lng);
+  const box = element('div', 'go');
+  for (const [key, href] of [['google', links.google], ['waze', links.waze]]) {
+    const a = element('a', `go-${key}`, t(`go.${key}`));
+    a.href = href;
+    a.target = '_blank';
+    a.rel = 'noopener noreferrer';
+    box.append(a);
+  }
+  return box;
+}
+
+// REQ-005: the station window — company, name, address, this station's prices and the two buttons.
+function stationWindow(s) {
+  const box = element('div', 'station-window');
+  const title = element('p', 'who');
+  title.append(element('strong', '', s.company));
+  if (s.name) title.append(` · ${s.name}`);
+  box.append(title, element('p', 'address', s.address));
+  const list = element('ul', 'prices-here');
+  const company = companyPrices(s.companyId);
+  for (const fuel of FUELS) {
+    for (const p of company ? stationPrices(company, s, fuel, Date.now()) : []) {
+      const li = element('li', p.stale ? 'stale' : '', `${p.grade} — ${priceText(p.price)}`);
+      if (p.stale) li.append(element('span', 'note', t('price.stale')));
+      list.append(li);
+    }
+  }
+  box.append(list.children.length ? list : element('p', 'note', t('station.noPrice')), routeButtons(s.lat, s.lng));
+  return box;
 }
 
 function renderStations() {
@@ -40,15 +89,44 @@ function renderStations() {
       fillColor: s.color,
       fillOpacity: 0.95,
       className: 'station',
-    }).addTo(state.markers);
+    })
+      .bindPopup(() => stationWindow(s))
+      .addTo(state.markers);
   }
+}
+
+// REQ-003: the ★ card, once the page knows where the visitor is.
+function renderBest() {
+  const card = document.getElementById('best');
+  if (!state.here) {
+    card.hidden = true;
+    return;
+  }
+  card.hidden = false;
+  const result = cheapestNearby(state.prices, state.stations, state.fuel, state.here, Date.now());
+  const parts = [element('h2', 'best-title', t('best.title'))];
+  if (result.best) {
+    const b = result.best;
+    const who = element('p', 'who');
+    const dot = element('span', 'dot');
+    dot.style.backgroundColor = b.color;
+    who.append(dot, element('strong', '', b.company), ` · ${b.grade}`);
+    if (b.name) who.append(` · ${b.name}`);
+    const line = element('p', 'best-line');
+    line.append(element('span', 'price', priceText(b.price)), ` · ${b.distanceKm.toFixed(1)} ${t('unit.km')}`);
+    parts.push(who, line);
+    if (b.stale) parts.push(element('p', 'note', t('price.stale')));
+    parts.push(routeButtons(b.lat, b.lng));
+  } else {
+    parts.push(element('p', 'note', t(result.reason === 'gasUnknown' ? 'best.gasUnknown' : 'best.none')));
+  }
+  card.replaceChildren(...parts);
 }
 
 function renderFuels() {
   const box = document.getElementById('fuels');
   for (const key of FUELS) {
-    const label = document.createElement('label');
-    label.className = 'chip';
+    const label = element('label', 'chip');
     const input = document.createElement('input');
     input.type = 'radio';
     input.name = 'fuel';
@@ -58,9 +136,7 @@ function renderFuels() {
       state.fuel = key;
       render();
     });
-    const span = document.createElement('span');
-    span.textContent = t(`fuel.${key}`);
-    label.append(input, span);
+    label.append(input, element('span', '', t(`fuel.${key}`)));
     box.append(label);
   }
 }
@@ -78,13 +154,6 @@ function setStatus(text) {
   document.getElementById('status').textContent = text;
 }
 
-function element(tag, className, text) {
-  const el = document.createElement(tag);
-  if (className) el.className = className;
-  if (text !== undefined) el.textContent = text;
-  return el;
-}
-
 function rowElement(row) {
   const tr = element('tr', row.stale ? 'stale' : '');
   const dot = element('span', 'dot');
@@ -93,12 +162,13 @@ function rowElement(row) {
   who.append(dot, element('strong', '', row.company), element('span', 'grade', row.grade));
   const when = element('td', 'time', formatTime(row.time));
   if (row.stale) when.append(element('span', 'note', t('price.stale')));
-  tr.append(who, element('td', 'price', `${row.price.toFixed(2)} ₾`), when);
+  tr.append(who, element('td', 'price', priceText(row.price)), when);
   return tr;
 }
 
 function render() {
   renderStations();
+  renderBest();
   const body = document.querySelector('#price-table tbody');
   if (!state.prices) {
     body.replaceChildren();
@@ -110,12 +180,34 @@ function render() {
   setStatus(rows.length ? '' : t('status.noFuelPrice'));
 }
 
+function showHere(lat, lng) {
+  state.here = { lat, lng };
+  state.map.setView([lat, lng], NEAR_ZOOM);
+  if (state.you) state.you.remove();
+  state.you = L.circleMarker([lat, lng], {
+    radius: 6,
+    color: '#ffffff',
+    weight: 2,
+    fillColor: '#2563eb',
+    fillOpacity: 1,
+    className: 'you',
+    interactive: false,
+  }).addTo(state.map);
+  render();
+}
+
+function locate() {
+  if (!('geolocation' in navigator)) return;
+  navigator.geolocation.getCurrentPosition((pos) => showHere(pos.coords.latitude, pos.coords.longitude), () => {}, LOCATE);
+}
+
 async function main() {
   initMap();
   renderFuels();
   setStatus(t('status.loading'));
   [state.prices, state.stations] = await Promise.all([loadJson('prices.json'), loadJson('stations.json')]);
   render();
+  locate();
 }
 
 main();

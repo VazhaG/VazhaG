@@ -66,8 +66,72 @@ export function stationsFor(data, fuel) {
         address: String(s.address ?? ''),
         lat: s.lat,
         lng: s.lng,
+        fuels: s.fuels.map(String),
+        grades: Array.isArray(s.grades) ? s.grades.map(String) : null,
       });
     }
   }
   return out;
+}
+
+export const RADII_KM = [5, 10, 20, 50]; // REQ-003: the zone grows until a station is found
+const GASES = ['lpg', 'cng'];
+const EARTH_KM = 6371.0088;
+
+export function distanceKm(a, b) {
+  const rad = Math.PI / 180;
+  const dLat = (b.lat - a.lat) * rad;
+  const dLng = (b.lng - a.lng) * rad;
+  const h = Math.sin(dLat / 2) ** 2 + Math.cos(a.lat * rad) * Math.cos(b.lat * rad) * Math.sin(dLng / 2) ** 2;
+  return 2 * EARTH_KM * Math.asin(Math.sqrt(h));
+}
+
+// What one station sells of one fuel, cheapest first: its company's shown prices of that fuel, narrowed to the
+// station's own grades when its list names them (REQ-003). Prices 7 days old are not shown (REQ-006).
+export function stationPrices(company, station, fuel, now) {
+  if (!station.fuels.includes(fuel) || typeof company?.source !== 'string' || !company.source) return [];
+  const state = freshness(company.time, now);
+  if (state === 'hidden') return [];
+  let list = (company.prices ?? []).filter(
+    (p) => p?.fuel === fuel && typeof p.price === 'number' && Number.isFinite(p.price),
+  );
+  const named = station.grades ? list.filter((p) => station.grades.includes(String(p.grade))) : [];
+  if (named.length) list = named;
+  return list
+    .map((p) => ({ grade: String(p.grade ?? ''), price: p.price, stale: state === 'stale' }))
+    .sort((a, b) => a.price - b.price);
+}
+
+// REQ-003: the cheapest station within 5 km, then 10, 20, 50; on an equal price the nearer one.
+// { best, radius } — or { reason: 'none' }, or for a gas no station is known to sell, { reason: 'gasUnknown' }.
+export function cheapestNearby(pricesData, stationsData, fuel, here, now) {
+  const priced = new Map();
+  for (const c of pricesData?.companies ?? []) {
+    if (c?.id != null) priced.set(String(c.id), c);
+  }
+  const stations = stationsFor(stationsData, fuel);
+  if (!stations.length && GASES.includes(fuel)) return { reason: 'gasUnknown' };
+  const candidates = [];
+  for (const s of stations) {
+    const company = priced.get(s.companyId);
+    const [cheapest] = company ? stationPrices(company, s, fuel, now) : [];
+    if (cheapest) candidates.push({ ...s, ...cheapest, distanceKm: distanceKm(here, s) });
+  }
+  for (const radius of RADII_KM) {
+    const near = candidates.filter((c) => c.distanceKm <= radius);
+    if (near.length) {
+      near.sort((a, b) => a.price - b.price || a.distanceKm - b.distanceKm);
+      return { best: near[0], radius };
+    }
+  }
+  return { reason: 'none' };
+}
+
+// AC-007: the station's own place only — the visitor's is never put into a link (REQ-010).
+export function routeLinks(lat, lng) {
+  const ll = encodeURIComponent(`${lat},${lng}`);
+  return {
+    google: `https://www.google.com/maps/dir/?api=1&destination=${ll}`,
+    waze: `https://www.waze.com/ul?ll=${ll}&navigate=yes`,
+  };
 }

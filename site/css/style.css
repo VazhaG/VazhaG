@@ -85,6 +85,69 @@ h1 {
   display: none;
 }
 
+.best {
+  margin: 12px 16px 0;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: var(--mist);
+}
+
+.best[hidden] {
+  display: none;
+}
+
+.best h2 {
+  margin: 0 0 6px;
+}
+
+.best p {
+  margin: 4px 0;
+}
+
+.best .price {
+  font-size: 1.3rem;
+  font-weight: 700;
+}
+
+.go {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.go a {
+  display: inline-block;
+  padding: 8px 14px;
+  border-radius: 999px;
+  background: var(--violet);
+  color: var(--white);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.go a:focus-visible {
+  outline: 2px solid var(--graphite);
+  outline-offset: 2px;
+}
+
+.station-window p {
+  margin: 2px 0;
+}
+
+.station-window .address {
+  color: #64748b;
+}
+
+.prices-here {
+  margin: 6px 0 0;
+  padding-left: 18px;
+}
+
+.prices-here .stale {
+  color: #64748b;
+}
+
 .prices {
   padding: 8px 16px 16px;
 }

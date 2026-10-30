@@ -56,6 +56,7 @@ class Station:
     lat: float | None  # None when the list gives no usable place
     lng: float | None
     fuels: tuple[str, ...]  # our types, in FUELS order: what the list says, or PETROL where it says nothing
+    grades: tuple[str, ...] = ()  # the company's own fuel names the list confirms here, when it names them
 
 
 @dataclass(frozen=True)
@@ -211,7 +212,7 @@ def refresh_stations(companies: list[Company], previous: dict[str, dict], get: C
         dropped = len(stations) - len(kept)
         notes = [f"{c.name}: {dropped} station(s) without a place in Georgia — left out"] if dropped else []
         items = [{"name": s.name, "address": s.address, "lat": s.lat, "lng": s.lng, "fuels": list(s.fuels)}
-                 for s in kept]
+                 | ({"grades": list(s.grades)} if s.grades else {}) for s in kept]
         return _entry(c, c.stations_url, now, "stations", items), notes
 
     return _round([c for c in companies if c.parse_stations is not None], previous, only, "stations", read)

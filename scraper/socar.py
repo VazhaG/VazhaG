@@ -68,16 +68,18 @@ STATIONS_URL = "https://sgp.ge/sgp-backend/api/integration/info/get-branches-ful
 
 
 def parse_stations(text: str) -> list[Station]:
-    """SOCAR's branch list (the data its /locations page loads): each branch with its place and its own fuel list.
-    A branch selling none of our fuels is not a fuel station and is left out."""
+    """SOCAR's branch list (the data its /locations page loads): each branch with its place and its own fuel list,
+    named as on the price list (FuelNameGe). A branch selling none of our fuels is not a fuel station and is left out."""
     try:
         rows = json.loads(text)["GetBranches"]["Results"]
         stations = []
         for row in rows:
-            fuels = in_fuel_order({FUEL_BY_CODE[f["FuelCode"]] for f in row["Fuels"] if f.get("FuelCode") in FUEL_BY_CODE})
+            sold = [f for f in row["Fuels"] if f.get("FuelCode") in FUEL_BY_CODE]
+            fuels = in_fuel_order({FUEL_BY_CODE[f["FuelCode"]] for f in sold})
             if fuels:
                 stations.append(Station(str(row["AgsNameGe"]).strip(), str(row.get("AgsAddressGe") or "").strip(),
-                                        to_coordinate(row["Latitude"]), to_coordinate(row["Longitude"]), fuels))
+                                        to_coordinate(row["Latitude"]), to_coordinate(row["Longitude"]), fuels,
+                                        tuple(str(f["FuelNameGe"]).strip() for f in sold)))
     except (json.JSONDecodeError, KeyError, TypeError, AttributeError) as e:
         raise ParseError(f"the branch list is not the expected shape ({e!r})") from e
     return stations
