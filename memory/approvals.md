@@ -20,3 +20,8 @@ status: living
 | 2026-10-30 17:45 +0000 | intent | draft → accepted | intent.md | /approve spec 0001 /approve plan 0001 |
 | 2026-10-30 17:46 +0000 | SPEC-0001 | draft → approved | docs/specs/SPEC-0001-fuel-prices-map.md | — |
 | 2026-10-30 17:47 +0000 | PLAN-0001 | draft → approved | docs/plans/PLAN-0001-fuel-prices-map.md | — |
+| 2026-10-30 18:56 +0000 | intent | draft → accepted | intent.md | — |
+| 2026-10-30 19:17 +0000 | SPEC-0001 | draft → approved | docs/specs/SPEC-0001-fuel-prices-map.md | — |
+| 2026-10-30 19:18 +0000 | SPEC-0002 | review → approved | docs/specs/SPEC-0002-company-badges-and-filter.md | — |
+| 2026-10-30 19:24 +0000 | PLAN-0001 | draft → approved | docs/plans/PLAN-0001-fuel-prices-map.md | — |
+| 2026-10-30 19:25 +0000 | PLAN-0002 | draft → approved | docs/plans/PLAN-0002-company-badges-and-filter.md | — |

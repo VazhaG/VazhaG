@@ -24,6 +24,9 @@ export const TEXT = {
     'best.none': '50 კმ-ში ამ საწვავის ახალი ფასით სადგური ვერ მოიძებნა.',
     'best.gasUnknown': 'რომელ სადგურს აქვს აირი, ჯერ ცნობილი არ არის — ფასები ქვემოთ, ცხრილშია.',
     'sheet.all': 'ყველა ფასი',
+    'companies.label': 'კომპანიები',
+    'companies.allOff': 'ჩართე ერთი კომპანია მაინც.',
+    'companies.filtered': 'ჩართულ კომპანიებში ამ საწვავის ფასი არ მოიძებნა — ჩართე სხვა კომპანიაც.',
     'unit.km': 'კმ',
     'go.google': 'Google Maps',
     'go.waze': 'Waze',
@@ -40,6 +43,7 @@ export const TEXT = {
     'note.tiles':
       'რუკის სურათები OpenStreetMap-ის სერვერიდან იტვირთება იმ არეალისთვის, რომელსაც ეკრანი აჩვენებს; '
       + 'შენი ზუსტი მდებარეობა არსად იგზავნება.',
+    'note.storage': 'ენა და კომპანიების არჩევანი მხოლოდ შენს ტელეფონში ინახება.',
     'note.cities': 'ქალაქების კოორდინატები:',
     'lang.group': 'ენა',
   },
@@ -61,6 +65,9 @@ export const TEXT = {
     'best.none': 'No station with a recent price for this fuel within 50 km.',
     'best.gasUnknown': 'Which stations sell this gas is not known yet — see the prices in the table below.',
     'sheet.all': 'All prices',
+    'companies.label': 'Companies',
+    'companies.allOff': 'Turn on at least one company.',
+    'companies.filtered': 'No price for this fuel among the companies switched on — turn on another company.',
     'unit.km': 'km',
     'go.google': 'Google Maps',
     'go.waze': 'Waze',
@@ -76,6 +83,7 @@ export const TEXT = {
     'note.standard': 'Standard prices; self-service and card prices may be lower.',
     'note.tiles':
       'Map images load from the OpenStreetMap server for the area on the screen; your exact location is never sent.',
+    'note.storage': 'The language and the companies you choose are kept only on your phone.',
     'note.cities': 'City coordinates:',
     'lang.group': 'Language',
   },

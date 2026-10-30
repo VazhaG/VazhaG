@@ -101,8 +101,8 @@ h1 {
 .map {
   z-index: 0;
   isolation: isolate; /* Leaflet's layers stay under the fuel choice and the sheet */
-  height: calc(100vh - var(--header-h) - 250px); /* the ★ card and "all prices" fit the first screen */
-  height: calc(100svh - var(--header-h) - 250px);
+  height: calc(100vh - var(--header-h) - 300px); /* the badges, the ★ card and "all prices" fit the first screen */
+  height: calc(100svh - var(--header-h) - 300px);
   min-height: 300px;
   background: var(--raised);
 }
@@ -173,6 +173,24 @@ h1 {
   bottom: var(--overlap); /* above the part of the map the sheet covers */
 }
 
+/* SPEC-0002 REQ-002: a station — its company's colour, and from the city view on its first letter */
+.station span {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+  border: 1.5px solid var(--white);
+  border-radius: 50%;
+  box-shadow: 0 1px 3px rgb(15 23 42 / 0.4);
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.station.near span {
+  border-width: 2px;
+}
+
 .best-pin {
   display: grid;
   place-items: center;
@@ -201,7 +219,7 @@ h1 {
   display: block;
   width: 40px;
   height: 4px;
-  margin: 0 auto 12px;
+  margin: 0 auto 8px;
   border-radius: 2px;
   background: var(--line);
 }
@@ -210,6 +228,47 @@ h1 {
   max-width: 640px;
   margin-right: auto;
   margin-left: auto;
+}
+
+/* SPEC-0002: the company badges — text on the company's colour, never a picture */
+.companies {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 8px;
+  margin-bottom: 10px;
+  padding-bottom: 2px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.companies::-webkit-scrollbar {
+  display: none;
+}
+
+.badge {
+  flex: none;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 8px 10px; /* four companies fit a phone's width in one line */
+  border: 2px solid var(--company);
+  border-radius: 999px;
+  background: var(--company);
+  color: var(--ink);
+  font: inherit;
+  font-size: 0.9rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.badge[aria-pressed="false"] {
+  background: transparent; /* switched off: only the company's frame stays, and the name is crossed out */
+  color: var(--text);
+  text-decoration: line-through;
+}
+
+.badge:focus-visible {
+  outline: 2px solid var(--text);
+  outline-offset: 2px;
 }
 
 .best[hidden] {
@@ -264,7 +323,7 @@ h1 {
 
 .to-prices {
   display: block;
-  margin-top: 12px;
+  margin-top: 8px;
   padding: 6px;
   color: var(--link);
   font-weight: 600;

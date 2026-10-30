@@ -1,7 +1,9 @@
 // The page: map, fuel choice, the ★ card and prices (SPEC-0001). Texts from the data files are shown only as text
 // (textContent, never innerHTML) — REQ-008. The visitor's place stays in this page: it is never sent (REQ-010).
 import { FUELS, lang, LANGS, setLang, t } from './i18n.js';
-import { cheapestNearby, placed, priceRows, routeLinks, stationPrices, stationsFor } from './logic.js';
+import {
+  cheapestNearby, companiesOf, inkOn, placed, priceRows, routeLinks, stationPrices, stationsFor,
+} from './logic.js';
 
 const GEORGIA = [[41.05, 40.0], [43.6, 46.7]]; // south-west and north-east corners: the first view shows it all
 const TILES = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
@@ -10,7 +12,9 @@ const LOCATE = { enableHighAccuracy: false, timeout: 10000, maximumAge: 300000 }
 const NEAR_ZOOM = 12;
 // a station's window opens clear of the fuel choice on the map's top and of the sheet over its lower edge
 const POPUP = { autoPanPaddingTopLeft: [12, 72], autoPanPaddingBottomRight: [12, 48] };
-const LANG_KEY = 'fuel-map.lang'; // the chosen language stays on this phone; nothing else is stored
+// What stays on this phone, and nothing else: the chosen language, and the companies switched off (SPEC-0002 REQ-004)
+const LANG_KEY = 'fuel-map.lang';
+const OFF_KEY = 'fuel-map.off';
 // Georgian time, written the Georgian way ("30.10 15:00") — the browser's own "ka" format gives "10-30".
 const TIME_PARTS = new Intl.DateTimeFormat('en-GB', {
   timeZone: 'Asia/Tbilisi',
@@ -38,6 +42,7 @@ const state = {
   markers: null,
   you: null,
   pin: null, // the ★ on the map: the station the card shows (intent §5)
+  off: new Set(), // the companies switched off in the badge row (SPEC-0002)
 };
 
 function element(tag, className, text) {
@@ -56,6 +61,9 @@ function initMap() {
   L.control.zoom({ position: 'bottomright' }).addTo(state.map); // the fuel choice floats on the map's top
   L.tileLayer(TILES, { maxZoom: 19, attribution: OSM_CREDIT }).addTo(state.map);
   state.markers = L.layerGroup().addTo(state.map);
+  state.map.on('zoomend', () => {
+    if ((state.map.getZoom() >= LETTERS_FROM) !== state.near) render(); // the letters come or go
+  });
 }
 
 function companyPrices(companyId) {
@@ -95,19 +103,26 @@ function stationWindow(s) {
   return box;
 }
 
-function renderStations() {
+// SPEC-0002 REQ-002: from the city view on, a station is its company's colour with the company's first letter; from
+// farther away, a small dot, so the whole country's map stays readable.
+const LETTERS_FROM = 11;
+
+function stationIcon(s, near) {
+  const mark = element('span', '', near ? (s.company.trim()[0] ?? '?') || '?' : '');
+  mark.style.backgroundColor = s.color;
+  mark.style.color = inkOn(s.color);
+  const size = near ? 24 : 12;
+  return L.divIcon({ className: near ? 'station near' : 'station', html: mark, iconSize: [size, size] });
+}
+
+function renderStations(stations) {
   state.markers.clearLayers();
-  for (const s of stationsFor(state.stations, state.fuel)) {
-    L.circleMarker([s.lat, s.lng], {
-      radius: 7,
-      color: '#ffffff',
-      weight: 1.5,
-      fillColor: s.color,
-      fillOpacity: 0.95,
-      className: 'station',
-    })
+  state.near = state.map.getZoom() >= LETTERS_FROM;
+  for (const s of stationsFor(stations, state.fuel)) {
+    const marker = L.marker([s.lat, s.lng], { icon: stationIcon(s, state.near), keyboard: false })
       .bindPopup(() => stationWindow(s), POPUP)
       .addTo(state.markers);
+    marker.getElement().dataset.company = s.companyId;
   }
 }
 
@@ -122,6 +137,62 @@ function markBest(b) {
   })
     .bindPopup(() => stationWindow(b), POPUP)
     .addTo(state.map);
+}
+
+// SPEC-0002: the badge row above the ★ card — one per company in the data, its colour and name, text only.
+function renderCompanies() {
+  const box = document.getElementById('companies');
+  box.setAttribute('aria-label', t('companies.label'));
+  box.replaceChildren(...companiesOf(state.prices, state.stations).map((c) => {
+    const badge = element('button', 'badge', c.name || '?');
+    badge.type = 'button';
+    badge.dataset.company = c.id;
+    badge.setAttribute('aria-pressed', String(!state.off.has(c.id)));
+    badge.style.setProperty('--company', c.color);
+    badge.style.setProperty('--ink', inkOn(c.color));
+    badge.addEventListener('click', () => toggleCompany(c.id));
+    return badge;
+  }));
+}
+
+// REQ-003: a badge switches its company off or on — the map, the ★ and the table follow at once.
+function toggleCompany(id) {
+  if (state.off.has(id)) state.off.delete(id);
+  else state.off.add(id);
+  saveOff();
+  render();
+  // the row was drawn anew: the pressed badge keeps the focus, for the keyboard and the screen reader
+  document.querySelector(`#companies [data-company="${CSS.escape(id)}"]`)?.focus();
+}
+
+// REQ-004: only the list of companies switched off is kept — those the row still shows; with all of them on, nothing.
+function saveOff() {
+  const ids = companiesOf(state.prices, state.stations).map((c) => c.id).filter((id) => state.off.has(id));
+  try {
+    if (ids.length) localStorage.setItem(OFF_KEY, JSON.stringify(ids));
+    else localStorage.removeItem(OFF_KEY);
+  } catch {
+    // a private window or a blocked storage: the choice works for this visit only
+  }
+}
+
+function savedOff() {
+  try {
+    const ids = JSON.parse(localStorage.getItem(OFF_KEY) ?? '[]');
+    return new Set(Array.isArray(ids) ? ids.filter((id) => typeof id === 'string') : []);
+  } catch {
+    return new Set(); // blocked or broken: every company on
+  }
+}
+
+function shown(data) {
+  return data && { ...data, companies: (data.companies ?? []).filter((c) => !state.off.has(String(c?.id))) };
+}
+
+// REQ-005: every company in the row switched off.
+function everyCompanyOff() {
+  const ids = companiesOf(state.prices, state.stations).map((c) => c.id);
+  return ids.length > 0 && ids.every((id) => state.off.has(id));
 }
 
 // AC-003: the fixed city list, in the page's language, alphabetically.
@@ -156,7 +227,15 @@ function chooseCity(c) {
 }
 
 // REQ-003: the ★ card, once the page knows where to count from.
-function renderBest() {
+// REQ-006: an empty result that a switched-off company would have filled says so — not "see the table".
+function filteredOut(result, pricesHidden) {
+  return !result.best && state.off.size > 0 && (pricesHidden
+    || Boolean(cheapestNearby(state.prices, state.stations, state.fuel, state.here, Date.now()).best));
+}
+
+const REASON_TEXT = { gasUnknown: 'best.gasUnknown', filtered: 'companies.filtered', none: 'best.none' };
+
+function renderBest(prices, stations, allOff, pricesHidden) {
   const card = document.getElementById('best');
   markBest(null);
   if (!state.here && !state.asking) {
@@ -170,9 +249,12 @@ function renderBest() {
     card.replaceChildren(...parts);
     return;
   }
-  const result = cheapestNearby(state.prices, state.stations, state.fuel, state.here, Date.now());
+  let result = allOff ? { reason: 'allOff' } : cheapestNearby(prices, stations, state.fuel, state.here, Date.now());
+  if (!allOff && filteredOut(result, pricesHidden)) result = { reason: 'filtered' };
   markBest(result.best);
-  if (result.best) {
+  if (result.reason === 'allOff') {
+    parts.push(element('p', 'note', t('companies.allOff')));
+  } else if (result.best) {
     const b = result.best;
     const who = element('p', 'who');
     const dot = element('span', 'dot');
@@ -185,7 +267,7 @@ function renderBest() {
     if (b.stale) parts.push(element('p', 'note', t('price.stale')));
     parts.push(routeButtons(b.lat, b.lng));
   } else {
-    parts.push(element('p', 'note', t(result.reason === 'gasUnknown' ? 'best.gasUnknown' : 'best.none')));
+    parts.push(element('p', 'note', t(REASON_TEXT[result.reason] ?? 'best.none')));
   }
   const all = element('a', 'to-prices', t('sheet.all'));
   all.href = '#prices-title';
@@ -251,17 +333,27 @@ function rowElement(row) {
 }
 
 function render() {
-  renderStations();
-  renderBest();
+  const prices = shown(state.prices);
+  const stations = shown(state.stations);
+  const allOff = everyCompanyOff();
+  const rows = priceRows(prices, state.fuel, Date.now());
+  const pricesHidden = !rows.length && state.off.size > 0 && priceRows(state.prices, state.fuel, Date.now()).length > 0;
+  renderCompanies();
+  renderStations(stations);
+  renderBest(prices, stations, allOff, pricesHidden);
   const body = document.querySelector('#price-table tbody');
   if (!state.prices) {
     body.replaceChildren();
     setStatus(t('status.noPrices'));
     return;
   }
-  const rows = priceRows(state.prices, state.fuel, Date.now());
+  if (allOff) {
+    body.replaceChildren();
+    setStatus(t('companies.allOff'));
+    return;
+  }
   body.replaceChildren(...rows.map(rowElement));
-  setStatus(rows.length ? '' : t('status.noFuelPrice'));
+  setStatus(rows.length ? '' : t(pricesHidden ? 'companies.filtered' : 'status.noFuelPrice'));
 }
 
 function showHere(lat, lng) {
@@ -348,6 +440,7 @@ function validCities(data) {
 
 async function main() {
   setLang(savedLanguage() ?? 'ka');
+  state.off = savedOff();
   applyStatic();
   for (const button of document.querySelectorAll('.lang button')) {
     button.addEventListener('click', () => setLanguage(button.dataset.lang));

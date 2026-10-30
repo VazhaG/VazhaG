@@ -7,6 +7,7 @@ seconds on a slow mobile network), §6 (text contrast WCAG AA, 4.5 : 1 — a hyp
 from __future__ import annotations
 
 import json
+import re
 import time
 from collections.abc import Callable
 from datetime import datetime
@@ -42,7 +43,7 @@ def test_the_visitors_place_never_leaves_the_page(page_at: Callable[[float, floa
     card = page.locator("#best")
     expect(card.locator("a.go-google")).to_be_visible()
     page.get_by_text("პრემიუმი", exact=True).first.click()
-    page.locator("path.station").first.dispatch_event("click")  # it may lie outside the screen's part of the map
+    page.locator(".station").first.dispatch_event("click")  # it may lie outside the screen's part of the map
     expect(page.locator(".leaflet-popup-content a.go-waze")).to_be_visible()
     links = [a.get_attribute("href") or "" for a in page.locator("a.go-google, a.go-waze").all()]
     page.wait_for_load_state("networkidle")
@@ -52,7 +53,7 @@ def test_the_visitors_place_never_leaves_the_page(page_at: Callable[[float, floa
     assert net.outside == []  # no script, font or beacon from anywhere else: only the site and the map images
     assert page.context.cookies() == []
     stored = page.evaluate("Object.keys(localStorage)")
-    assert set(stored) <= {"fuel-map.lang"}
+    assert set(stored) <= {"fuel-map.lang", "fuel-map.off"}  # the language and the companies switched off (SPEC-0002)
 
 
 # data: is Leaflet's own empty picture, set on a tile it no longer needs (no request leaves the page)
@@ -72,7 +73,7 @@ def test_the_page_runs_under_its_own_content_security_policy(page_at: Callable[[
     page.goto(net.base)
     expect(page.locator("meta[http-equiv='Content-Security-Policy']")).to_have_attribute("content", CSP)
     expect(page.locator("#best a.go-google")).to_be_visible()
-    page.locator("path.station").first.dispatch_event("click")
+    page.locator(".station").first.dispatch_event("click")
     expect(page.locator(".leaflet-popup-content a.go-waze")).to_be_visible()
     page.get_by_role("button", name="ENG").click()
     expect(page.locator("#best")).to_contain_text("Cheapest nearby")
@@ -113,7 +114,7 @@ CONTRAST_JS = """() => {
   const out = [];
   for (const el of document.querySelectorAll(
       'h1, h2, .chip span, .lang button, #best p, #best label, .go a, .to-prices, #price-table th, #price-table td, '
-      + '.foot p, .foot a, .leaflet-control-attribution, .leaflet-control-zoom a')) {
+      + '.foot p, .foot a, .leaflet-control-attribution, .leaflet-control-zoom a, .badge, .station span')) {
     if (!el.textContent.trim() || !el.getClientRects().length) continue;
     const fg = rgb(getComputedStyle(el).color).slice(0, 3);
     const [a, b] = [lum(fg), lum(background(el))].sort((x, y) => y - x);
@@ -131,8 +132,12 @@ def test_every_text_has_wcag_aa_contrast(page_at: Callable[[float, float], Page]
     page.goto(net.base)
     expect(page.locator("#best a.go-google")).to_be_visible()
     page.get_by_text("დიზელი", exact=True).first.click()  # a chosen chip: white on violet
+    expect(page.locator(".station.near span").first).to_have_text(re.compile(r"\S"))  # letters on the map
     page.evaluate("document.querySelector('#price-table tbody tr')?.classList.add('stale')")  # a greyed-out row
-    checked = page.evaluate(CONTRAST_JS)
-    assert len(checked) > 20
+    checked = page.evaluate(CONTRAST_JS)  # every company on: each colour as a badge and as letters on the map
+    page.locator("#companies .badge").first.click()  # a switched-off badge: its frame and crossed-out name (SPEC-0002)
+    expect(page.locator("#companies .badge").first).to_have_attribute("aria-pressed", "false")
+    checked += page.evaluate(CONTRAST_JS)
+    assert len(checked) > 40
     low = [c for c in checked if c["ratio"] < 4.5]
     assert low == [], low
