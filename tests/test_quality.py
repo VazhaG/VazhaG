@@ -42,7 +42,7 @@ def test_the_visitors_place_never_leaves_the_page(page_at: Callable[[float, floa
     card = page.locator("#best")
     expect(card.locator("a.go-google")).to_be_visible()
     page.get_by_text("პრემიუმი", exact=True).first.click()
-    page.locator("path.station").first.dispatch_event("click")  # it may lie outside the screen's part of the map
+    page.locator(".station").first.dispatch_event("click")  # it may lie outside the screen's part of the map
     expect(page.locator(".leaflet-popup-content a.go-waze")).to_be_visible()
     links = [a.get_attribute("href") or "" for a in page.locator("a.go-google, a.go-waze").all()]
     page.wait_for_load_state("networkidle")
@@ -72,7 +72,7 @@ def test_the_page_runs_under_its_own_content_security_policy(page_at: Callable[[
     page.goto(net.base)
     expect(page.locator("meta[http-equiv='Content-Security-Policy']")).to_have_attribute("content", CSP)
     expect(page.locator("#best a.go-google")).to_be_visible()
-    page.locator("path.station").first.dispatch_event("click")
+    page.locator(".station").first.dispatch_event("click")
     expect(page.locator(".leaflet-popup-content a.go-waze")).to_be_visible()
     page.get_by_role("button", name="ENG").click()
     expect(page.locator("#best")).to_contain_text("Cheapest nearby")

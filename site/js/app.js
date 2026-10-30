@@ -61,6 +61,9 @@ function initMap() {
   L.control.zoom({ position: 'bottomright' }).addTo(state.map); // the fuel choice floats on the map's top
   L.tileLayer(TILES, { maxZoom: 19, attribution: OSM_CREDIT }).addTo(state.map);
   state.markers = L.layerGroup().addTo(state.map);
+  state.map.on('zoomend', () => {
+    if ((state.map.getZoom() >= LETTERS_FROM) !== state.near) render(); // the letters come or go
+  });
 }
 
 function companyPrices(companyId) {
@@ -100,19 +103,26 @@ function stationWindow(s) {
   return box;
 }
 
+// SPEC-0002 REQ-002: from the city view on, a station is its company's colour with the company's first letter; from
+// farther away, a small dot, so the whole country's map stays readable.
+const LETTERS_FROM = 11;
+
+function stationIcon(s, near) {
+  const mark = element('span', '', near ? (s.company.trim()[0] ?? '?') || '?' : '');
+  mark.style.backgroundColor = s.color;
+  mark.style.color = inkOn(s.color);
+  const size = near ? 24 : 12;
+  return L.divIcon({ className: near ? 'station near' : 'station', html: mark, iconSize: [size, size] });
+}
+
 function renderStations(stations) {
   state.markers.clearLayers();
+  state.near = state.map.getZoom() >= LETTERS_FROM;
   for (const s of stationsFor(stations, state.fuel)) {
-    L.circleMarker([s.lat, s.lng], {
-      radius: 7,
-      color: '#ffffff',
-      weight: 1.5,
-      fillColor: s.color,
-      fillOpacity: 0.95,
-      className: 'station',
-    })
+    const marker = L.marker([s.lat, s.lng], { icon: stationIcon(s, state.near), keyboard: false })
       .bindPopup(() => stationWindow(s), POPUP)
       .addTo(state.markers);
+    marker.getElement().dataset.company = s.companyId;
   }
 }
 

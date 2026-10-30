@@ -157,7 +157,7 @@ def test_the_cheapest_station_is_marked_with_a_star_on_the_map(page_at: Callable
         assert box
         return box["x"] + box["width"] / 2, box["y"] + box["height"] / 2
 
-    (px, py), (sx, sy) = centre(pin.bounding_box()), centre(page.locator("path.station").nth(1).bounding_box())
+    (px, py), (sx, sy) = centre(pin.bounding_box()), centre(page.locator(".station").nth(1).bounding_box())
     assert abs(px - sx) < 3 and abs(py - sy) < 3
     pin.dispatch_event("click")
     expect(page.locator(".leaflet-popup-content")).to_contain_text("ვაკე")
@@ -199,7 +199,7 @@ def test_text_from_a_company_site_is_only_text_in_the_card_and_the_window(page_a
     page = open_here(page_at, net, prices, stations, "დიზელი")
     card = page.locator("#best")
     expect(card).to_contain_text(f"{evil} · {script} · {evil}")
-    page.locator("path.station").first.dispatch_event("click")
+    page.locator(".station").first.dispatch_event("click")
     popup = page.locator(".leaflet-popup-content")
     expect(popup).to_contain_text(f"{evil} · {evil}")
     expect(popup).to_contain_text(f"{script} — 4.97 ₾")
@@ -213,7 +213,7 @@ def test_the_station_window_shows_its_prices_and_both_buttons(page_at: Callable[
     prices = [prices_of("a", [("ევრო დიზელი", "diesel", 4.97), ("efix სუპერი", "super", 4.68),
                               ("თხევადი აირი", "lpg", 2.09)])]
     page = open_here(page_at, net, prices, [stations_of("a", [at_km(2, ["super", "diesel"], name="ვაკე")])], "დიზელი")
-    page.locator("path.station").first.click(force=True)
+    page.locator(".station").first.dispatch_event("click")
     popup = page.locator(".leaflet-popup-content")
     expect(popup).to_contain_text("ვაკე")
     expect(popup).to_contain_text("2 კმ ჩრდილოეთით")

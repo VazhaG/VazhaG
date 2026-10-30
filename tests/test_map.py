@@ -6,12 +6,12 @@ SPEC-0001: REQ-001, REQ-002 (the choice changes the map), AC-002 (a station with
 
 from __future__ import annotations
 
-from playwright.sync_api import Page, expect
+from playwright.sync_api import Locator, Page, expect
 
 from support import Net
 
 PETROL = ["regular", "premium", "super", "diesel"]
-CIRCLES = "path.station"
+CIRCLES = ".station"  # a station's mark on the map (SPEC-0002 REQ-002)
 
 
 def station(lat: object, lng: object, fuels: list[str], address: str = "მისამართი") -> dict:
@@ -25,6 +25,11 @@ def stations_file(*companies: dict) -> dict:
 def company(cid: str, color: str, stations: list[dict], **extra: object) -> dict:
     return {"id": cid, "name": cid.upper(), "color": color, "source": f"https://{cid}.example/map",
             "time": "2026-10-30T12:00:00Z", "basis": "read", "stations": stations, **extra}
+
+
+def fill(mark: Locator) -> str:
+    """A station mark's colour: the background of the circle inside it."""
+    return mark.locator("span").evaluate("s => getComputedStyle(s).backgroundColor")
 
 
 def open_map(page: Page, net: Net, data: dict, fuel: str | None = None) -> None:
@@ -41,8 +46,8 @@ def test_every_station_with_a_known_place_is_a_circle_in_its_company_colour(page
     ))
     circles = page.locator(CIRCLES)
     expect(circles).to_have_count(3)
-    fills = sorted(circles.nth(i).get_attribute("fill") or "" for i in range(3))
-    assert fills == ["#00843d", "#e41e30", "#e41e30"]
+    fills = sorted(fill(circles.nth(i)) for i in range(3))
+    assert fills == ["rgb(0, 132, 61)", "rgb(228, 30, 48)", "rgb(228, 30, 48)"]
     assert net.outside == []
 
 
@@ -75,4 +80,4 @@ def test_a_company_without_a_source_or_with_a_bad_colour(page: Page, net: Net) -
     open_map(page, net, stations_file(no_source, company("y", "url(#evil)", [station(41.71, 44.81, PETROL)])))
     circles = page.locator(CIRCLES)
     expect(circles).to_have_count(1)
-    assert circles.first.get_attribute("fill") == "#94a3b8"
+    assert fill(circles.first) == "rgb(148, 163, 184)"

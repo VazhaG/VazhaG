@@ -139,8 +139,8 @@ def open_here(page_at: Callable[[float, float], Page], net: Net,
     return page
 
 
-def circles_of(page: Page, color: str) -> object:
-    return page.locator(f'path.station[fill="{color}"]')
+def circles_of(page: Page, cid: str) -> object:
+    return page.locator(f'.station[data-company="{cid}"]')
 
 
 def centre(box: dict | None) -> tuple[float, float]:
@@ -152,18 +152,18 @@ def test_a_badge_switches_its_company_off_and_on_everywhere(page_at: Callable[[f
                                                             net: Net) -> None:
     page = open_here(page_at, net, FOUR)
     rompetrol = page.locator(BADGES).nth(1)
-    expect(circles_of(page, "#f39200")).to_have_count(1)  # type: ignore[attr-defined]
+    expect(circles_of(page, "rompetrol")).to_have_count(1)  # type: ignore[attr-defined]
     expect(page.locator(ROWS)).to_have_count(4)
     rompetrol.click()
     expect(rompetrol).to_have_attribute("aria-pressed", "false")
     assert rompetrol.evaluate("b => getComputedStyle(b).backgroundColor") == "rgba(0, 0, 0, 0)"  # only the frame
     assert rompetrol.evaluate("b => getComputedStyle(b).textDecorationLine") == "line-through"
-    expect(circles_of(page, "#f39200")).to_have_count(0)  # type: ignore[attr-defined]
+    expect(circles_of(page, "rompetrol")).to_have_count(0)  # type: ignore[attr-defined]
     expect(page.locator(ROWS)).to_have_count(3)
     expect(page.locator("#price-table")).not_to_contain_text("Rompetrol")
     rompetrol.click()
     expect(rompetrol).to_have_attribute("aria-pressed", "true")
-    expect(circles_of(page, "#f39200")).to_have_count(1)  # type: ignore[attr-defined]
+    expect(circles_of(page, "rompetrol")).to_have_count(1)  # type: ignore[attr-defined]
     expect(page.locator(ROWS)).to_have_count(4)
 
 
@@ -176,7 +176,7 @@ def test_the_star_moves_to_the_cheapest_company_still_on(page_at: Callable[[floa
     alpha.click()
     expect(card).to_contain_text("Beta")
     (px, py), (sx, sy) = centre(page.locator(".best-pin").bounding_box()), centre(
-        circles_of(page, "#00843d").bounding_box())  # type: ignore[attr-defined]
+        circles_of(page, "b").bounding_box())  # type: ignore[attr-defined]
     assert abs(px - sx) < 3 and abs(py - sy) < 3  # the ★ on the map moved with the card
     beta.click()
     expect(card).to_contain_text("Gamma")
@@ -190,7 +190,7 @@ def test_with_every_company_off_the_page_says_to_turn_one_on(page_at: Callable[[
     page = open_here(page_at, net, FOUR)
     for badge in page.locator(BADGES).all():
         badge.click()
-    expect(page.locator("path.station")).to_have_count(0)
+    expect(page.locator(".station")).to_have_count(0)
     expect(page.locator(".best-pin")).to_have_count(0)
     expect(page.locator("#best")).to_contain_text("ჩართე ერთი კომპანია მაინც")
     expect(page.locator(ROWS)).to_have_count(0)
@@ -199,7 +199,7 @@ def test_with_every_company_off_the_page_says_to_turn_one_on(page_at: Callable[[
     expect(page.locator("#best")).to_contain_text("Turn on at least one company")
     expect(page.locator("#status")).to_contain_text("Turn on at least one company")
     page.locator(BADGES).first.click()  # SOCAR on again
-    expect(circles_of(page, "#e41e30")).to_have_count(1)  # type: ignore[attr-defined]
+    expect(circles_of(page, "socar")).to_have_count(1)  # type: ignore[attr-defined]
     expect(page.locator(ROWS)).to_have_count(1)
 
 
@@ -306,3 +306,39 @@ def test_a_broken_or_blocked_store_leaves_every_company_on(page_at: Callable[[fl
     page.locator(BADGES).nth(0).click()  # the choice works for this visit, it just is not kept
     expect(page.locator(BADGES).nth(0)).to_have_attribute("aria-pressed", "false")
     expect(page.locator(ROWS)).to_have_count(3)
+
+
+# PLAN-0002 T6: from the city view on, a station shows its company's first letter on its colour (REQ-002; AC-002)
+
+
+def test_from_the_city_view_a_station_shows_its_companys_letter(page_at: Callable[[float, float], Page],
+                                                                 net: Net) -> None:
+    page = open_here(page_at, net, FOUR)  # the visitor's place: the city view
+    for cid, name, color, _, _ in FOUR:
+        mark = page.locator(f'.station[data-company="{cid}"] span')
+        expect(mark).to_have_text(name[0])
+        box = mark.bounding_box()
+        assert box and box["width"] >= 20 and box["height"] >= 20, (cid, box)
+        assert mark.evaluate("s => getComputedStyle(s).backgroundColor") == rgb(color)
+        assert mark.evaluate("s => parseFloat(getComputedStyle(s).fontSize)") >= 11
+    page.locator('.station[data-company="lukoil"]').dispatch_event("click")
+    expect(page.locator(".leaflet-popup-content")).to_contain_text("Lukoil")  # the full name in the window
+
+
+def test_from_far_a_station_is_a_small_dot_until_the_city_view(page: Page, net: Net) -> None:
+    open_with(page, net, [prices_of("socar", "SOCAR", "#e41e30")], stations=[stations_of("socar", "SOCAR", "#e41e30")])
+    page.get_by_text("დიზელი", exact=True).first.click()  # the station sells diesel only
+    mark = page.locator(".station span")
+    expect(mark).to_have_count(1)  # no place was allowed: the whole of Georgia is in view
+    expect(mark).to_have_text("")
+    box = mark.bounding_box()
+    assert box and box["width"] < 20
+    zoom_in, zoom_out = page.locator(".leaflet-control-zoom-in"), page.locator(".leaflet-control-zoom-out")
+    for _ in range(5):  # by hand, as with the fingers: from the whole country to the city view
+        zoom_in.click()
+        page.wait_for_timeout(350)  # Leaflet's zoom animation
+    expect(mark).to_have_text("S")
+    for _ in range(5):
+        zoom_out.click()
+        page.wait_for_timeout(350)
+    expect(mark).to_have_text("")
