@@ -12,3 +12,4 @@ status: living
 | როდის | id | ცვლილება | ფაილი | შენიშვნა |
 |---|---|---|---|---|
 | 2026-10-30 09:28 +0000 | intent | draft → accepted | intent.md | — |
+| 2026-10-30 09:38 +0000 | SPEC-0001 | review → approved | docs/specs/SPEC-0001-fuel-prices-map.md | — |
