@@ -1,0 +1,517 @@
+{
+ "source": "GeoNames, https://download.geonames.org/export/dump/GE.zip, read 2026-10-30",
+ "license": "CC BY 4.0 — https://creativecommons.org/licenses/by/4.0/",
+ "cities": [
+  {
+   "ka": "აბაშა",
+   "en": "Abasha",
+   "lat": 42.20453,
+   "lng": 42.20357,
+   "geonameid": 616022
+  },
+  {
+   "ka": "ადიგენი",
+   "en": "Adigeni",
+   "lat": 41.67555,
+   "lng": 42.70291,
+   "geonameid": 615973
+  },
+  {
+   "ka": "ახალგორი",
+   "en": "Akhalgori",
+   "lat": 42.12433,
+   "lng": 44.48314,
+   "geonameid": 615914
+  },
+  {
+   "ka": "ახალქალაქი",
+   "en": "Akhalkalaki",
+   "lat": 41.40514,
+   "lng": 43.48629,
+   "geonameid": 615893
+  },
+  {
+   "ka": "ახალციხე",
+   "en": "Akhaltsikhe",
+   "lat": 41.63952,
+   "lng": 42.98604,
+   "geonameid": 615860
+  },
+  {
+   "ka": "ახმეტა",
+   "en": "Akhmeta",
+   "lat": 42.03495,
+   "lng": 45.20804,
+   "geonameid": 615844
+  },
+  {
+   "ka": "ამბროლაური",
+   "en": "Ambrolauri",
+   "lat": 42.52322,
+   "lng": 43.14982,
+   "geonameid": 615776
+  },
+  {
+   "ka": "ასპინძა",
+   "en": "Aspindza",
+   "lat": 41.57314,
+   "lng": 43.24842,
+   "geonameid": 615660
+  },
+  {
+   "ka": "ბაღდათი",
+   "en": "Baghdati",
+   "lat": 42.06943,
+   "lng": 42.82505,
+   "geonameid": 615607
+  },
+  {
+   "ka": "ბათუმი",
+   "en": "Batumi",
+   "lat": 41.64077,
+   "lng": 41.6306,
+   "geonameid": 615532
+  },
+  {
+   "ka": "ბოლნისი",
+   "en": "Bolnisi",
+   "lat": 41.45124,
+   "lng": 44.53835,
+   "geonameid": 615419
+  },
+  {
+   "ka": "ბორჯომი",
+   "en": "Borjomi",
+   "lat": 41.84692,
+   "lng": 43.3971,
+   "geonameid": 615403
+  },
+  {
+   "ka": "ჭიათურა",
+   "en": "Chiatura",
+   "lat": 42.29806,
+   "lng": 43.29889,
+   "geonameid": 615211
+  },
+  {
+   "ka": "ჩხოროწყუ",
+   "en": "Chkhorotsqu",
+   "lat": 42.51954,
+   "lng": 42.12734,
+   "geonameid": 615140
+  },
+  {
+   "ka": "ჩოხატაური",
+   "en": "Chokhatauri",
+   "lat": 42.01896,
+   "lng": 42.23945,
+   "geonameid": 615118
+  },
+  {
+   "ka": "დედოფლისწყარო",
+   "en": "Dedoplistsqaro",
+   "lat": 41.46566,
+   "lng": 46.10385,
+   "geonameid": 615005
+  },
+  {
+   "ka": "დმანისი",
+   "en": "Dmanisi",
+   "lat": 41.33183,
+   "lng": 44.20296,
+   "geonameid": 614891
+  },
+  {
+   "ka": "დუშეთი",
+   "en": "Dusheti",
+   "lat": 42.08642,
+   "lng": 44.695,
+   "geonameid": 614843
+  },
+  {
+   "ka": "გაგრა",
+   "en": "Gagra",
+   "lat": 43.27858,
+   "lng": 40.27124,
+   "geonameid": 614622
+  },
+  {
+   "ka": "გალი",
+   "en": "Gali",
+   "lat": 42.62705,
+   "lng": 41.73645,
+   "geonameid": 614613
+  },
+  {
+   "ka": "გარდაბანი",
+   "en": "Gardabani",
+   "lat": 41.45967,
+   "lng": 45.08988,
+   "geonameid": 614575
+  },
+  {
+   "ka": "გორი",
+   "en": "Gori",
+   "lat": 41.98532,
+   "lng": 44.1129,
+   "geonameid": 614455
+  },
+  {
+   "ka": "გუდაუთა",
+   "en": "Gudauta",
+   "lat": 43.10191,
+   "lng": 40.62245,
+   "geonameid": 614409
+  },
+  {
+   "ka": "გულრიფში",
+   "en": "Gulripshi",
+   "lat": 42.93057,
+   "lng": 41.10257,
+   "geonameid": 614379
+  },
+  {
+   "ka": "გურჯაანი",
+   "en": "Gurjaani",
+   "lat": 41.74384,
+   "lng": 45.80246,
+   "geonameid": 614351
+  },
+  {
+   "ka": "ჯავა",
+   "en": "Java",
+   "lat": 42.38991,
+   "lng": 43.92421,
+   "geonameid": 614217
+  },
+  {
+   "ka": "ქარელი",
+   "en": "Kareli",
+   "lat": 42.0215,
+   "lng": 43.89553,
+   "geonameid": 7669163
+  },
+  {
+   "ka": "კასპი",
+   "en": "Kaspi",
+   "lat": 41.92776,
+   "lng": 44.42355,
+   "geonameid": 614104
+  },
+  {
+   "ka": "ქედა",
+   "en": "Keda",
+   "lat": 41.59948,
+   "lng": 41.93946,
+   "geonameid": 614080
+  },
+  {
+   "ka": "ხარაგაული",
+   "en": "Kharagauli",
+   "lat": 42.02137,
+   "lng": 43.19773,
+   "geonameid": 7667751
+  },
+  {
+   "ka": "ხაშური",
+   "en": "Khashuri",
+   "lat": 41.99733,
+   "lng": 43.59905,
+   "geonameid": 613988
+  },
+  {
+   "ka": "ხელვაჩაური",
+   "en": "Khelvachauri",
+   "lat": 41.58452,
+   "lng": 41.6731,
+   "geonameid": 613971
+  },
+  {
+   "ka": "ხობი",
+   "en": "Khobi",
+   "lat": 42.31746,
+   "lng": 41.9002,
+   "geonameid": 613918
+  },
+  {
+   "ka": "ხონი",
+   "en": "Khoni",
+   "lat": 42.32535,
+   "lng": 42.42243,
+   "geonameid": 613902
+  },
+  {
+   "ka": "ხულო",
+   "en": "Khulo",
+   "lat": 41.64517,
+   "lng": 42.31464,
+   "geonameid": 613870
+  },
+  {
+   "ka": "ქობულეთი",
+   "en": "Kobuleti",
+   "lat": 41.83283,
+   "lng": 41.77823,
+   "geonameid": 613762
+  },
+  {
+   "ka": "ქუთაისი",
+   "en": "Kutaisi",
+   "lat": 42.26791,
+   "lng": 42.69459,
+   "geonameid": 613607
+  },
+  {
+   "ka": "ყვარელი",
+   "en": "Kvareli",
+   "lat": 41.95493,
+   "lng": 45.81716,
+   "geonameid": 612338
+  },
+  {
+   "ka": "ლაგოდეხი",
+   "en": "Lagodekhi",
+   "lat": 41.82747,
+   "lng": 46.27495,
+   "geonameid": 613342
+  },
+  {
+   "ka": "ლანჩხუთი",
+   "en": "Lanchkhuti",
+   "lat": 42.08744,
+   "lng": 42.03611,
+   "geonameid": 613311
+  },
+  {
+   "ka": "ლენტეხი",
+   "en": "Lentekhi",
+   "lat": 42.78888,
+   "lng": 42.72228,
+   "geonameid": 613226
+  },
+  {
+   "ka": "მარნეული",
+   "en": "Marneuli",
+   "lat": 41.48758,
+   "lng": 44.79845,
+   "geonameid": 613074
+  },
+  {
+   "ka": "მარტვილი",
+   "en": "Martvili",
+   "lat": 42.41429,
+   "lng": 42.37892,
+   "geonameid": 613065
+  },
+  {
+   "ka": "მესტია",
+   "en": "Mestia",
+   "lat": 43.0438,
+   "lng": 42.72368,
+   "geonameid": 612987
+  },
+  {
+   "ka": "მცხეთა",
+   "en": "Mtskheta",
+   "lat": 41.84514,
+   "lng": 44.71875,
+   "geonameid": 612890
+  },
+  {
+   "ka": "ნინოწმინდა",
+   "en": "Ninotsminda",
+   "lat": 41.26697,
+   "lng": 43.58959,
+   "geonameid": 612691
+  },
+  {
+   "ka": "ოჩამჩირე",
+   "en": "Ochamchire",
+   "lat": 42.71232,
+   "lng": 41.46863,
+   "geonameid": 612652
+  },
+  {
+   "ka": "ონი",
+   "en": "Oni",
+   "lat": 42.58453,
+   "lng": 43.44356,
+   "geonameid": 612592
+  },
+  {
+   "ka": "ოზურგეთი",
+   "en": "Ozurgeti",
+   "lat": 41.92336,
+   "lng": 42.00525,
+   "geonameid": 612536
+  },
+  {
+   "ka": "ფოთი",
+   "en": "Poti",
+   "lat": 42.14272,
+   "lng": 41.67384,
+   "geonameid": 612366
+  },
+  {
+   "ka": "რუსთავი",
+   "en": "Rustavi",
+   "lat": 41.56271,
+   "lng": 44.9787,
+   "geonameid": 612287
+  },
+  {
+   "ka": "საჩხერე",
+   "en": "Sachkhere",
+   "lat": 42.33594,
+   "lng": 43.40575,
+   "geonameid": 612256
+  },
+  {
+   "ka": "საგარეჯო",
+   "en": "Sagarejo",
+   "lat": 41.73691,
+   "lng": 45.32596,
+   "geonameid": 612230
+  },
+  {
+   "ka": "სამტრედია",
+   "en": "Samtredia",
+   "lat": 42.1537,
+   "lng": 42.33517,
+   "geonameid": 612126
+  },
+  {
+   "ka": "სენაკი",
+   "en": "Senaki",
+   "lat": 42.27077,
+   "lng": 42.06334,
+   "geonameid": 612053
+  },
+  {
+   "ka": "შუახევი",
+   "en": "Shuakhevi",
+   "lat": 41.62566,
+   "lng": 42.18615,
+   "geonameid": 611936
+  },
+  {
+   "ka": "სიღნაღი",
+   "en": "Sighnaghi",
+   "lat": 41.61918,
+   "lng": 45.92227,
+   "geonameid": 611902
+  },
+  {
+   "ka": "სოხუმი",
+   "en": "Sokhumi",
+   "lat": 43.00697,
+   "lng": 40.9893,
+   "geonameid": 611847
+  },
+  {
+   "ka": "სტეფანწმინდა",
+   "en": "Stepantsminda",
+   "lat": 42.65691,
+   "lng": 44.64311,
+   "geonameid": 614087
+  },
+  {
+   "ka": "თბილისი",
+   "en": "Tbilisi",
+   "lat": 41.69143,
+   "lng": 44.83412,
+   "geonameid": 611717
+  },
+  {
+   "ka": "თელავი",
+   "en": "Telavi",
+   "lat": 41.91957,
+   "lng": 45.47002,
+   "geonameid": 611694
+  },
+  {
+   "ka": "თერჯოლა",
+   "en": "Terjola",
+   "lat": 42.18058,
+   "lng": 42.9776,
+   "geonameid": 611682
+  },
+  {
+   "ka": "თეთრიწყარო",
+   "en": "Tetritsqaro",
+   "lat": 41.54379,
+   "lng": 44.46181,
+   "geonameid": 611674
+  },
+  {
+   "ka": "თიანეთი",
+   "en": "Tianeti",
+   "lat": 42.10987,
+   "lng": 44.96784,
+   "geonameid": 611669
+  },
+  {
+   "ka": "ტყიბული",
+   "en": "Tqibuli",
+   "lat": 42.34781,
+   "lng": 42.99774,
+   "geonameid": 611584
+  },
+  {
+   "ka": "ტყვარჩელი",
+   "en": "Tqvarch'eli",
+   "lat": 42.84035,
+   "lng": 41.68007,
+   "geonameid": 611583
+  },
+  {
+   "ka": "ცაგერი",
+   "en": "Tsageri",
+   "lat": 42.64534,
+   "lng": 42.76911,
+   "geonameid": 611566
+  },
+  {
+   "ka": "წალენჯიხა",
+   "en": "Tsalenjikha",
+   "lat": 42.60857,
+   "lng": 42.06693,
+   "geonameid": 611551
+  },
+  {
+   "ka": "წალკა",
+   "en": "Tsalka",
+   "lat": 41.59822,
+   "lng": 44.09112,
+   "geonameid": 611548
+  },
+  {
+   "ka": "წყალტუბო",
+   "en": "Tsqaltubo",
+   "lat": 42.32858,
+   "lng": 42.59808,
+   "geonameid": 824288
+  },
+  {
+   "ka": "ვანი",
+   "en": "Vani",
+   "lat": 42.08408,
+   "lng": 42.51189,
+   "geonameid": 611219
+  },
+  {
+   "ka": "ზესტაფონი",
+   "en": "Zestaponi",
+   "lat": 42.10752,
+   "lng": 43.03291,
+   "geonameid": 610864
+  },
+  {
+   "ka": "ზუგდიდი",
+   "en": "Zugdidi",
+   "lat": 42.5084,
+   "lng": 41.86796,
+   "geonameid": 610824
+  }
+ ]
+}

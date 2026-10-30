@@ -1,7 +1,7 @@
 // The page: map, fuel choice, the ★ card and prices (SPEC-0001). Texts from the data files are shown only as text
 // (textContent, never innerHTML) — REQ-008. The visitor's place stays in this page: it is never sent (REQ-010).
 import { FUELS, t } from './i18n.js';
-import { cheapestNearby, priceRows, routeLinks, stationPrices, stationsFor } from './logic.js';
+import { cheapestNearby, placed, priceRows, routeLinks, stationPrices, stationsFor } from './logic.js';
 
 const GEORGIA = [[41.05, 40.0], [43.6, 46.7]]; // south-west and north-east corners: the first view shows it all
 const TILES = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
@@ -23,7 +23,18 @@ function formatTime(iso) {
   return `${p.day}.${p.month} ${p.hour}:${p.minute}`;
 }
 
-const state = { fuel: FUELS[0], prices: null, stations: null, here: null, map: null, markers: null, you: null };
+const state = {
+  fuel: FUELS[0],
+  prices: null,
+  stations: null,
+  cities: [],
+  here: null, // where the ★ is counted from: the visitor's place, or the chosen city's centre
+  city: null,
+  asking: false, // the city list is shown: no place came from the phone (AC-003)
+  map: null,
+  markers: null,
+  you: null,
+};
 
 function element(tag, className, text) {
   const el = document.createElement(tag);
@@ -95,16 +106,50 @@ function renderStations() {
   }
 }
 
-// REQ-003: the ★ card, once the page knows where the visitor is.
+// AC-003: the fixed city list, in the page's language, alphabetically.
+function cityPicker() {
+  const wrap = element('div', 'city');
+  const label = element('label', '', t('city.ask'));
+  label.htmlFor = 'city';
+  const select = element('select');
+  select.id = 'city';
+  select.append(new Option('—', ''));
+  state.cities.forEach((c, i) => {
+    const option = new Option(c.ka, String(i));
+    option.selected = state.city === c;
+    select.append(option);
+  });
+  select.addEventListener('change', () => {
+    const c = state.cities[Number(select.value)];
+    if (select.value !== '' && c) chooseCity(c);
+  });
+  wrap.append(label, select);
+  return wrap;
+}
+
+function chooseCity(c) {
+  state.city = c;
+  state.here = { lat: c.lat, lng: c.lng };
+  if (state.you) state.you.remove();
+  state.map.setView([c.lat, c.lng], NEAR_ZOOM);
+  render();
+}
+
+// REQ-003: the ★ card, once the page knows where to count from.
 function renderBest() {
   const card = document.getElementById('best');
-  if (!state.here) {
+  if (!state.here && !state.asking) {
     card.hidden = true;
     return;
   }
   card.hidden = false;
-  const result = cheapestNearby(state.prices, state.stations, state.fuel, state.here, Date.now());
   const parts = [element('h2', 'best-title', t('best.title'))];
+  if (state.asking) parts.push(cityPicker());
+  if (!state.here) {
+    card.replaceChildren(...parts);
+    return;
+  }
+  const result = cheapestNearby(state.prices, state.stations, state.fuel, state.here, Date.now());
   if (result.best) {
     const b = result.best;
     const who = element('p', 'who');
@@ -196,16 +241,48 @@ function showHere(lat, lng) {
   render();
 }
 
+function askCity() {
+  if (state.here && !state.city) return; // the phone answered meanwhile
+  state.asking = true;
+  render();
+}
+
+// REQ-001: ask the phone; a refusal, an error or 10 seconds without an answer bring the city list (AC-003).
 function locate() {
-  if (!('geolocation' in navigator)) return;
-  navigator.geolocation.getCurrentPosition((pos) => showHere(pos.coords.latitude, pos.coords.longitude), () => {}, LOCATE);
+  if (!('geolocation' in navigator)) {
+    askCity();
+    return;
+  }
+  const timer = setTimeout(askCity, LOCATE.timeout);
+  navigator.geolocation.getCurrentPosition(
+    (pos) => {
+      clearTimeout(timer);
+      if (!state.city) showHere(pos.coords.latitude, pos.coords.longitude);
+    },
+    () => {
+      clearTimeout(timer);
+      askCity();
+    },
+    LOCATE,
+  );
+}
+
+function validCities(data) {
+  const collator = new Intl.Collator('ka');
+  return (data?.cities ?? [])
+    .filter((c) => typeof c?.ka === 'string' && typeof c.en === 'string' && placed(c.lat, c.lng))
+    .sort((a, b) => collator.compare(a.ka, b.ka));
 }
 
 async function main() {
   initMap();
   renderFuels();
   setStatus(t('status.loading'));
-  [state.prices, state.stations] = await Promise.all([loadJson('prices.json'), loadJson('stations.json')]);
+  let cities;
+  [state.prices, state.stations, cities] = await Promise.all(
+    ['prices.json', 'stations.json', 'cities.json'].map(loadJson),
+  );
+  state.cities = validCities(cities);
   render();
   locate();
 }

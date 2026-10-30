@@ -22,6 +22,7 @@ export const TEXT = {
     'go.google': 'Google Maps',
     'go.waze': 'Waze',
     'station.noPrice': 'ფასი ჯერ არ არის.',
+    'city.ask': 'მდებარეობა უცნობია — აირჩიე ქალაქი:',
   },
 };
 

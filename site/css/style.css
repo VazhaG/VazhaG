@@ -131,6 +131,26 @@ h1 {
   outline-offset: 2px;
 }
 
+.city label {
+  display: block;
+  margin-bottom: 6px;
+}
+
+.city select {
+  width: 100%;
+  max-width: 320px;
+  padding: 8px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  background: var(--white);
+  color: var(--graphite);
+  font: inherit;
+}
+
+.foot a {
+  color: var(--violet);
+}
+
 .station-window p {
   margin: 2px 0;
 }
