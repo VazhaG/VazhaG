@@ -1,0 +1,89 @@
+# Reads the companies' prices and stations every 3 hours and publishes the site on GitHub Pages — SPEC-0001 REQ-006,
+# REQ-007, AC-005; ADR-0012. GitHub runs a schedule only on the default branch, so this starts working once it is
+# merged into main and Pages is switched on (Settings → Pages → Source: GitHub Actions).
+# Every action is pinned to a commit (its release tag beside it), as in gates.yml.
+name: prices
+
+on:
+  schedule:
+    - cron: "17 */3 * * *"  # every 3 hours at :17 — the top of the hour is when GitHub's queue is longest
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: prices
+  cancel-in-progress: false
+
+jobs:
+  read:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: write  # the data files are committed when prices or stations changed (scraper/changed.py)
+    outputs:
+      status: ${{ steps.read.outputs.status }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0  # v7.1.0
+        with:
+          python-version: "3.12"
+      - name: Install the reader
+        run: python -m pip install -r requirements.txt
+      - name: Start from the published data — its times are the last good readings
+        run: |
+          for f in prices stations; do
+            if curl -fsS --max-time 30 -o "$RUNNER_TEMP/$f.json" "https://vazhag.github.io/VazhaG/data/$f.json" \
+               && python -c "import json, sys; json.load(open(sys.argv[1], encoding='utf-8'))" "$RUNNER_TEMP/$f.json"; then
+              cp "$RUNNER_TEMP/$f.json" "site/data/$f.json"
+            else
+              echo "no published $f.json yet — starting from the repository's"
+            fi
+          done
+      - name: Read the companies
+        id: read
+        run: |
+          set +e
+          python -m scraper
+          echo "status=$?" >> "$GITHUB_OUTPUT"
+      - name: Did prices or stations change?
+        id: changed
+        run: python -m scraper.changed site/data/prices.json site/data/stations.json >> "$GITHUB_OUTPUT"
+      - name: Commit the data
+        if: steps.changed.outputs.changed == 'true'
+        continue-on-error: true  # a refused push must not stop the fresh prices from being published
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add site/data/prices.json site/data/stations.json
+          git commit -m "data: prices and stations, $(date -u +%Y-%m-%dT%H:%MZ)"
+          git push
+      - uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d  # v6.0.0
+      - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9  # v5.0.0
+        with:
+          path: site
+
+  deploy:
+    needs: read
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346  # v5.0.1
+
+  verdict:
+    needs: [read, deploy]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Red when no company was read, or one has gone 48 hours unread — GitHub then tells the owner
+        env:
+          STATUS: ${{ needs.read.outputs.status }}
+        run: test "$STATUS" = "0"
