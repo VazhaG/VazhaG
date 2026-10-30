@@ -141,6 +141,39 @@ def test_the_card_shows_the_best_station_with_both_navigation_buttons(page_at: C
     expect(page.locator("path.you")).to_have_count(1)
 
 
+def test_the_cheapest_station_is_marked_with_a_star_on_the_map(page_at: Callable[[float, float], Page],
+                                                               net: Net) -> None:
+    # intent §5: on the map the cheapest is marked with ★; the mark follows the fuel choice
+    prices = [prices_of("a", [("ევრო დიზელი", "diesel", 4.97), ("ბუნებრივი აირი", "cng", 1.6)])]
+    page = open_here(page_at, net, prices, [stations_of("a", [at_km(1.2, name="ვაკე")])], "დიზელი")
+    pin = page.locator(".best-pin")
+    expect(pin).to_have_count(1)
+    expect(pin).to_have_text("★")
+
+    def centre(box: dict | None) -> tuple[float, float]:
+        assert box
+        return box["x"] + box["width"] / 2, box["y"] + box["height"] / 2
+
+    (px, py), (sx, sy) = centre(pin.bounding_box()), centre(page.locator("path.station").first.bounding_box())
+    assert abs(px - sx) < 3 and abs(py - sy) < 3
+    pin.dispatch_event("click")
+    expect(page.locator(".leaflet-popup-content")).to_contain_text("ვაკე")
+    page.get_by_text("ბუნებრივი აირი", exact=True).first.click()  # no station is known to sell it
+    expect(pin).to_have_count(0)
+
+
+def test_all_prices_takes_the_card_down_to_the_table(page_at: Callable[[float, float], Page], net: Net) -> None:
+    # names as long as the real ones, so the card's line wraps as it does on the published data
+    page = open_here(page_at, net, [prices_of("a", [("ნანო ევრო 5 დიზელი", "diesel", 4.97)])],
+                     [stations_of("a", [at_km(1.2, name="თბილისის ზღვის ტერიტორია")])], "დიზელი")
+    link = page.locator("#best a.to-prices")
+    expect(link).to_have_text("ყველა ფასი")
+    expect(link).to_have_attribute("href", "#prices-title")
+    expect(link).to_be_in_viewport(ratio=1)  # whole, on the first screen with the card (375 × 812)
+    link.click()
+    expect(page.locator("#prices-title")).to_be_in_viewport()
+
+
 def test_the_card_says_when_nothing_is_within_50_km_or_gas_is_unknown(page_at: Callable[[float, float], Page],
                                                                        net: Net) -> None:
     prices = [prices_of("a", [("ევრო დიზელი", "diesel", 4.97), ("ბუნებრივი აირი", "cng", 1.6)])]

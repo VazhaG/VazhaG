@@ -8,6 +8,8 @@ const TILES = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
 const OSM_CREDIT = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors';
 const LOCATE = { enableHighAccuracy: false, timeout: 10000, maximumAge: 300000 }; // REQ-001: 10 seconds at most
 const NEAR_ZOOM = 12;
+// a station's window opens clear of the fuel choice on the map's top and of the sheet over its lower edge
+const POPUP = { autoPanPaddingTopLeft: [12, 72], autoPanPaddingBottomRight: [12, 48] };
 const LANG_KEY = 'fuel-map.lang'; // the chosen language stays on this phone; nothing else is stored
 // Georgian time, written the Georgian way ("30.10 15:00") — the browser's own "ka" format gives "10-30".
 const TIME_PARTS = new Intl.DateTimeFormat('en-GB', {
@@ -35,6 +37,7 @@ const state = {
   map: null,
   markers: null,
   you: null,
+  pin: null, // the ★ on the map: the station the card shows (intent §5)
 };
 
 function element(tag, className, text) {
@@ -49,7 +52,8 @@ function priceText(price) {
 }
 
 function initMap() {
-  state.map = L.map('map', { zoomSnap: 0.25 }).fitBounds(GEORGIA);
+  state.map = L.map('map', { zoomSnap: 0.25, zoomControl: false }).fitBounds(GEORGIA);
+  L.control.zoom({ position: 'bottomright' }).addTo(state.map); // the fuel choice floats on the map's top
   L.tileLayer(TILES, { maxZoom: 19, attribution: OSM_CREDIT }).addTo(state.map);
   state.markers = L.layerGroup().addTo(state.map);
 }
@@ -102,9 +106,22 @@ function renderStations() {
       fillOpacity: 0.95,
       className: 'station',
     })
-      .bindPopup(() => stationWindow(s))
+      .bindPopup(() => stationWindow(s), POPUP)
       .addTo(state.markers);
   }
+}
+
+function markBest(b) {
+  if (state.pin) state.pin.remove();
+  state.pin = null;
+  if (!b) return;
+  state.pin = L.marker([b.lat, b.lng], {
+    icon: L.divIcon({ className: 'best-pin', html: element('span', '', '★'), iconSize: [30, 30] }),
+    title: t('best.title'),
+    zIndexOffset: 1000,
+  })
+    .bindPopup(() => stationWindow(b), POPUP)
+    .addTo(state.map);
 }
 
 // AC-003: the fixed city list, in the page's language, alphabetically.
@@ -141,6 +158,7 @@ function chooseCity(c) {
 // REQ-003: the ★ card, once the page knows where to count from.
 function renderBest() {
   const card = document.getElementById('best');
+  markBest(null);
   if (!state.here && !state.asking) {
     card.hidden = true;
     return;
@@ -153,6 +171,7 @@ function renderBest() {
     return;
   }
   const result = cheapestNearby(state.prices, state.stations, state.fuel, state.here, Date.now());
+  markBest(result.best);
   if (result.best) {
     const b = result.best;
     const who = element('p', 'who');
@@ -168,7 +187,20 @@ function renderBest() {
   } else {
     parts.push(element('p', 'note', t(result.reason === 'gasUnknown' ? 'best.gasUnknown' : 'best.none')));
   }
+  const all = element('a', 'to-prices', t('sheet.all'));
+  all.href = '#prices-title';
+  parts.push(all);
   card.replaceChildren(...parts);
+}
+
+// The six fuels do not fit a phone's width: the chosen one is scrolled whole into its row — the row, not the page.
+function showChosen(box) {
+  const chip = box.querySelector('input:checked')?.closest('.chip');
+  if (!chip) return;
+  const start = chip.offsetLeft - 12;
+  const end = chip.offsetLeft + chip.offsetWidth + 12 - box.clientWidth;
+  if (box.scrollLeft > start) box.scrollLeft = start;
+  else if (box.scrollLeft < end) box.scrollLeft = end;
 }
 
 function renderFuels() {
@@ -183,11 +215,13 @@ function renderFuels() {
     input.checked = key === state.fuel;
     input.addEventListener('change', () => {
       state.fuel = key;
+      showChosen(box);
       render();
     });
     label.append(input, element('span', '', t(`fuel.${key}`)));
     box.append(label);
   }
+  showChosen(box);
 }
 
 async function loadJson(name) {
