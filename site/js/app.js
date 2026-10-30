@@ -1,10 +1,25 @@
 // The page: map, fuel choice and prices (SPEC-0001). Texts from the data files are shown only as text
 // (textContent, never innerHTML) — REQ-008.
 import { FUELS, t } from './i18n.js';
+import { priceRows } from './logic.js';
 
 const GEORGIA = [42.3, 43.4];
 const TILES = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
 const OSM_CREDIT = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors';
+// Georgian time, written the Georgian way ("30.10 15:00") — the browser's own "ka" format gives "10-30".
+const TIME_PARTS = new Intl.DateTimeFormat('en-GB', {
+  timeZone: 'Asia/Tbilisi',
+  day: '2-digit',
+  month: '2-digit',
+  hour: '2-digit',
+  minute: '2-digit',
+  hourCycle: 'h23',
+});
+
+function formatTime(iso) {
+  const p = Object.fromEntries(TIME_PARTS.formatToParts(new Date(iso)).map((x) => [x.type, x.value]));
+  return `${p.day}.${p.month} ${p.hour}:${p.minute}`;
+}
 
 const state = { fuel: FUELS[0], prices: null };
 
@@ -48,10 +63,35 @@ function setStatus(text) {
   document.getElementById('status').textContent = text;
 }
 
+function element(tag, className, text) {
+  const el = document.createElement(tag);
+  if (className) el.className = className;
+  if (text !== undefined) el.textContent = text;
+  return el;
+}
+
+function rowElement(row) {
+  const tr = element('tr', row.stale ? 'stale' : '');
+  const dot = element('span', 'dot');
+  dot.style.backgroundColor = row.color;
+  const who = element('td', 'who');
+  who.append(dot, element('strong', '', row.company), element('span', 'grade', row.grade));
+  const when = element('td', 'time', formatTime(row.time));
+  if (row.stale) when.append(element('span', 'note', t('price.stale')));
+  tr.append(who, element('td', 'price', `${row.price.toFixed(2)} ₾`), when);
+  return tr;
+}
+
 function render() {
+  const body = document.querySelector('#price-table tbody');
   if (!state.prices) {
+    body.replaceChildren();
     setStatus(t('status.noPrices'));
+    return;
   }
+  const rows = priceRows(state.prices, state.fuel, Date.now());
+  body.replaceChildren(...rows.map(rowElement));
+  setStatus(rows.length ? '' : t('status.noFuelPrice'));
 }
 
 async function main() {

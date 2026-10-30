@@ -1,0 +1,40 @@
+{
+  "generated": "2026-10-30T10:08:34Z",
+  "companies": [
+    {
+      "id": "socar",
+      "name": "SOCAR",
+      "color": "#e41e30",
+      "source": "https://www.sgp.ge/ge/",
+      "time": "2026-10-30T10:08:34Z",
+      "basis": "read",
+      "prices": [
+        {
+          "grade": "ნანო სუპერი",
+          "fuel": "super",
+          "price": 4.65
+        },
+        {
+          "grade": "ნანო პრემიუმი",
+          "fuel": "premium",
+          "price": 4.37
+        },
+        {
+          "grade": "ნანო ევრო რეგულარი",
+          "fuel": "regular",
+          "price": 4.06
+        },
+        {
+          "grade": "ევრო 5 დიზელი",
+          "fuel": "diesel",
+          "price": 4.9
+        },
+        {
+          "grade": "ნანო ევრო 5 დიზელი",
+          "fuel": "diesel",
+          "price": 4.96
+        }
+      ]
+    }
+  ]
+}

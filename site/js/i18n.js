@@ -11,6 +11,8 @@ export const TEXT = {
     'fuel.gas': 'გაზი',
     'status.loading': 'იტვირთება…',
     'status.noPrices': 'ფასები ჯერ არ არის.',
+    'status.noFuelPrice': 'ამ საწვავის ფასი არ მოიძებნა.',
+    'price.stale': 'შესაძლოა მოძველებულია',
   },
 };
 
