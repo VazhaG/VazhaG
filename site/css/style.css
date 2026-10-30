@@ -1,0 +1,97 @@
+/* Look chosen by the owner (intent §5): layout 1 "map on top", palette II "light day". */
+:root {
+  --white: #ffffff;
+  --mist: #f1f5f9;
+  --graphite: #334155;
+  --violet: #7c3aed;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans Georgian", sans-serif;
+  color: var(--graphite);
+  background: var(--white);
+  line-height: 1.4;
+}
+
+.top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 12px 16px;
+}
+
+h1 {
+  margin: 0;
+  font-size: 1.25rem;
+}
+
+.fuels {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  min-width: 0;
+  margin: 0;
+  padding: 0 16px 12px;
+  border: 0;
+}
+
+.chip {
+  position: relative;
+  cursor: pointer;
+}
+
+.chip input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+}
+
+.chip span {
+  display: inline-block;
+  padding: 8px 14px;
+  border-radius: 999px;
+  background: var(--mist);
+  white-space: nowrap;
+}
+
+.chip input:checked + span {
+  background: var(--violet);
+  color: var(--white);
+}
+
+.chip input:focus-visible + span {
+  outline: 2px solid var(--violet);
+  outline-offset: 2px;
+}
+
+.map {
+  height: 55vh;
+  min-height: 280px;
+}
+
+.status {
+  margin: 0;
+  padding: 12px 16px;
+}
+
+.foot {
+  padding: 4px 16px 16px;
+  background: var(--mist);
+  font-size: 0.875rem;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}

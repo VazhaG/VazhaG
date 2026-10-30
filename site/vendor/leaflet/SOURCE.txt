@@ -1,0 +1,8 @@
+Leaflet 1.9.4 — https://leafletjs.com — BSD-2-Clause (see LICENSE in this folder)
+
+Source: https://registry.npmjs.org/leaflet/-/leaflet-1.9.4.tgz, downloaded 2026-10-30.
+The archive's sha512 matched the registry's "dist.integrity" for leaflet@1.9.4.
+Copied from the archive: dist/leaflet.js, dist/leaflet.css, dist/images/*.png, LICENSE.
+One change: leaflet.css and LICENSE were converted from CRLF to LF line endings (the project's eol gate);
+their content is otherwise byte-for-byte the published files.
+Kept in the site itself (ADR-0012), so a visitor's browser asks no third party for it.

@@ -1,0 +1,8 @@
+# The checks' tools (ADR-0012): {venv_python} -m pip install -r requirements-dev.txt
+# Playwright is pinned to the version whose Chromium is already in this cloud environment (/opt/pw-browsers);
+# on another machine run once: {venv_python} -m playwright install chromium
+-r requirements.txt
+pytest==9.2.0
+djlint==1.47.1
+ruff==0.17.3
+playwright==1.63.0

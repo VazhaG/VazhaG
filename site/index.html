@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="ka">
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <title>საწვავის ფასები საქართველოში</title>
+        <meta name="description"
+              content="სად ჩაასხა ახლოს და იაფად: საწვავის ფასები და სადგურები საქართველოში, კომპანიების ოფიციალური საიტებიდან.">
+        <link rel="stylesheet" href="vendor/leaflet/leaflet.css">
+        <link rel="stylesheet" href="css/style.css">
+    </head>
+    <body>
+        <header class="top">
+            <h1 id="title">⛽ საწვავის ფასები</h1>
+        </header>
+        <main>
+            <fieldset class="fuels" id="fuels">
+                <legend class="visually-hidden" id="fuels-legend">საწვავის ტიპი</legend>
+            </fieldset>
+            <div id="map" class="map"></div>
+            <p id="status" class="status" aria-live="polite">იტვირთება…</p>
+        </main>
+        <footer class="foot">
+            <p id="source-note">ფასები მოდის კომპანიების ოფიციალური საიტებიდან და სადგურზე შეიძლება განსხვავდებოდეს.</p>
+        </footer>
+        <script src="vendor/leaflet/leaflet.js"></script>
+        <script type="module" src="js/app.js"></script>
+    </body>
+</html>
