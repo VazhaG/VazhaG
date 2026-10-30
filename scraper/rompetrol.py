@@ -6,11 +6,18 @@ Each fuel has a row with its standard price; the row after it, starting with "-"
 
 from __future__ import annotations
 
+import json
+
 from bs4 import BeautifulSoup
 
-from scraper.core import ParseError, Reading, to_price
+from scraper.core import ParseError, Reading, Station, in_fuel_order, to_coordinate, to_price
 
 URL = "https://www.rompetrol.ge/"
+STATIONS_URL = "https://www.rompetrol.ge/routeplanner/stations?language_id=1"
+
+# The station list's service numbers that are fuels (the legend on its stations page, 2026-10-30). efix სუპერი is on
+# the price list but not among the services, so every station that sells fuel counts for it (SPEC-0001 REQ-003).
+FUEL_BY_SERVICE = {"27": "premium", "29": "regular", "28": "diesel", "30": "diesel"}
 
 FUEL_BY_NAME = {
     "efix სუპერი": "super",
@@ -43,3 +50,19 @@ def parse(html: str) -> list[Reading]:
     if not readings:
         raise ParseError("the price table has no rows")
     return readings
+
+
+def parse_stations(text: str) -> list[Station]:
+    """The JSON list behind the stations page's map: id, lat, lng, name, address, services (numbers)."""
+    try:
+        rows = json.loads(text)
+        stations = []
+        for row in rows:
+            fuels = {FUEL_BY_SERVICE[s] for s in map(str, row.get("services") or []) if s in FUEL_BY_SERVICE}
+            if fuels:
+                stations.append(Station(str(row["name"]).strip(), str(row.get("address") or "").strip(),
+                                        to_coordinate(row["lat"]), to_coordinate(row["lng"]),
+                                        in_fuel_order(fuels | {"super"})))
+    except (json.JSONDecodeError, KeyError, TypeError, AttributeError) as e:
+        raise ParseError(f"the station list is not the expected shape ({e!r})") from e
+    return stations

@@ -63,7 +63,7 @@ def test_cli_writes_the_data_file(tmp_path: Path, monkeypatch: pytest.MonkeyPatc
     monkeypatch.setattr(cli, "COMPANIES", [c for c in COMPANIES if c.id == "socar"])
     monkeypatch.setattr(cli, "fetch", lambda url: fixture("socar.html"))
     out = tmp_path / "prices.json"
-    assert cli.main(["--out", str(out)]) == 0
+    assert cli.main(["--out", str(out), "--stations-out", str(tmp_path / "stations.json")]) == 0
     data = json.loads(out.read_text(encoding="utf-8"))
     (entry,) = data["companies"]
     assert entry["id"] == "socar"
@@ -86,7 +86,7 @@ def test_cli_fails_when_a_company_has_not_been_read_for_48_hours(tmp_path: Path,
 
     monkeypatch.setattr(cli, "COMPANIES", [c for c in COMPANIES if c.id in ("socar", "rompetrol")])
     monkeypatch.setattr(cli, "fetch", only_socar)
-    assert cli.main(["--out", str(out)]) == 1
+    assert cli.main(["--out", str(out), "--stations-out", str(tmp_path / "stations.json")]) == 1
     by_id = {e["id"]: e for e in json.loads(out.read_text(encoding="utf-8"))["companies"]}
     assert by_id["rompetrol"] == stale
     assert len(by_id["socar"]["prices"]) == 7
@@ -99,5 +99,5 @@ def test_cli_with_nothing_read_leaves_the_file_alone(tmp_path: Path, monkeypatch
     monkeypatch.setattr(cli, "fetch", broken)
     out = tmp_path / "prices.json"
     out.write_text("{}", encoding="utf-8")
-    assert cli.main(["--out", str(out)]) == 1
+    assert cli.main(["--out", str(out), "--stations-out", str(tmp_path / "stations.json")]) == 1
     assert out.read_text(encoding="utf-8") == "{}"

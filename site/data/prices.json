@@ -1,12 +1,12 @@
 {
-  "generated": "2026-10-30T11:03:17Z",
+  "generated": "2026-10-30T11:16:13Z",
   "companies": [
     {
       "id": "socar",
       "name": "SOCAR",
       "color": "#e41e30",
       "source": "https://www.sgp.ge/ge/",
-      "time": "2026-10-30T11:03:17Z",
+      "time": "2026-10-30T11:16:13Z",
       "basis": "read",
       "prices": [
         {
@@ -51,7 +51,7 @@
       "name": "Rompetrol",
       "color": "#f39200",
       "source": "https://www.rompetrol.ge/",
-      "time": "2026-10-30T11:03:17Z",
+      "time": "2026-10-30T11:16:13Z",
       "basis": "read",
       "prices": [
         {
@@ -86,7 +86,7 @@
       "name": "Lukoil",
       "color": "#8a1538",
       "source": "https://www.lukoil.ge/",
-      "time": "2026-10-30T11:03:17Z",
+      "time": "2026-10-30T11:16:13Z",
       "basis": "read",
       "prices": [
         {
@@ -116,7 +116,7 @@
       "name": "Wissol",
       "color": "#00843d",
       "source": "https://wissol.ge/ka/fuel-prices",
-      "time": "2026-10-30T11:03:17Z",
+      "time": "2026-10-30T11:16:13Z",
       "basis": "read",
       "prices": [
         {

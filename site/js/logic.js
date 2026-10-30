@@ -3,6 +3,10 @@
 export const STALE_MS = 48 * 3600 * 1000; // REQ-006: 48 hours and more — greyed out
 export const HIDDEN_MS = 7 * 24 * 3600 * 1000; // REQ-006: 7 days and more — not shown
 
+// AC-002: a station is drawn only with a numeric place inside this box around Georgia.
+export const LAT_RANGE = [41.0, 43.7];
+export const LNG_RANGE = [39.9, 46.8];
+
 const COLOR_RE = /^#[0-9a-f]{6}$/i;
 const NEUTRAL = '#94a3b8';
 
@@ -39,4 +43,31 @@ export function priceRows(data, fuel, now) {
   }
   rows.sort((a, b) => a.price - b.price || a.company.localeCompare(b.company));
   return rows;
+}
+
+export function placed(lat, lng) {
+  return typeof lat === 'number' && typeof lng === 'number'
+    && lat >= LAT_RANGE[0] && lat <= LAT_RANGE[1] && lng >= LNG_RANGE[0] && lng <= LNG_RANGE[1];
+}
+
+// The stations that sell this fuel and have a known place in Georgia (REQ-001, REQ-002, AC-002).
+// A company needs a source, like its prices (REQ-006).
+export function stationsFor(data, fuel) {
+  const out = [];
+  for (const c of data?.companies ?? []) {
+    if (typeof c?.source !== 'string' || !c.source) continue;
+    for (const s of c.stations ?? []) {
+      if (!placed(s?.lat, s?.lng) || !Array.isArray(s.fuels) || !s.fuels.includes(fuel)) continue;
+      out.push({
+        companyId: String(c.id ?? ''),
+        company: String(c.name ?? ''),
+        color: safeColor(c.color),
+        name: String(s.name ?? ''),
+        address: String(s.address ?? ''),
+        lat: s.lat,
+        lng: s.lng,
+      });
+    }
+  }
+  return out;
 }

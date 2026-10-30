@@ -7,11 +7,24 @@ switched off with one setting in scraper/companies.py.
 
 from __future__ import annotations
 
+import json
+import re
+
 from bs4 import BeautifulSoup
 
-from scraper.core import ParseError, Reading, to_price
+from scraper.core import PETROL, ParseError, Reading, Station, in_fuel_order, to_coordinate, to_price
 
 URL = "https://wissol.ge/ka/fuel-prices"
+STATIONS_URL = "https://wissol.ge/ka/map"
+
+# The map page carries `const allLocations = JSON.parse('…')` — GeoJSON points ([lng, lat]) for Wissol and its sister
+# companies. Wissol's own places have company_code 202161098; a fuel station is marked "სტანდარტული" or
+# "თვითმომსახურება" (its petrol and diesel are not listed, so every one counts for them — SPEC-0001 REQ-003), a natural
+# gas station "ბუნებრივი აირი". Service centres, the head office and payment kiosks are not stations.
+_LOCATIONS_RE = re.compile(r"const allLocations = JSON\.parse\('((?:[^'\\]|\\.)*)'\)")
+WISSOL_CODE = 202161098
+PETROL_SERVICES = {"სტანდარტული", "თვითმომსახურება"}
+CNG_SERVICE = "ბუნებრივი აირი"
 
 # "ვისოლ გაზი" is not here on purpose: the page does not say which gas it is, and a gas is shown only once its kind
 # is confirmed by Wissol itself (SPEC-0001 REQ-002) — until then it is logged and left out.
@@ -39,3 +52,25 @@ def parse(html: str) -> list[Reading]:
     if not readings:
         raise ParseError("no price rows")
     return readings
+
+
+def parse_stations(html: str) -> list[Station]:
+    m = _LOCATIONS_RE.search(html)
+    if not m:
+        raise ParseError("no allLocations on the map page")
+    try:
+        features = json.loads(json.loads('"' + m.group(1) + '"'))
+        stations = []
+        for f in features:
+            props = f["properties"]
+            if props.get("company_code") != WISSOL_CODE:
+                continue
+            services = {s["name"]["ka"] for s in props.get("services") or []}
+            fuels = (set(PETROL) if services & PETROL_SERVICES else set()) | ({"cng"} if CNG_SERVICE in services else set())
+            if fuels:
+                lng, lat = f["geometry"]["coordinates"][:2]
+                stations.append(Station("", " ".join(str(props.get("address") or "").split()), to_coordinate(lat),
+                                        to_coordinate(lng), in_fuel_order(fuels)))
+    except (json.JSONDecodeError, KeyError, TypeError, ValueError, AttributeError) as e:
+        raise ParseError(f"allLocations is not the expected shape ({e!r})") from e
+    return stations

@@ -11,7 +11,7 @@ from __future__ import annotations
 import json
 import re
 
-from scraper.core import ParseError, Reading
+from scraper.core import ParseError, Reading, Station, in_fuel_order, to_coordinate
 
 URL = "https://www.sgp.ge/ge/"
 
@@ -62,3 +62,22 @@ def parse(html: str) -> list[Reading]:
     if not readings:
         raise ParseError("GetCurrentPrices has no rows")
     return readings
+
+
+STATIONS_URL = "https://sgp.ge/sgp-backend/api/integration/info/get-branches-full-info"
+
+
+def parse_stations(text: str) -> list[Station]:
+    """SOCAR's branch list (the data its /locations page loads): each branch with its place and its own fuel list.
+    A branch selling none of our fuels is not a fuel station and is left out."""
+    try:
+        rows = json.loads(text)["GetBranches"]["Results"]
+        stations = []
+        for row in rows:
+            fuels = in_fuel_order({FUEL_BY_CODE[f["FuelCode"]] for f in row["Fuels"] if f.get("FuelCode") in FUEL_BY_CODE})
+            if fuels:
+                stations.append(Station(str(row["AgsNameGe"]).strip(), str(row.get("AgsAddressGe") or "").strip(),
+                                        to_coordinate(row["Latitude"]), to_coordinate(row["Longitude"]), fuels))
+    except (json.JSONDecodeError, KeyError, TypeError, AttributeError) as e:
+        raise ParseError(f"the branch list is not the expected shape ({e!r})") from e
+    return stations

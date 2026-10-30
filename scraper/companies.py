@@ -11,8 +11,12 @@ from scraper.core import Company
 WISSOL_ENABLED = True
 
 COMPANIES = [
-    Company(id="socar", name="SOCAR", color="#e41e30", url=socar.URL, parse=socar.parse),
-    Company(id="rompetrol", name="Rompetrol", color="#f39200", url=rompetrol.URL, parse=rompetrol.parse),
-    Company(id="lukoil", name="Lukoil", color="#8a1538", url=lukoil.URL, parse=lukoil.parse),
-    Company(id="wissol", name="Wissol", color="#00843d", url=wissol.URL, parse=wissol.parse, enabled=WISSOL_ENABLED),
+    Company(id="socar", name="SOCAR", color="#e41e30", url=socar.URL, parse=socar.parse,
+            stations_url=socar.STATIONS_URL, parse_stations=socar.parse_stations),
+    Company(id="rompetrol", name="Rompetrol", color="#f39200", url=rompetrol.URL, parse=rompetrol.parse,
+            stations_url=rompetrol.STATIONS_URL, parse_stations=rompetrol.parse_stations),
+    Company(id="lukoil", name="Lukoil", color="#8a1538", url=lukoil.URL, parse=lukoil.parse,
+            stations_url=lukoil.STATIONS_URL, parse_stations=lukoil.parse_stations),
+    Company(id="wissol", name="Wissol", color="#00843d", url=wissol.URL, parse=wissol.parse, enabled=WISSOL_ENABLED,
+            stations_url=wissol.STATIONS_URL, parse_stations=wissol.parse_stations),
 ]
