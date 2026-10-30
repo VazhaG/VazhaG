@@ -46,7 +46,9 @@ def test_wissol_reads_the_standard_prices_in_georgian() -> None:
     assert readings[0] == Reading("A1 სუპერი 100", "super", 4.83)
     assert Reading("ეკო სუპერი", "super", 4.68) in readings
     assert Reading("დიზელ ენერჯი", "diesel", 4.93) in readings
-    assert Reading("ვისოლ გაზი", None, 1.64) in readings  # gas waits for the owner's answer
+    # natural gas: Wissol's own map marks its gas stations so, none as LPG — the owner took that as the
+    # confirmation REQ-002 asks for (2026-10-30, docs/domain/fuel-price-sources.md)
+    assert Reading("ვისოლ გაზი", "cng", 1.64) in readings
 
 
 @pytest.mark.parametrize("parse", [rompetrol.parse, lukoil.parse, wissol.parse, socar.parse])

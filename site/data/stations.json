@@ -1,12 +1,12 @@
 {
-  "generated": "2026-10-30T11:38:35Z",
+  "generated": "2026-10-30T12:16:16Z",
   "companies": [
     {
       "id": "socar",
       "name": "SOCAR",
       "color": "#e41e30",
       "source": "https://sgp.ge/sgp-backend/api/integration/info/get-branches-full-info",
-      "time": "2026-10-30T11:38:35Z",
+      "time": "2026-10-30T12:16:16Z",
       "basis": "read",
       "stations": [
         {
@@ -1854,7 +1854,7 @@
       "name": "Rompetrol",
       "color": "#f39200",
       "source": "https://www.rompetrol.ge/routeplanner/stations?language_id=1",
-      "time": "2026-10-30T11:38:35Z",
+      "time": "2026-10-30T12:16:16Z",
       "basis": "read",
       "stations": [
         {
@@ -3219,7 +3219,7 @@
       "name": "Lukoil",
       "color": "#8a1538",
       "source": "https://www.lukoil.ge/stations",
-      "time": "2026-10-30T11:38:35Z",
+      "time": "2026-10-30T12:16:16Z",
       "basis": "read",
       "stations": [
         {
@@ -3913,7 +3913,7 @@
       "name": "Wissol",
       "color": "#00843d",
       "source": "https://wissol.ge/ka/map",
-      "time": "2026-10-30T11:38:35Z",
+      "time": "2026-10-30T12:16:16Z",
       "basis": "read",
       "stations": [
         {

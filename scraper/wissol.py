@@ -26,9 +26,10 @@ WISSOL_CODE = 202161098
 PETROL_SERVICES = {"სტანდარტული", "თვითმომსახურება"}
 CNG_SERVICE = "ბუნებრივი აირი"
 
-# "ვისოლ გაზი" is not here on purpose: the page does not say which gas it is, and a gas is shown only once its kind
-# is confirmed by Wissol itself (SPEC-0001 REQ-002) — until then it is logged and left out.
+# "ვისოლ გაზი": the price page does not say which gas it is; Wissol's own map marks its gas stations "ბუნებრივი აირი"
+# and none as LPG, which the owner took as the confirmation SPEC-0001 REQ-002 asks for (2026-10-30).
 FUEL_BY_NAME = {
+    "ვისოლ გაზი": "cng",
     "A1 სუპერი 100": "super",
     "ეკო სუპერი": "super",
     "ეკო პრემიუმი": "premium",
