@@ -239,6 +239,23 @@ h1 {
   padding-bottom: 2px;
   overflow-x: auto;
   scrollbar-width: none;
+  scroll-padding-inline: 24px; /* a badge reached from the keyboard stops clear of the faded strip */
+}
+
+/* SPEC-0003 REQ-005: five or more badges scroll in the row; an edge with more badges beyond it fades in 24 px */
+.companies.more-end {
+  -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 24px), transparent);
+  mask-image: linear-gradient(to right, #000 calc(100% - 24px), transparent);
+}
+
+.companies.more-start {
+  -webkit-mask-image: linear-gradient(to left, #000 calc(100% - 24px), transparent);
+  mask-image: linear-gradient(to left, #000 calc(100% - 24px), transparent);
+}
+
+.companies.more-start.more-end {
+  -webkit-mask-image: linear-gradient(to right, transparent, #000 24px, #000 calc(100% - 24px), transparent);
+  mask-image: linear-gradient(to right, transparent, #000 24px, #000 calc(100% - 24px), transparent);
 }
 
 .companies::-webkit-scrollbar {
@@ -249,7 +266,7 @@ h1 {
   flex: none;
   min-width: 44px;
   min-height: 44px;
-  padding: 8px 10px; /* four companies fit a phone's width in one line */
+  padding: 8px 10px; /* four companies fit a phone's width in one line; five scroll in the row */
   border: 2px solid var(--edge, var(--company)); /* SPEC-0003 REQ-003: dark for a light colour, by day */
   border-radius: 999px;
   background: var(--company);

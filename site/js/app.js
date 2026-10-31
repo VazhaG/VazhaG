@@ -162,6 +162,22 @@ function renderCompanies() {
     badge.addEventListener('click', () => toggleCompany(c.id));
     return badge;
   }));
+  markRowEdges();
+}
+
+// SPEC-0003 REQ-005: five or more badges scroll in their row; an edge with more badges beyond it fades (the
+// stylesheet's 24 px strip), and a badge reached from the keyboard is brought clear of the strip (the row's padding).
+function markRowEdges() {
+  const row = document.getElementById('companies');
+  row.classList.toggle('more-start', row.scrollLeft > 1);
+  row.classList.toggle('more-end', row.scrollWidth - row.clientWidth - row.scrollLeft > 1);
+}
+
+function watchRow() {
+  const row = document.getElementById('companies');
+  row.addEventListener('scroll', markRowEdges, { passive: true });
+  row.addEventListener('focusin', (event) => event.target.scrollIntoView({ block: 'nearest', inline: 'nearest' }));
+  window.addEventListener('resize', markRowEdges);
 }
 
 // REQ-003: a badge switches its company off or on — the map, the ★ and the table follow at once.
@@ -454,6 +470,7 @@ async function main() {
   for (const button of document.querySelectorAll('.lang button')) {
     button.addEventListener('click', () => setLanguage(button.dataset.lang));
   }
+  watchRow();
   initMap();
   renderFuels();
   setStatus(t('status.loading'));

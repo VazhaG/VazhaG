@@ -3,6 +3,8 @@
 T4: a company whose colour is light (its letters are dark: today Rompetrol and Connect) has a dark outline by day, on
 its badge and on its map circles, so they stand out on the white page and the light map; at night the outline is as
 before (REQ-003; AC-007).
+T5: five badges do not fit a phone's width — the row scrolls in its place, never the page, and the edge with more
+badges beyond it fades in a 24 px strip; a badge reached from the keyboard stops clear of the strip (REQ-005; AC-006).
 """
 
 from __future__ import annotations
@@ -127,3 +129,96 @@ def test_connects_name_and_letter_read_well_on_and_off(page_at: Callable[[float,
     on.click()
     expect(on).to_have_attribute("aria-pressed", "false")
     assert ratio(rgb(on.evaluate("b => getComputedStyle(b).color")), rgb(on.evaluate(BACKGROUND_JS))) >= 4.5
+
+
+# T5 — the row of five (REQ-005; AC-006)
+STRIP = 24  # px — the faded strip at an edge with more badges beyond it (a hypothesis the owner approved)
+ROW = "#companies"
+EDGES_JS = """(row) => {
+  const mask = getComputedStyle(row).maskImage || getComputedStyle(row).webkitMaskImage || 'none';
+  return { more: row.scrollWidth > row.clientWidth, start: row.classList.contains('more-start'),
+           end: row.classList.contains('more-end'), mask };
+}"""
+
+
+def edges(page: Page) -> dict:
+    return page.locator(ROW).evaluate(EDGES_JS)
+
+
+def scroll_row(page: Page, to: str) -> None:
+    page.locator(ROW).evaluate(f"(row) => {{ row.scrollLeft = {'row.scrollWidth' if to == 'end' else 0}; }}")
+    page.wait_for_timeout(100)  # the scroll event
+
+
+@pytest.mark.parametrize("scheme", ["light", "dark"])
+@pytest.mark.parametrize("language", ["ka", "en"])
+def test_five_badges_scroll_in_their_row_never_the_page_and_the_edge_beyond_fades(
+        page_at: Callable[[float, float], Page], net: Net, scheme: str, language: str) -> None:
+    page = open_five(page_at, net, scheme)
+    if language == "en":
+        page.get_by_role("button", name="ENG").click()
+        expect(page.locator(ROW)).to_have_attribute("aria-label", "Companies")
+    assert page.evaluate("document.documentElement.scrollWidth <= window.innerWidth")
+    at_start = edges(page)
+    assert at_start["more"] and at_start["end"] and not at_start["start"], at_start
+    assert "linear-gradient" in at_start["mask"] and f"{STRIP}px" in at_start["mask"], at_start
+    scroll_row(page, "end")
+    at_end = edges(page)
+    assert at_end["start"] and not at_end["end"], at_end
+    last, row = page.locator(f"{ROW} .badge").last.bounding_box(), page.locator(ROW).bounding_box()
+    assert last and row and last["x"] + last["width"] <= row["x"] + row["width"] + 0.5  # the last badge fully in
+    page.locator(f"{ROW} .badge").last.click()  # a finger reaches it
+    expect(page.locator(f"{ROW} .badge").last).to_have_attribute("aria-pressed", "false")
+    assert page.evaluate("document.documentElement.scrollWidth <= window.innerWidth")
+
+
+def test_a_row_that_fits_has_no_faded_edge(page_at: Callable[[float, float], Page], net: Net) -> None:
+    net.data["prices.json"] = {"generated": TIME, "companies": [
+        {"id": "a", "name": "Alpha", "color": "#e41e30", "source": "https://a.example/", "time": TIME,
+         "basis": "read", "prices": [{"grade": "დიზელი", "fuel": "diesel", "price": 4.9}]}]}
+    net.data["stations.json"] = {"generated": TIME, "companies": []}
+    page = page_at(*HERE)
+    page.clock.set_fixed_time(TIME)
+    page.goto(net.base)
+    expect(page.locator(f"{ROW} .badge")).to_have_count(1)
+    state = edges(page)
+    assert not state["more"] and not state["start"] and not state["end"] and state["mask"] == "none", state
+
+
+def test_a_wider_screen_that_fits_the_row_loses_the_faded_edge(page_at: Callable[[float, float], Page],
+                                                                net: Net) -> None:
+    page = open_five(page_at, net)
+    assert edges(page)["end"]
+    page.set_viewport_size({"width": 1024, "height": 812})  # a phone turned sideways, a tablet
+    page.wait_for_timeout(200)
+    state = edges(page)
+    assert not state["more"] and not state["start"] and not state["end"] and state["mask"] == "none", state
+
+
+def test_every_badge_is_reached_and_pressed_from_the_keyboard_clear_of_the_strip(
+        page_at: Callable[[float, float], Page], net: Net) -> None:
+    page = open_five(page_at, net)
+    page.locator(f"{ROW} .badge").first.focus()
+    for i, (cid, *_) in enumerate(FIVE):
+        if i:
+            page.keyboard.press("Tab")
+        assert page.evaluate("document.activeElement.dataset.company") == cid
+        page.wait_for_timeout(100)  # the scroll that brings it into view, and its event
+        state, row = edges(page), page.locator(ROW).bounding_box()
+        box = page.locator(badge(cid)).bounding_box()
+        assert row and box
+        left = row["x"] + (STRIP if state["start"] else 0)
+        right = row["x"] + row["width"] - (STRIP if state["end"] else 0)
+        assert left - 0.5 <= box["x"] and box["x"] + box["width"] <= right + 0.5, (cid, state, box, row)
+        page.keyboard.press("Space")
+        expect(page.locator(badge(cid))).to_have_attribute("aria-pressed", "false")
+        page.keyboard.press("Space")
+        expect(page.locator(badge(cid))).to_have_attribute("aria-pressed", "true")
+
+
+def test_with_five_badges_the_card_and_its_all_prices_link_stay_on_the_first_screen(
+        page_at: Callable[[float, float], Page], net: Net) -> None:
+    page = open_five(page_at, net)
+    for target in ("#best", "#best a.to-prices"):
+        box = page.locator(target).bounding_box()
+        assert box and box["y"] + box["height"] <= 812, (target, box)
