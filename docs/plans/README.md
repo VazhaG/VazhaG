@@ -14,5 +14,6 @@ title: ფუნქციების გეგმები — ინდექ�
 
 | გეგმა | სათაური | სპეციფიკაცია | სტატუსი |
 |---|---|---|---|
-| [[PLAN-0001-fuel-prices-map]] | საწვავის ფასების რუკა — პირველი ვერსიის აშენება | [[SPEC-0001-fuel-prices-map]] | draft (ხელახლა დასადასტურებელი, შინაარსი უცვლელია) |
-| [[PLAN-0002-company-badges-and-filter]] | კომპანიების ნიშნები და კომპანიით ფილტრი — აშენება | [[SPEC-0002-company-badges-and-filter]] | draft |
+| [[PLAN-0001-fuel-prices-map]] | საწვავის ფასების რუკა — პირველი ვერსიის აშენება | [[SPEC-0001-fuel-prices-map]] | in-progress |
+| [[PLAN-0002-company-badges-and-filter]] | კომპანიების ნიშნები და კომპანიით ფილტრი — აშენება | [[SPEC-0002-company-badges-and-filter]] | in-progress |
+| [[PLAN-0003-connect-stations-and-prices]] | Connect-ის სადგურები და ფასები — აშენება | [[SPEC-0003-connect-stations-and-prices]] | draft |
