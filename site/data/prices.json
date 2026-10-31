@@ -1,5 +1,5 @@
 {
-  "generated": "2026-10-31T19:27:05Z",
+  "generated": "2026-10-31T20:40:33Z",
   "companies": [
     {
       "id": "socar",
@@ -166,7 +166,7 @@
       "name": "Connect",
       "color": "#ffe900",
       "source": "https://connect.com.ge/",
-      "time": "2026-10-31T19:27:05Z",
+      "time": "2026-10-31T20:40:33Z",
       "basis": "read",
       "prices": [
         {

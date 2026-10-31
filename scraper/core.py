@@ -128,8 +128,9 @@ def fetch(url: str, timeout: float = 30) -> str:
 
 def one_line(text: str) -> str:
     """A log line that text from a source cannot break: the Actions runner takes a line starting with "::" for a
-    command of its own."""
-    return _LINE_BREAKS.sub(" ", text)
+    command of its own, and may read its older form "##[command]" anywhere in a line (the security review's U1,
+    2026-10-31 — not verified on the runner, so the form is split up either way)."""
+    return _LINE_BREAKS.sub(" ", text).replace("##[", "# #[")
 
 
 def to_price(text: str) -> float:

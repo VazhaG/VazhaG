@@ -12,6 +12,7 @@ the gas fuels, a returning visitor's stored choice (REQ-003; AC-005).
 from __future__ import annotations
 
 import json
+import re
 from collections.abc import Callable
 
 import pytest
@@ -42,7 +43,7 @@ def north(km: float) -> float:
     return round(HERE[0] + km / KM_PER_DEGREE, 6)
 
 
-def open_five(page_at: Callable[[float, float], Page], net: Net, scheme: str = "light") -> Page:
+def serve_five(net: Net) -> None:
     prices, stations = [], []
     for cid, name, color, price, km in FIVE:
         head = {"id": cid, "name": name, "color": color, "source": f"https://{cid}.example/", "time": TIME,
@@ -52,6 +53,20 @@ def open_five(page_at: Callable[[float, float], Page], net: Net, scheme: str = "
                                               "fuels": ["regular", "premium", "super", "diesel"]}]})
     net.data["prices.json"] = {"generated": TIME, "companies": prices}
     net.data["stations.json"] = {"generated": TIME, "companies": stations}
+
+
+def open_five_far(page: Page, net: Net, scheme: str) -> Page:
+    """No place allowed: the whole country's view, where a station is a small dot without its letter."""
+    serve_five(net)
+    page.emulate_media(color_scheme=scheme)
+    page.clock.set_fixed_time(TIME)
+    page.goto(net.base)
+    expect(page.locator(".station:not(.near) span")).to_have_count(len(FIVE))
+    return page
+
+
+def open_five(page_at: Callable[[float, float], Page], net: Net, scheme: str = "light") -> Page:
+    serve_five(net)
     page = page_at(*HERE)
     page.emulate_media(color_scheme=scheme)
     page.clock.set_fixed_time(TIME)
@@ -120,6 +135,19 @@ def test_every_companys_circle_stands_out_from_the_map(page_at: Callable[[float,
         assert max(ratio(fill, ground), ratio(edge, ground)) >= 3, (cid, fill, edge)
 
 
+@pytest.mark.parametrize(("scheme", "ground"), [("light", WHITE), ("dark", NIGHT_PAGE)])
+def test_from_far_the_small_dots_keep_the_same_outline(page: Page, net: Net, scheme: str,
+                                                       ground: tuple[int, ...]) -> None:
+    # critic C2: the far view is where a yellow dot on the light map is hardest to see (SPEC-0003 §7)
+    page = open_five_far(page, net, scheme)
+    for cid, *_ in FIVE:
+        dot = f'.station[data-company="{cid}"]:not(.near) span'
+        expect(page.locator(dot)).to_have_text("")
+        fill, edge = style(page, dot, "backgroundColor"), style(page, dot, "borderTopColor")
+        assert edge == (DARK_INK if scheme == "light" and cid in LIGHT else WHITE), (cid, edge)
+        assert max(ratio(fill, ground), ratio(edge, ground)) >= 3, (cid, fill, edge)
+
+
 @pytest.mark.parametrize("scheme", ["light", "dark"])
 def test_connects_name_and_letter_read_well_on_and_off(page_at: Callable[[float, float], Page], net: Net,
                                                        scheme: str) -> None:
@@ -148,8 +176,18 @@ def edges(page: Page) -> dict:
     return page.locator(ROW).evaluate(EDGES_JS)
 
 
+def faded(mask: str) -> set[str]:
+    """Which edges of the row a computed mask fades — read from the gradient itself, not from the classes."""
+    if mask == "none":
+        return set()
+    clear = [s.replace(" ", "") == "rgba(0,0,0,0)" for s in re.findall(r"rgba?\([^)]*\)", mask)]
+    first, last = ("left", "right") if mask.startswith("linear-gradient(to right") else ("right", "left")
+    return ({first} if clear[0] else set()) | ({last} if clear[-1] else set())
+
+
 def scroll_row(page: Page, to: str) -> None:
-    page.locator(ROW).evaluate(f"(row) => {{ row.scrollLeft = {'row.scrollWidth' if to == 'end' else 0}; }}")
+    where = {"start": "0", "middle": "(row.scrollWidth - row.clientWidth) / 2", "end": "row.scrollWidth"}[to]
+    page.locator(ROW).evaluate(f"(row) => {{ row.scrollLeft = {where}; }}")
     page.wait_for_timeout(100)  # the scroll event
 
 
@@ -164,10 +202,13 @@ def test_five_badges_scroll_in_their_row_never_the_page_and_the_edge_beyond_fade
     assert page.evaluate("document.documentElement.scrollWidth <= window.innerWidth")
     at_start = edges(page)
     assert at_start["more"] and at_start["end"] and not at_start["start"], at_start
-    assert "linear-gradient" in at_start["mask"] and f"{STRIP}px" in at_start["mask"], at_start
+    assert faded(at_start["mask"]) == {"right"} and f"{STRIP}px" in at_start["mask"], at_start  # critic C1
+    scroll_row(page, "middle")
+    midway = edges(page)
+    assert midway["start"] and midway["end"] and faded(midway["mask"]) == {"left", "right"}, midway
     scroll_row(page, "end")
     at_end = edges(page)
-    assert at_end["start"] and not at_end["end"], at_end
+    assert at_end["start"] and not at_end["end"] and faded(at_end["mask"]) == {"left"}, at_end
     last, row = page.locator(f"{ROW} .badge").last.bounding_box(), page.locator(ROW).bounding_box()
     assert last and row and last["x"] + last["width"] <= row["x"] + row["width"] + 0.5  # the last badge fully in
     page.locator(f"{ROW} .badge").last.click()  # a finger reaches it
@@ -196,6 +237,19 @@ def test_a_wider_screen_that_fits_the_row_loses_the_faded_edge(page_at: Callable
     page.wait_for_timeout(200)
     state = edges(page)
     assert not state["more"] and not state["start"] and not state["end"] and state["mask"] == "none", state
+
+
+def test_a_tap_on_the_faded_part_of_a_badge_still_presses_it(page_at: Callable[[float, float], Page],
+                                                              net: Net) -> None:
+    # critic C3: the row must not scroll between the finger going down and coming up — the tap would land elsewhere
+    page = open_five(page_at, net)
+    assert edges(page)["end"]
+    wissol, row = page.locator(badge("wissol")).bounding_box(), page.locator(ROW).bounding_box()
+    assert wissol and row
+    x = min(wissol["x"] + wissol["width"], row["x"] + row["width"]) - 6  # inside the faded strip
+    assert x > row["x"] + row["width"] - STRIP
+    page.mouse.click(x, wissol["y"] + wissol["height"] / 2)
+    expect(page.locator(badge("wissol"))).to_have_attribute("aria-pressed", "false")
 
 
 def test_every_badge_is_reached_and_pressed_from_the_keyboard_clear_of_the_strip(

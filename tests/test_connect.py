@@ -14,6 +14,7 @@ import http.server
 import importlib.util
 import json
 import threading
+import time
 import urllib.error
 import urllib.parse
 from collections.abc import Callable, Iterator
@@ -124,6 +125,35 @@ def test_a_refusal_or_a_browser_check_keeps_the_previous_prices_and_is_not_tried
     assert len(log) == 1 and log[0].startswith("Connect: not read — ")
 
 
+CARD = '<div class="fpc-card"><div class="fpc-card-name">დიზელი 10PPM</div><span class="fpc-pstd">4.80₾</span></div>'
+
+
+def test_a_page_of_cards_nested_thousands_deep_is_refused_at_once() -> None:
+    # security review S1: each card's own search walks everything inside it, so cards nested in cards cost the
+    # square of their number — 2 000 took 18 s, and the run has no deadline for reading a page it has downloaded
+    depth = 3_000
+    page = ('<div id="fpc1">' + '<div class="fpc-card">' * depth
+            + '<div class="fpc-card-name">დიზელი 10PPM</div><span class="fpc-pstd">4.80₾</span>'
+            + "</div>" * depth + "</div>")
+    start = time.perf_counter()
+    with pytest.raises(ParseError):
+        connect.parse(page)
+    assert time.perf_counter() - start < 1
+
+
+def test_more_cards_than_the_block_holds_are_refused() -> None:
+    with pytest.raises(ParseError, match="21 price cards"):
+        connect.parse(f'<div id="fpc1">{CARD * 21}</div>')
+    assert len(connect.parse(f'<div id="fpc1">{CARD * 20}</div>')) == 20
+
+
+def test_the_block_is_found_far_down_a_large_page_and_read_alone() -> None:
+    page = "<html><body>" + "<p>ტექსტი</p>" * 300_000 + fixture("connect.html")  # about 8 MB before the block
+    start = time.perf_counter()
+    assert connect.parse(page) == STANDARD
+    assert time.perf_counter() - start < 1
+
+
 def test_connect_is_read_with_a_switch_like_wissols() -> None:
     assert CONNECT.name == "Connect" and CONNECT.url == "https://connect.com.ge/" and CONNECT.enabled is True
     assert companies.CONNECT_ENABLED is True  # the owner's decision, 2026-10-31 (SPEC-0003 REQ-004)
@@ -222,6 +252,18 @@ def test_a_list_answer_that_is_not_a_list_of_stations_keeps_the_previous_station
     assert len(asked) == 2  # no second try
     assert (entries, read) == ([previous["connect"]], 0)
     assert len(log) == 1 and log[0].startswith("Connect: stations not read — ")
+
+
+@pytest.mark.parametrize(("code", "taken"), [("a" * 5, False), ("a" * 6, True), ("Z9" * 16, True), ("a" * 33, False)])
+def test_a_code_is_six_to_thirty_two_letters_and_digits(code: str, taken: bool) -> None:
+    asked, get = connect_site(map_page=fixture("connect-map.html").replace(CODE, code))
+    if taken:
+        connect.stations_text(get)
+        assert urllib.parse.parse_qs(asked[1].split("?", 1)[1])["nonce"] == [code]
+    else:
+        with pytest.raises(ParseError):
+            connect.stations_text(get)
+        assert asked == [connect.MAP_URL]
 
 
 @pytest.mark.parametrize(("answer", "why"), [

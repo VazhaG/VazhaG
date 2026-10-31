@@ -38,11 +38,25 @@ FUEL_BY_NAME = {
     "დიზელი 10PPM": "diesel",
 }
 
+# The security review's S1 (2026-10-31): each card's own search walks everything inside it, so cards nested in cards
+# cost the square of their number, and reading a downloaded page has no deadline (core.fetch's covers the download
+# only). The block is about 3 kB with five cards (2026-10-31): only BLOCK_CHARS from where it begins are read, and more
+# than MAX_CARDS cards are a misreading.
+BLOCK_CHARS = 50_000
+MAX_CARDS = 20
+
 
 def parse(html: str) -> list[Reading]:
-    soup = BeautifulSoup(html, "html.parser")
+    at = html.find('id="fpc')
+    if at < 0:
+        raise ParseError("no price block")
+    start = max(html.rfind("<", 0, at), 0)
+    soup = BeautifulSoup(html[start:start + BLOCK_CHARS], "html.parser")
+    cards = soup.select(".fpc-featured, .fpc-card")
+    if len(cards) > MAX_CARDS:
+        raise ParseError(f"{len(cards)} price cards, more than {MAX_CARDS}")
     readings = []
-    for card in soup.select(".fpc-featured, .fpc-card"):
+    for card in cards:
         name = card.select_one(".fpc-feat-name, .fpc-card-name")
         standard = card.select(".fpc-feat-std, .fpc-pstd")
         if name is None or len(standard) != 1:

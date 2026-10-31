@@ -176,7 +176,10 @@ function markRowEdges() {
 function watchRow() {
   const row = document.getElementById('companies');
   row.addEventListener('scroll', markRowEdges, { passive: true });
-  row.addEventListener('focusin', (event) => event.target.scrollIntoView({ block: 'nearest', inline: 'nearest' }));
+  row.addEventListener('focusin', (event) => {
+    // the keyboard's focus only: a finger's comes before it lifts, and the row must not move under it
+    if (event.target.matches(':focus-visible')) event.target.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+  });
   window.addEventListener('resize', markRowEdges);
 }
 
