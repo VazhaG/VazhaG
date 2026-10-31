@@ -45,8 +45,9 @@ MAX_STATIONS = 1000
 # its own, so a page sent a byte at a time would otherwise hold the whole run; the largest page now is about 1 MB.
 DEADLINE_S = 60.0
 MAX_BYTES = 10_000_000
-# One company's prices or stations in a data file: four of them stay under MAX_BYTES, the size at which the next run
-# would refuse the published file (scraper/published.py). The largest entry now is SOCAR's stations, about 46 kB.
+# One company's prices or stations in a data file: every company's together stay under MAX_BYTES, the size at which
+# the next run would refuse the published file (scraper/published.py). The largest entry now is SOCAR's stations,
+# about 46 kB.
 MAX_ENTRY_BYTES = 1_000_000
 
 # one optional tail after the number: two optional runs of spaces side by side would be tried in every split
