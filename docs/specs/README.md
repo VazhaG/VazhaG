@@ -12,5 +12,6 @@ title: სპეციფიკაციები — ინდექსი დ�
 
 | სპეციფიკაცია | სათაური | სტატუსი |
 |---|---|---|
-| [[SPEC-0001-fuel-prices-map]] | საწვავის ფასების რუკა — პირველი ვერსია | draft (ხელახლა დასადასტურებელი, შინაარსი უცვლელია) |
-| [[SPEC-0002-company-badges-and-filter]] | კომპანიების ნიშნები და კომპანიით ფილტრი | review |
+| [[SPEC-0001-fuel-prices-map]] | საწვავის ფასების რუკა — პირველი ვერსია | approved |
+| [[SPEC-0002-company-badges-and-filter]] | კომპანიების ნიშნები და კომპანიით ფილტრი | approved |
+| [[SPEC-0003-connect-stations-and-prices]] | Connect-ის სადგურები და ფასები | review |
