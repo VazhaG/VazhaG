@@ -5,10 +5,13 @@ its badge and on its map circles, so they stand out on the white page and the li
 before (REQ-003; AC-007).
 T5: five badges do not fit a phone's width — the row scrolls in its place, never the page, and the edge with more
 badges beyond it fades in a 24 px strip; a badge reached from the keyboard stops clear of the strip (REQ-005; AC-006).
+T6: Connect works on the page as every other company — its badge and letter, the switch, the ★ with both route links,
+the gas fuels, a returning visitor's stored choice (REQ-003; AC-005).
 """
 
 from __future__ import annotations
 
+import json
 from collections.abc import Callable
 
 import pytest
@@ -222,3 +225,70 @@ def test_with_five_badges_the_card_and_its_all_prices_link_stay_on_the_first_scr
     for target in ("#best", "#best a.to-prices"):
         box = page.locator(target).bounding_box()
         assert box and box["y"] + box["height"] <= 812, (target, box)
+
+
+# T6 — Connect on the page, as every other company (REQ-003; AC-005). The page already does this for any company,
+# so these pass at once; seeded defects prove they bite (PLAN-0003, deviations).
+ROWS = "#price-table tbody tr"
+STORED_OFF = "localStorage.getItem('fuel-map.off')"
+
+
+def test_connects_badge_and_map_letter_in_its_colour_with_dark_letters(page_at: Callable[[float, float], Page],
+                                                                       net: Net) -> None:
+    page = open_five(page_at, net)
+    expect(page.locator(f"{ROW} .badge")).to_have_text([name for _, name, *_ in FIVE])
+    assert style(page, badge("connect"), "backgroundColor") == hex_rgb("#ffe900")
+    assert style(page, badge("connect"), "color") == DARK_INK
+    expect(page.locator(circle("connect"))).to_have_text("C")
+    assert style(page, circle("connect"), "backgroundColor") == hex_rgb("#ffe900")
+    assert style(page, circle("connect"), "color") == DARK_INK
+
+
+def test_the_star_finds_connect_when_it_is_the_cheapest_near_with_both_route_links(
+        page_at: Callable[[float, float], Page], net: Net) -> None:
+    page = open_five(page_at, net)  # Connect's diesel is the cheapest within 5 km: 4.80 ₾ at 4.5 km
+    best = page.locator("#best")
+    expect(best.locator(".who strong")).to_have_text("Connect")
+    expect(best.locator(".price")).to_contain_text("4.80")
+    place = f"{north(4.5)}%2C{HERE[1]}"
+    assert place in (best.locator("a.go-google").get_attribute("href") or "")
+    assert place in (best.locator("a.go-waze").get_attribute("href") or "")
+
+
+def test_switching_connect_off_and_on_changes_the_map_the_star_and_the_table(
+        page_at: Callable[[float, float], Page], net: Net) -> None:
+    page = open_five(page_at, net)
+    expect(page.locator(ROWS)).to_have_count(5)
+    page.locator(badge("connect")).click()
+    expect(page.locator(circle("connect"))).to_have_count(0)
+    expect(page.locator("#best .who strong")).to_have_text("SOCAR")  # the next cheapest within 5 km
+    expect(page.locator(ROWS)).to_have_count(4)
+    expect(page.locator(ROWS).filter(has_text="Connect")).to_have_count(0)
+    page.locator(badge("connect")).click()
+    expect(page.locator(circle("connect"))).to_have_count(1)
+    expect(page.locator("#best .who strong")).to_have_text("Connect")
+    expect(page.locator(ROWS)).to_have_count(5)
+
+
+def test_with_a_gas_chosen_connects_stations_are_not_shown(page_at: Callable[[float, float], Page],
+                                                           net: Net) -> None:
+    page = open_five(page_at, net)
+    page.get_by_text("თხევადი აირი", exact=True).first.click()
+    expect(page.locator(circle("connect"))).to_have_count(0)
+    page.get_by_text("ბუნებრივი აირი", exact=True).first.click()
+    expect(page.locator(circle("connect"))).to_have_count(0)
+
+
+def test_a_returning_visitor_finds_connect_on_and_keeps_its_own_choice(page_at: Callable[[float, float], Page],
+                                                                       net: Net) -> None:
+    page = open_five(page_at, net)
+    page.evaluate("localStorage.setItem('fuel-map.off', JSON.stringify(['rompetrol', 'lukoil', 'wissol']))")
+    page.reload()  # the visitor's list from before Connect was there
+    expect(page.locator(f"{ROW} .badge")).to_have_count(len(FIVE))
+    pressed = {cid: page.locator(badge(cid)).get_attribute("aria-pressed") for cid, *_ in FIVE}
+    assert pressed == {"socar": "true", "rompetrol": "false", "lukoil": "false", "wissol": "false",
+                       "connect": "true"}
+    page.locator(badge("connect")).click()
+    page.reload()
+    expect(page.locator(badge("connect"))).to_have_attribute("aria-pressed", "false")
+    assert sorted(json.loads(page.evaluate(STORED_OFF))) == ["connect", "lukoil", "rompetrol", "wissol"]
