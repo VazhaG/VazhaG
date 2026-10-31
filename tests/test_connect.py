@@ -11,19 +11,23 @@ from __future__ import annotations
 
 import dataclasses
 import http.server
+import importlib.util
 import json
 import threading
 import urllib.error
 import urllib.parse
 from collections.abc import Callable, Iterator
 from datetime import UTC, datetime
+from pathlib import Path
 
 import pytest
 
+import scraper.__main__ as cli
 from scraper import companies, connect, lukoil, rompetrol, socar, wissol
 from scraper.core import (
     PETROL,
     USER_AGENT,
+    Company,
     ParseError,
     Reading,
     company_entry,
@@ -306,3 +310,50 @@ def test_one_round_asks_connect_exactly_three_times_by_our_programs_name(
     assert [path.split("?", 1)[0] for path, _ in seen] == ["/", "/map/", "/wp-admin/admin-ajax.php"]
     assert {agent for _, agent in seen} == {USER_AGENT}
     assert urllib.parse.parse_qs(seen[2][0].split("?", 1)[1])["nonce"] == [CODE]
+
+
+# T3 — the switch (REQ-004; AC-009)
+def companies_with_connect_switched_off(folder: Path) -> list[Company]:
+    """scraper/companies.py as it is with its one setting turned off — what the owner's request changes."""
+    source = (ROOT / "scraper" / "companies.py").read_text(encoding="utf-8")
+    assert source.count("CONNECT_ENABLED = True") == 1
+    copy = folder / "companies_switched_off.py"
+    copy.write_text(source.replace("CONNECT_ENABLED = True", "CONNECT_ENABLED = False"), encoding="utf-8")
+    spec = importlib.util.spec_from_file_location("companies_switched_off", copy)
+    assert spec and spec.loader
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module.COMPANIES
+
+
+def test_the_one_setting_switches_connect_off_and_nothing_else(tmp_path: Path) -> None:
+    listed = companies_with_connect_switched_off(tmp_path)
+    assert [(c.id, c.enabled) for c in listed] == [(c.id, c.id != "connect") for c in companies.COMPANIES]
+
+
+def test_switched_off_connect_is_not_asked_and_leaves_both_data_files(tmp_path: Path,
+                                                                     monkeypatch: pytest.MonkeyPatch) -> None:
+    listed = [c for c in companies_with_connect_switched_off(tmp_path) if c.id in ("socar", "connect")]
+    asked: list[str] = []
+
+    def get(url: str) -> str:
+        asked.append(url)
+        return fixture("socar-stations.json" if url == socar.STATIONS_URL else "socar.html")
+
+    out, places = tmp_path / "prices.json", tmp_path / "stations.json"
+    out.write_text(json.dumps({"companies": [previous_prices()["connect"]]}), encoding="utf-8")
+    places.write_text(json.dumps({"companies": [previous_stations()["connect"]]}), encoding="utf-8")
+    monkeypatch.setattr(cli, "COMPANIES", listed)
+    monkeypatch.setattr(cli, "fetch", get)
+    assert cli.main(["--out", str(out), "--stations-out", str(places)]) == 0
+    assert asked and not [u for u in asked if "connect.com.ge" in u]
+    for path in (out, places):
+        assert [e["id"] for e in json.loads(path.read_text(encoding="utf-8"))["companies"]] == ["socar"]
+
+
+def test_switched_off_connect_says_so_once_for_each_data_file(tmp_path: Path) -> None:
+    off = next(c for c in companies_with_connect_switched_off(tmp_path) if c.id == "connect")
+    _p, log, _r = refresh([off], previous_prices(), lambda url: "", NOW)
+    _s, places_log, _r = refresh_stations([off], previous_stations(), lambda url: "", NOW)
+    assert log == ["Connect: switched off — not read, its prices removed"]
+    assert places_log == ["Connect: switched off — not read, its stations removed"]
