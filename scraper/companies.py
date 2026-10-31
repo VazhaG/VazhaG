@@ -23,5 +23,6 @@ COMPANIES = [
     Company(id="wissol", name="Wissol", color="#00843d", url=wissol.URL, parse=wissol.parse, enabled=WISSOL_ENABLED,
             stations_url=wissol.STATIONS_URL, parse_stations=wissol.parse_stations),
     Company(id="connect", name="Connect", color="#ffe900", url=connect.URL, parse=connect.parse,
-            enabled=CONNECT_ENABLED),
+            enabled=CONNECT_ENABLED, stations_url=connect.MAP_URL, parse_stations=connect.parse_stations,
+            fetch_stations=connect.stations_text),
 ]

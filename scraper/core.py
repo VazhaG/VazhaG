@@ -86,6 +86,9 @@ class Company:
     enabled: bool = True
     stations_url: str = ""
     parse_stations: Callable[[str], list[Station]] | None = None
+    # When one request to stations_url is not enough (SPEC-0003 REQ-002: Connect's list needs the map page's code
+    # first): given the round's fetcher, the list's text. stations_url stays the list's source, as the page shows it.
+    fetch_stations: Callable[[Callable[[str], str]], str] | None = None
 
 
 def _download(url: str, timeout: float) -> str:
@@ -265,7 +268,7 @@ def refresh_stations(companies: list[Company], previous: dict[str, dict], get: C
     def read(c: Company, old: dict | None) -> tuple[dict, list[str]]:
         if c.parse_stations is None:
             raise ParseError("no station list for this company")
-        stations = c.parse_stations(get(c.stations_url))
+        stations = c.parse_stations(c.fetch_stations(get) if c.fetch_stations else get(c.stations_url))
         kept = [s for s in stations if placed(s)]
         then = parse_time((old or {}).get("time"))
         before = len((old or {}).get("stations", [])) if then is not None and now - then < JUMP_WINDOW else 0
