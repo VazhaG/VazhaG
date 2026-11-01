@@ -2,7 +2,7 @@
 id: PLAN-0004
 type: plan
 title: კომპანიების ლოგოები და შავ-ნარინჯისფერი რეჟიმები — აშენება
-status: draft
+status: approved
 created: 2026-11-01
 updated: 2026-11-01
 spec: "[[SPEC-0004-logos-and-black-orange-look]]"
