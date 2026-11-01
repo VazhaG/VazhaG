@@ -13,6 +13,7 @@ from __future__ import annotations
 import hashlib
 import re
 from collections.abc import Callable
+from xml.etree import ElementTree
 
 import pytest
 from playwright.sync_api import Page, expect
@@ -71,20 +72,28 @@ def test_the_list_names_exactly_the_files_in_the_logo_folder(page: Page, net: Ne
     assert sum((SITE / f).stat().st_size for f in files) <= 300_000  # REQ-003: 300 kB at most, all together
 
 
-ADDRESS = re.compile(r"""(?:\b(?:xlink:)?href|\bsrc)\s*=\s*["']([^"']*)["']|url\(\s*["']?([^"')\s]*)""",
-                     re.IGNORECASE)
-FORBIDDEN = re.compile(r"<\s*script|<\s*foreignObject|@import|data:|javascript:|\son[a-z]+\s*=", re.IGNORECASE)
+SVG = "{http://www.w3.org/2000/svg}"
+SVG_ELEMENTS = {"svg", "path", "g"}  # shapes only: no script, style, image, link, foreignObject, animation
+SVG_ATTRIBUTES = {"d", "fill", "fill-rule", "clip-rule", "height", "viewBox", "width", "transform"}
+SVG_VALUE = re.compile(r"[#\w\s.,()-]*")  # colours, numbers and path letters — no "url(", no ":"
+NOT_SHAPES = re.compile(r"<!|<\?(?!xml\s)")  # a DOCTYPE, an entity, CDATA, a comment, a stylesheet link
 
 
-def test_an_svg_logo_holds_no_script_and_no_outside_address() -> None:
-    # REQ-003: every href, xlink:href, src and url() points inside the file (#…); no script of any kind
+def test_an_svg_logo_holds_only_shapes() -> None:
+    # REQ-003, security review S1: an allow-list, read the way a browser reads the file — an element written with
+    # a prefix (<x:script xmlns:x="…svg">) is still a script, and only the parser sees it as one
     svgs = sorted((SITE / "logos").glob("*.svg"))
     assert [p.name for p in svgs] == ["socar.svg", "wissol.svg"]
     for svg in svgs:
         text = svg.read_text(encoding="utf-8")
-        assert not FORBIDDEN.search(text), svg.name
-        addresses = [a or b for a, b in ADDRESS.findall(text)]
-        assert all(a.startswith("#") for a in addresses), (svg.name, addresses)
+        assert not NOT_SHAPES.search(text), svg.name  # checked first, so no DOCTYPE or entity reaches the parser
+        root = ElementTree.fromstring(text)  # our own file, with no DOCTYPE or entity (checked above)
+        for element in root.iter():
+            assert element.tag.startswith(SVG) and element.tag[len(SVG):] in SVG_ELEMENTS, (svg.name, element.tag)
+            assert not (element.text or "").strip() and not (element.tail or "").strip(), (svg.name, element.tag)
+            for name, value in element.attrib.items():
+                assert name in SVG_ATTRIBUTES and SVG_VALUE.fullmatch(value), (svg.name, element.tag, name)
+                assert "url(" not in value.replace(" ", ""), (svg.name, element.tag, name)
 
 
 def open_five(page: Page, net: Net, scheme: str) -> None:
