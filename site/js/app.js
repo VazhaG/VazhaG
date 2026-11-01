@@ -65,7 +65,8 @@ function initMap() {
   L.tileLayer(TILES, { maxZoom: 19, attribution: OSM_CREDIT }).addTo(state.map);
   state.markers = L.layerGroup().addTo(state.map);
   state.map.on('zoomend', () => {
-    if ((state.map.getZoom() >= LETTERS_FROM) !== state.near) render(); // the letters come or go
+    const near = state.map.getZoom() >= LETTERS_FROM;
+    if (near !== state.near) redrawMarks(near); // the letters and the marks come or go
   });
 }
 
@@ -115,9 +116,9 @@ const LETTERS_FROM = 11;
 const MARK = 22;
 const FRAME = 30;
 
-function logoMark(logo) {
+function logoMark(logo, onFail) {
   const frame = element('span');
-  const img = logoImage(logo);
+  const img = logoImage(logo, onFail);
   const [x, y, w, h] = logo.mark;
   const k = MARK / Math.max(w, h);
   img.style.width = `${logo.size[0] * k}px`;
@@ -137,9 +138,9 @@ function setEdge(el, color) {
   if (ink !== '#ffffff') el.style.setProperty('--edge', ink);
 }
 
-function stationIcon(s, near) {
+function stationIcon(s, near, marker) {
   const logo = near ? usableLogo(s.companyId) : null;
-  if (logo) return logoMark(logo);
+  if (logo) return logoMark(logo, () => setStationIcon(marker)); // a file that fails: this marker's letter instead
   const mark = element('span', '', near ? (s.company.trim()[0] ?? '?') || '?' : '');
   mark.style.backgroundColor = s.color;
   mark.style.color = inkOn(s.color);
@@ -148,15 +149,29 @@ function stationIcon(s, near) {
   return L.divIcon({ className: near ? 'station near' : 'station', html: mark, iconSize: [size, size] });
 }
 
+// A marker's look, set again in place: Leaflet keeps the marker and its open window (review C1, C2).
+function setStationIcon(marker) {
+  const s = marker.options.station;
+  marker.setIcon(stationIcon(s, state.near, marker));
+  marker.getElement()?.setAttribute('data-company', s.companyId);
+}
+
 function renderStations(stations) {
   state.markers.clearLayers();
   state.near = state.map.getZoom() >= LETTERS_FROM;
   for (const s of stationsFor(stations, state.fuel)) {
-    const marker = L.marker([s.lat, s.lng], { icon: stationIcon(s, state.near), keyboard: false })
-      .bindPopup(() => stationWindow(s), POPUP)
-      .addTo(state.markers);
+    const marker = L.marker([s.lat, s.lng], { keyboard: false, station: s });
+    marker.setIcon(stationIcon(s, state.near, marker)); // before it is on the map: no element is drawn twice
+    marker.bindPopup(() => stationWindow(s), POPUP).addTo(state.markers);
     marker.getElement().dataset.company = s.companyId;
   }
+}
+
+// The city view comes or goes: each marker takes its new look in place, so an open station window stays open — a
+// redraw would remove the markers, and Leaflet closes a removed marker's window (review C2).
+function redrawMarks(near) {
+  state.near = near;
+  state.markers.eachLayer(setStationIcon);
 }
 
 function markBest(b) {
@@ -179,23 +194,25 @@ const LOGO_HEIGHT = 30;
 // SPEC-0004 REQ-003, REQ-004: each logo file is asked for once on a visit. One loader picture per file asks for it;
 // the page's own pictures get the address only once the file has arrived, so the browser gives it from what it
 // already holds — however often the row and the map are drawn meanwhile. A file that fails is remembered: its
-// company shows its name and letter until the page is opened anew, and the page is drawn once more to show them.
-const logoLoads = new Map(); // file -> { state: 'loading' | 'ok' | 'failed', waiting: Set of pictures, loader }
+// company shows its name and letter until the page is opened anew. Only the pictures that waited for it change, each
+// in its place, so an open station window, the keyboard's focus and the city list stay as they are (review C1).
+const logoLoads = new Map(); // file -> { state: 'loading' | 'ok' | 'failed', waiting: picture -> onFail, loader }
 
 function logoLoad(logo) {
   let load = logoLoads.get(logo.file);
   if (load) return load;
-  load = { state: 'loading', waiting: new Set(), loader: new Image() };
+  load = { state: 'loading', waiting: new Map(), loader: new Image() };
   logoLoads.set(logo.file, load);
   load.loader.addEventListener('load', () => {
     load.state = 'ok';
-    for (const img of load.waiting) img.src = logo.file;
+    for (const img of load.waiting.keys()) img.src = logo.file;
     load.waiting.clear();
   }, { once: true });
   load.loader.addEventListener('error', () => {
     load.state = 'failed';
+    const fails = [...load.waiting].filter(([img]) => img.isConnected).map(([, onFail]) => onFail);
     load.waiting.clear();
-    setTimeout(render, 0);
+    for (const onFail of fails) onFail();
   }, { once: true });
   load.loader.src = logo.file;
   return load;
@@ -207,12 +224,12 @@ function usableLogo(id) {
 }
 
 // The picture keeps its size from the start, so the row and the map do not move when the file arrives (REQ-003).
-function logoImage(logo) {
+function logoImage(logo, onFail) {
   const img = element('img');
   img.alt = '';
   const load = logoLoad(logo);
   if (load.state === 'ok') img.src = logo.file;
-  else load.waiting.add(img);
+  else load.waiting.set(img, onFail);
   return img;
 }
 
@@ -234,7 +251,10 @@ function logoBadge(badge, logo, c) {
   badge.setAttribute('aria-label', c.name || '?');
   badge.style.setProperty('--ground', logo.ground);
   badge.style.setProperty('--strike', inkOn(logo.ground));
-  const img = logoImage(logo);
+  const img = logoImage(logo, () => {
+    nameBadge(badge, c); // the same button: the keyboard's focus stays on it
+    markRowEdges();
+  });
   img.width = Math.round((LOGO_HEIGHT * logo.size[0]) / logo.size[1]);
   img.height = LOGO_HEIGHT;
   badge.append(img);
@@ -563,7 +583,6 @@ function applyTheme() {
   document.documentElement.dataset.theme = dark ? 'dark' : 'light';
   const button = document.getElementById('theme');
   button.setAttribute('aria-pressed', String(dark)); // its name stays "dark mode": pressed means dark
-  button.textContent = dark ? '☀' : '☾'; // where a press takes the page
 }
 
 function toggleTheme() {

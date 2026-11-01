@@ -401,6 +401,8 @@ def test_an_open_station_window_stays_open_across_the_city_view(page: Page, net:
         page.locator(".leaflet-control-zoom-in").click()
         page.wait_for_timeout(350)
     expect(page.locator(".station span")).to_have_text("S")  # the letter came
+    page.wait_for_timeout(300)  # past Leaflet's 200 ms fade: a closed window would be gone by now (review C2)
+    expect(page.locator(".leaflet-popup")).to_have_count(1)
     expect(window).to_contain_text("SOCAR")  # and the window is still open
     expect(page.locator('.station[data-company="socar"]')).to_have_count(1)
 

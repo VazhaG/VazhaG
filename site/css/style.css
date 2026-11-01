@@ -101,6 +101,15 @@ h1 {
   cursor: pointer;
 }
 
+/* review C3: the sign by the look itself, so it is right before the main script runs */
+.theme::before {
+  content: "☾";
+}
+
+:root[data-theme="dark"] .theme::before {
+  content: "☀";
+}
+
 .theme:focus-visible,
 .lang button:focus-visible {
   outline: 2px solid var(--on-bar);
@@ -293,8 +302,8 @@ h1 {
   display: flex;
   flex-wrap: nowrap;
   gap: 8px;
-  margin-bottom: 10px;
-  padding-bottom: 2px;
+  margin-bottom: 6px;
+  padding: 4px; /* room for a badge's focus ring: the row scrolls, so it cuts what sticks out of it */
   overflow-x: auto;
   scrollbar-width: none;
   scroll-padding-inline: 24px; /* a badge reached from the keyboard stops clear of the faded strip */

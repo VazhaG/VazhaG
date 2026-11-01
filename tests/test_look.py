@@ -87,6 +87,7 @@ TIME = "2026-11-01T12:00:00Z"
 STORAGE_KA = "ენა, კომპანიების არჩევანი და ნათელი თუ მუქი რეჟიმი მხოლოდ შენს ტელეფონში ინახება"
 STORAGE_EN = "The language, your choice of companies and the light or dark mode are kept only on your phone"
 BACKGROUND = "() => getComputedStyle(document.body).backgroundColor"
+SIGN = "() => getComputedStyle(document.querySelector('#theme'), '::before').content"
 LOOK = "() => document.documentElement.dataset.theme"
 BLOCKED = ("Storage.prototype.getItem = Storage.prototype.setItem = Storage.prototype.removeItem ="
            " () => { throw new Error('blocked'); };")
@@ -104,7 +105,7 @@ def test_on_a_first_visit_the_look_follows_the_phone(page: Page, net: Net, phone
     open_plain(page, net, phone)
     switch = page.locator(THEME)
     expect(switch).to_have_attribute("aria-pressed", "true" if phone == "dark" else "false")
-    expect(switch).to_have_text("☀" if phone == "dark" else "☾")  # where a press takes the page
+    assert page.evaluate(SIGN) == ('"☀"' if phone == "dark" else '"☾"')  # where a press takes the page
     assert page.evaluate(LOOK) == phone
     assert page.evaluate(BACKGROUND) == ("rgb(0, 0, 0)" if phone == "dark" else "rgb(255, 255, 255)")
 
@@ -116,14 +117,14 @@ def test_the_switch_changes_the_look_and_keeps_its_name_in_both_languages(page: 
     expect(switch).to_have_attribute("aria-pressed", "false")
     switch.click()
     expect(switch).to_have_attribute("aria-pressed", "true")
-    expect(switch).to_have_text("☀")
+    assert page.evaluate(SIGN) == '"☀"'
     assert page.evaluate(BACKGROUND) == "rgb(0, 0, 0)"
     page.get_by_role("button", name="ENG").click()
     switch = page.get_by_role("button", name="Dark mode", exact=True)
     expect(switch).to_have_attribute("aria-pressed", "true")
     switch.click()
     expect(switch).to_have_attribute("aria-pressed", "false")
-    expect(switch).to_have_text("☾")
+    assert page.evaluate(SIGN) == '"☾"'
     assert page.evaluate(BACKGROUND) == "rgb(255, 255, 255)"
 
 
@@ -196,6 +197,7 @@ def test_a_kept_dark_look_is_there_before_the_main_script_runs(page: Page, net: 
     page.wait_for_timeout(3000)
     assert page.evaluate("document.querySelectorAll('#companies *').length") == 0  # the main script never ran
     assert page.evaluate(BACKGROUND) == "rgb(0, 0, 0)"
+    assert page.evaluate(SIGN) == '"☀"'  # review C3: the switch already shows the dark look's sign
     # and before the first drawing: a plain script in <head>, ahead of the styles, so the browser waits for it
     head = (SITE / "index.html").read_text(encoding="utf-8").split("</head>")[0]
     assert '<script src="js/theme.js"></script>' in head, head
@@ -243,11 +245,7 @@ def test_on_a_phone_the_card_the_row_and_both_switches_fit(page_at: Callable[[fl
 def test_without_any_logo_the_card_comes_within_10_seconds_and_the_row_stays(
         page_at: Callable[[float, float], Page], net: Net, how: str) -> None:
     # AC-006: every logo answers 404, or never answers; the page does not wait for them
-    for file in LOGO_FILES:
-        if how == "missing":
-            net.files[file] = (404, "text/plain", "")
-        else:
-            net.held.add(file)
+    net.held.update(LOGO_FILES)  # first unanswered; "missing" answers them 404 once the row is measured
     net.real_data = True
     page = page_at(*TBILISI)
     generated = json.loads((SITE / "data" / "prices.json").read_text(encoding="utf-8"))["generated"]
@@ -255,5 +253,9 @@ def test_without_any_logo_the_card_comes_within_10_seconds_and_the_row_stays(
     page.goto(net.base, wait_until="domcontentloaded")  # a stalled picture holds the page's "load" back
     expect(page.locator("#best a.go-google")).to_be_visible(timeout=10_000)
     row = page.locator("#companies").bounding_box()
+    if how == "missing":
+        for file in LOGO_FILES:
+            net.pending[file].fulfill(status=404, body="")
+        expect(page.locator("#companies img")).to_have_count(0)  # every badge is its name now
     page.wait_for_timeout(1500)
     assert page.locator("#companies").bounding_box() == row  # the row stays where it is

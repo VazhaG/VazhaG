@@ -217,6 +217,10 @@ def test_the_keyboards_ring_around_a_logo_badge_stands_out(page: Page, net: Net,
                                  "getComputedStyle(b).outlineColor, b.matches(':focus-visible')]")
     assert ring[0] == "solid" and float(ring[1][:-2]) >= 2 and ring[3], ring
     assert ratio(rgb(ring[2]), rgb(badges.first.evaluate(BEHIND_JS))) >= 3, ring
+    # and the row, which scrolls and so cuts what sticks out of it, leaves the whole ring in view (2 px + 2 px)
+    row, badge = page.locator("#companies").bounding_box(), badges.first.bounding_box()
+    assert row and badge and row["y"] <= badge["y"] - 4 + 0.5 and row["x"] <= badge["x"] - 4 + 0.5, (row, badge)
+    assert row["y"] + row["height"] >= badge["y"] + badge["height"] + 4 - 0.5, (row, badge)
 
 
 def test_only_an_exact_code_in_our_list_gets_a_picture_and_a_name_stays_text(page: Page, net: Net) -> None:
@@ -271,8 +275,13 @@ MARKS_JS = """async () => {
     if (img && logo) {
       const r = img.getBoundingClientRect(), k = r.width / logo.size[0], [x, y, w, h] = logo.mark;
       const left = r.left + x * k, top = r.top + y * k;
+      const v = (getComputedStyle(img).clipPath.match(/[\\d.]+/g) || []).map(Number);
+      // inset() is written like a margin: one, two, three or four values — top, right, bottom, left
+      const [t, rt, b, lt] = [v[0], v[1] ?? v[0], v[2] ?? v[0], v[3] ?? v[1] ?? v[0]];
+      const shown = v.length ? [r.left + lt, r.top + t, r.width - rt - lt, r.height - t - b] : null;
       Object.assign(out, { src: img.getAttribute('src'), alt: img.getAttribute('alt'), mark: [w * k, h * k],
-                           clip: getComputedStyle(img).clipPath,
+                           clip: getComputedStyle(img).clipPath, shown, at: [left, top, w * k, h * k],
+                           off: [left + w * k / 2 - (f.left + f.width / 2), top + h * k / 2 - (f.top + f.height / 2)],
                            loaded: img.complete && img.naturalWidth > 0,
                            inside: left >= f.left - 0.5 && top >= f.top - 0.5 && left + w * k <= f.right + 0.5
                                    && top + h * k <= f.bottom + 0.5 });
@@ -284,12 +293,13 @@ MARKS_JS = """async () => {
 
 def open_near(page_at: Callable[[float, float], Page], net: Net, companies: list[tuple[str, str, str]],
               scheme: str = "light") -> Page:
-    """The visitor's place allowed: the city view, where a station shows its company."""
+    """The visitor's place allowed: the city view, where a station shows its company. The page is not waited for to
+    finish loading: a held logo file would hold that back (tests that hold one answer it late)."""
     serve(net, companies)
     page = page_at(*HERE)
     page.emulate_media(color_scheme=scheme)
     page.clock.set_fixed_time(TIME)
-    page.goto(net.base)
+    page.goto(net.base, wait_until="domcontentloaded")
     page.get_by_text("დიზელი", exact=True).first.click()
     expect(page.locator(".station.near")).to_have_count(len(companies))
     return page
@@ -314,6 +324,8 @@ def test_from_the_city_view_each_station_is_its_companys_mark_in_a_white_round_f
         assert m["near"] and m["imgs"] == 1 and (m["src"], m["alt"], m["loaded"]) == (logos[cid], "", True), m
         assert min(m["frame"]) >= 28 and max(m["mark"]) >= 21.5 and m["inside"], m
         assert m["clip"].startswith("inset("), m  # only the mark shows through the frame
+        assert max(abs(v) for v in m["off"]) <= 0.5, m  # in the middle of its frame
+        assert m["shown"] and all(abs(a - b) <= 0.6 for a, b in zip(m["shown"], m["at"], strict=True)), m
         assert (m["ground"], m["round"], m["text"]) == ("rgb(255, 255, 255)", "50%", ""), m
     page.locator('.station[data-company="lukoil"]').dispatch_event("click")
     expect(page.locator(".leaflet-popup-content")).to_contain_text("Lukoil")  # the window names the company
@@ -448,3 +460,21 @@ def test_a_removed_logo_leaves_the_name_badge_and_the_letter_circle(page_at: Cal
     expect(page.locator('.station[data-company="lukoil"] span')).to_have_text("L")
     expect(page.locator("#companies img")).to_have_count(len(FIVE) - 1)
     assert not [u for u in net.requests if "lukoil.png" in u]
+
+
+def test_a_logo_that_fails_late_leaves_the_open_window_and_the_focus_alone(page_at: Callable[[float, float], Page],
+                                                                           net: Net) -> None:
+    # review C1: a slow 404, seconds after the page was drawn, changes only that company's badge and marks — an open
+    # station window stays open and the keyboard's focus stays where it was
+    net.held.add("logos/wissol.svg")
+    page = open_near(page_at, net, FIVE)
+    page.locator('.station[data-company="socar"]').dispatch_event("click")
+    expect(page.locator(".leaflet-popup-content")).to_contain_text("SOCAR")
+    page.locator('#companies [data-company="rompetrol"]').focus()
+    net.pending["logos/wissol.svg"].fulfill(status=404, body="")
+    expect(page.locator('#companies [data-company="wissol"]')).to_have_text("Wissol")
+    expect(page.locator('.station[data-company="wissol"] span')).to_have_text("W")
+    page.wait_for_timeout(300)  # past Leaflet's 200 ms fade: a closed window would be gone by now
+    expect(page.locator(".leaflet-popup")).to_have_count(1)
+    expect(page.locator(".leaflet-popup-content")).to_contain_text("SOCAR")
+    assert page.evaluate("document.activeElement.dataset.company") == "rompetrol"
