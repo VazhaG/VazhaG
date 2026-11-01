@@ -36,3 +36,4 @@ status: living
 | 2026-11-01 16:34 +0000 | PLAN-0003 | draft → approved | docs/plans/PLAN-0003-connect-stations-and-prices.md | — |
 | 2026-11-01 17:21 +0000 | SPEC-0004 | review → approved | docs/specs/SPEC-0004-logos-and-black-orange-look.md | — |
 | 2026-11-01 17:39 +0000 | PLAN-0004 | draft → approved | docs/plans/PLAN-0004-logos-and-black-orange-look.md | — |
+| 2026-11-01 20:47 +0000 | intent | draft → accepted | intent.md | — |
