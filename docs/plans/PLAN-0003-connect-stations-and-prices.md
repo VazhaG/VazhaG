@@ -2,9 +2,9 @@
 id: PLAN-0003
 type: plan
 title: Connect-ის სადგურები და ფასები — აშენება
-status: draft
+status: approved
 created: 2026-10-31
-updated: 2026-10-31
+updated: 2026-11-01
 spec: "[[SPEC-0003-connect-stations-and-prices]]"
 adrs:
   - "[[ADR-0012-static-site-github-actions-pages]]"
