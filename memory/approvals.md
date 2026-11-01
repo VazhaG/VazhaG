@@ -27,3 +27,4 @@ status: living
 | 2026-10-30 19:25 +0000 | PLAN-0002 | draft → approved | docs/plans/PLAN-0002-company-badges-and-filter.md | — |
 | 2026-10-31 19:06 +0000 | SPEC-0003 | review → approved | docs/specs/SPEC-0003-connect-stations-and-prices.md | — |
 | 2026-10-31 19:13 +0000 | PLAN-0003 | draft → approved | docs/plans/PLAN-0003-connect-stations-and-prices.md | — |
+| 2026-11-01 16:13 +0000 | intent | draft → accepted | intent.md | — |
