@@ -4,6 +4,7 @@ import { FUELS, lang, LANGS, setLang, t } from './i18n.js';
 import {
   cheapestNearby, companiesOf, inkOn, placed, priceRows, routeLinks, stationPrices, stationsFor,
 } from './logic.js';
+import { logoOf } from './logos.js';
 
 const GEORGIA = [[41.05, 40.0], [43.6, 46.7]]; // south-west and north-east corners: the first view shows it all
 const TILES = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
@@ -147,18 +148,42 @@ function markBest(b) {
     .addTo(state.map);
 }
 
-// SPEC-0002: the badge row above the ★ card — one per company in the data, its colour and name, text only.
+// SPEC-0004 REQ-001: a logo is drawn this many pixels high on its badge; its width keeps the file's proportions, and
+// both are set before the picture arrives, so a slow or failed file never moves the row (REQ-003).
+const LOGO_HEIGHT = 30;
+
+// SPEC-0004 REQ-001: a company with a logo in our list shows it on its own ground; its name is what a screen reader
+// says. Without one, the badge is its name on its colour, as SPEC-0002 has it (REQ-004).
+function logoBadge(badge, logo, name) {
+  badge.classList.add('logo');
+  badge.setAttribute('aria-label', name);
+  badge.style.setProperty('--ground', logo.ground);
+  const img = element('img');
+  img.alt = '';
+  img.width = Math.round((LOGO_HEIGHT * logo.size[0]) / logo.size[1]);
+  img.height = LOGO_HEIGHT;
+  img.src = logo.file;
+  badge.append(img);
+}
+
+// SPEC-0002: the badge row above the ★ card — one per company in the data.
 function renderCompanies() {
   const box = document.getElementById('companies');
   box.setAttribute('aria-label', t('companies.label'));
   box.replaceChildren(...companiesOf(state.prices, state.stations).map((c) => {
-    const badge = element('button', 'badge', c.name || '?');
+    const badge = element('button', 'badge');
     badge.type = 'button';
     badge.dataset.company = c.id;
     badge.setAttribute('aria-pressed', String(!state.off.has(c.id)));
-    badge.style.setProperty('--company', c.color);
-    badge.style.setProperty('--ink', inkOn(c.color));
-    setEdge(badge, c.color);
+    const logo = logoOf(c.id);
+    if (logo) {
+      logoBadge(badge, logo, c.name || '?');
+    } else {
+      badge.textContent = c.name || '?';
+      badge.style.setProperty('--company', c.color);
+      badge.style.setProperty('--ink', inkOn(c.color));
+      setEdge(badge, c.color);
+    }
     badge.addEventListener('click', () => toggleCompany(c.id));
     return badge;
   }));

@@ -288,6 +288,21 @@ h1 {
   outline-offset: 2px;
 }
 
+/* SPEC-0004 REQ-001: a company's logo on its own ground in a neutral frame (3 : 1 on the page in both looks) — the
+   same in both looks; the name is the button's label */
+.badge.logo {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 14px;
+  border: 1.5px solid #6b7280;
+  background: var(--ground);
+}
+
+.badge.logo img {
+  display: block;
+}
+
 .best[hidden] {
   display: none;
 }
