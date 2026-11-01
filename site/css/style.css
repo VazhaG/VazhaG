@@ -191,6 +191,21 @@ h1 {
   border-width: 2px;
 }
 
+/* SPEC-0004 REQ-002: from the city view a station with a logo is its company's mark in a white round frame — the part
+   of the logo that reads small, shown through the frame from the same file; the same in both looks */
+.station.logo span {
+  position: relative;
+  overflow: hidden;
+  border: 0;
+  background: #ffffff;
+  box-shadow: 0 1px 4px rgb(15 23 42 / 0.45);
+}
+
+.station.logo img {
+  position: absolute;
+  max-width: none;
+}
+
 .best-pin {
   display: grid;
   place-items: center;

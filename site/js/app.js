@@ -105,8 +105,28 @@ function stationWindow(s) {
 }
 
 // SPEC-0002 REQ-002: from the city view on, a station is its company's colour with the company's first letter; from
-// farther away, a small dot, so the whole country's map stays readable.
+// farther away, a small dot, so the whole country's map stays readable. SPEC-0004 REQ-002: from the same view a
+// company with a logo shows its mark instead of the letter.
 const LETTERS_FROM = 11;
+// SPEC-0004 REQ-002: the mark is MARK pixels on its longer side, centred in a white round frame of FRAME pixels; it is
+// the logo's own file, scaled and moved so that only the mark shows through the frame.
+const MARK = 22;
+const FRAME = 30;
+
+function logoMark(logo) {
+  const frame = element('span');
+  const img = logoImage(logo);
+  const [x, y, w, h] = logo.mark;
+  const k = MARK / Math.max(w, h);
+  img.style.width = `${logo.size[0] * k}px`;
+  img.style.height = `${logo.size[1] * k}px`;
+  img.style.left = `${(FRAME - w * k) / 2 - x * k}px`;
+  img.style.top = `${(FRAME - h * k) / 2 - y * k}px`;
+  // only the mark shows — not the edge of the letters beside it (Lukoil's word under its square)
+  img.style.clipPath = `inset(${y * k}px ${(logo.size[0] - x - w) * k}px ${(logo.size[1] - y - h) * k}px ${x * k}px)`;
+  frame.append(img);
+  return L.divIcon({ className: 'station near logo', html: frame, iconSize: [FRAME, FRAME] });
+}
 
 // SPEC-0003 REQ-003: a light colour (its letters are dark) gets a dark outline by day — the stylesheet uses --edge only
 // on the light page and map.
@@ -116,6 +136,8 @@ function setEdge(el, color) {
 }
 
 function stationIcon(s, near) {
+  const logo = near ? usableLogo(s.companyId) : null;
+  if (logo) return logoMark(logo);
   const mark = element('span', '', near ? (s.company.trim()[0] ?? '?') || '?' : '');
   mark.style.backgroundColor = s.color;
   mark.style.color = inkOn(s.color);
@@ -152,13 +174,44 @@ function markBest(b) {
 // both are set before the picture arrives, so a slow or failed file never moves the row (REQ-003).
 const LOGO_HEIGHT = 30;
 
-// SPEC-0004 REQ-004: the logo files that could not be loaded on this visit — their companies show their names instead,
-// and a file is not asked for again until the page is opened anew.
-const failedLogos = new Set();
+// SPEC-0004 REQ-003, REQ-004: each logo file is asked for once on a visit. One loader picture per file asks for it;
+// the page's own pictures get the address only once the file has arrived, so the browser gives it from what it
+// already holds — however often the row and the map are drawn meanwhile. A file that fails is remembered: its
+// company shows its name and letter until the page is opened anew, and the page is drawn once more to show them.
+const logoLoads = new Map(); // file -> { state: 'loading' | 'ok' | 'failed', waiting: Set of pictures, loader }
+
+function logoLoad(logo) {
+  let load = logoLoads.get(logo.file);
+  if (load) return load;
+  load = { state: 'loading', waiting: new Set(), loader: new Image() };
+  logoLoads.set(logo.file, load);
+  load.loader.addEventListener('load', () => {
+    load.state = 'ok';
+    for (const img of load.waiting) img.src = logo.file;
+    load.waiting.clear();
+  }, { once: true });
+  load.loader.addEventListener('error', () => {
+    load.state = 'failed';
+    load.waiting.clear();
+    setTimeout(render, 0);
+  }, { once: true });
+  load.loader.src = logo.file;
+  return load;
+}
 
 function usableLogo(id) {
   const logo = logoOf(id);
-  return logo && !failedLogos.has(logo.file) ? logo : null;
+  return logo && logoLoads.get(logo.file)?.state !== 'failed' ? logo : null;
+}
+
+// The picture keeps its size from the start, so the row and the map do not move when the file arrives (REQ-003).
+function logoImage(logo) {
+  const img = element('img');
+  img.alt = '';
+  const load = logoLoad(logo);
+  if (load.state === 'ok') img.src = logo.file;
+  else load.waiting.add(img);
+  return img;
 }
 
 // SPEC-0002: a company without a logo — its name on its colour.
@@ -173,22 +226,15 @@ function nameBadge(badge, c) {
 
 // SPEC-0004 REQ-001: a company with a logo in our list shows it on its own ground; its name is what a screen reader
 // says. Switched off, the stylesheet greys it and crosses it out with a line in --strike, the ink that reads on the
-// ground. A file that fails turns the badge into its name badge (REQ-004).
+// ground. A file that fails leaves the name badge (REQ-004).
 function logoBadge(badge, logo, c) {
   badge.classList.add('logo');
   badge.setAttribute('aria-label', c.name || '?');
   badge.style.setProperty('--ground', logo.ground);
   badge.style.setProperty('--strike', inkOn(logo.ground));
-  const img = element('img');
-  img.alt = '';
+  const img = logoImage(logo);
   img.width = Math.round((LOGO_HEIGHT * logo.size[0]) / logo.size[1]);
   img.height = LOGO_HEIGHT;
-  img.addEventListener('error', () => {
-    failedLogos.add(logo.file);
-    nameBadge(badge, c);
-    markRowEdges();
-  }, { once: true });
-  img.src = logo.file;
   badge.append(img);
 }
 

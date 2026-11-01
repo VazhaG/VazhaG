@@ -130,7 +130,9 @@ def test_at_night_the_outline_is_as_before(page_at: Callable[[float, float], Pag
 @pytest.mark.parametrize(("scheme", "ground"), [("light", WHITE), ("dark", NIGHT_PAGE)])
 def test_every_companys_circle_stands_out_from_the_map(page_at: Callable[[float, float], Page], net: Net,
                                                        scheme: str, ground: tuple[int, ...]) -> None:
-    # AC-007: the circle's fill or its outline has at least 3 : 1 against the map
+    # AC-007: the circle's fill or its outline has at least 3 : 1 against the map — a letter circle, as a company
+    # without a logo has it (SPEC-0004 §3); a logo's mark is in its white frame (test_logos.py)
+    no_logos(net)
     page = open_five(page_at, net, scheme)
     for cid, *_ in FIVE:
         fill, edge = style(page, circle(cid), "backgroundColor"), style(page, circle(cid), "borderTopColor")

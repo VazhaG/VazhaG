@@ -17,6 +17,8 @@ ROOT = Path(__file__).resolve().parent.parent
 SITE = ROOT / "site"
 LOGOS_JS = SITE / "js" / "logos.js"
 LOGO_IDS = ("socar", "rompetrol", "lukoil", "wissol", "connect")  # the companies with a logo (SPEC-0004)
+# every picture the selector finds has its address and is drawn — a logo gets its address once its file has arrived
+DRAWN = "(sel) => [...document.querySelectorAll(sel)].every((i) => i.getAttribute('src') && i.naturalWidth > 0)"
 TILE_HOST = "https://tile.openstreetmap.org/"
 BLANK_PNG = base64.b64decode(
     "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII="

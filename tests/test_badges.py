@@ -13,7 +13,7 @@ from datetime import UTC, datetime
 import pytest
 from playwright.sync_api import Page, expect
 
-from support import SITE, TILE_HOST, Net, no_logos
+from support import DRAWN, SITE, TILE_HOST, Net, no_logos
 
 TIME = "2026-10-30T12:00:00Z"
 REAL = [("socar", "SOCAR", "#e41e30"), ("rompetrol", "Rompetrol", "#f39200"), ("lukoil", "Lukoil", "#8a1538"),
@@ -89,10 +89,10 @@ def test_a_badges_only_picture_is_its_companys_logo_from_our_list(page: Page, ne
     expect(page.locator(BADGES)).to_have_count(4)
     own = ["logos/socar.svg", "logos/rompetrol.png", "logos/lukoil.png", "logos/wissol.svg"]
     expect(page.locator("#companies img")).to_have_count(4)
+    page.wait_for_function(DRAWN, arg="#companies img")
     assert page.locator("#companies img").evaluate_all("(i) => i.map((x) => x.getAttribute('src'))") == own
     expect(page.locator("#companies svg, #companies picture")).to_have_count(0)
     assert {b.evaluate("b => getComputedStyle(b).backgroundImage") for b in page.locator(BADGES).all()} == {"none"}
-    page.wait_for_function("() => [...document.querySelectorAll('#companies img')].every((i) => i.complete)")
     assert pictures_asked(net) == sorted(own)
     files = sorted(p.relative_to(SITE).as_posix() for p in SITE.rglob("*") if p.suffix.lower() in PICTURES)
     assert files and all(f.startswith(("vendor/leaflet/images/", "logos/")) for f in files), files
@@ -339,6 +339,7 @@ def test_a_broken_or_blocked_store_leaves_every_company_on(page_at: Callable[[fl
 
 def test_from_the_city_view_a_station_shows_its_companys_letter(page_at: Callable[[float, float], Page],
                                                                  net: Net) -> None:
+    no_logos(net)  # SPEC-0004 §3: the letter is for a company without a logo; with one, its mark (test_logos.py)
     page = open_here(page_at, net, FOUR)  # the visitor's place: the city view
     for cid, name, color, _, _ in FOUR:
         mark = page.locator(f'.station[data-company="{cid}"] span')
@@ -352,6 +353,7 @@ def test_from_the_city_view_a_station_shows_its_companys_letter(page_at: Callabl
 
 
 def test_from_far_a_station_is_a_small_dot_until_the_city_view(page: Page, net: Net) -> None:
+    no_logos(net)  # SPEC-0004 §3: the letter at the city view is a company's without a logo (its mark: test_logos.py)
     open_with(page, net, [prices_of("socar", "SOCAR", "#e41e30")], stations=[stations_of("socar", "SOCAR", "#e41e30")])
     page.get_by_text("დიზელი", exact=True).first.click()  # the station sells diesel only
     mark = page.locator(".station span")
@@ -389,6 +391,7 @@ def test_the_badges_fit_a_phone_by_day_and_at_night(page_at: Callable[[float, fl
 
 # The reviewers' findings on PLAN-0002 (critic-correctness, critic-security; 2026-10-30)
 def test_an_open_station_window_stays_open_across_the_city_view(page: Page, net: Net) -> None:
+    no_logos(net)  # the letter shows the city view has come (SPEC-0004 §3: a company without a logo)
     open_with(page, net, [prices_of("socar", "SOCAR", "#e41e30")], stations=[stations_of("socar", "SOCAR", "#e41e30")])
     page.get_by_text("დიზელი", exact=True).first.click()
     page.locator(".station").first.dispatch_event("click")  # the dot, from the whole country's view

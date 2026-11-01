@@ -17,7 +17,7 @@ from collections.abc import Callable
 import pytest
 from playwright.sync_api import Page, expect
 
-from support import LOGO_IDS, ROOT, SITE, Net
+from support import DRAWN, LOGO_IDS, ROOT, SITE, Net
 
 DOMAIN = ROOT / "docs" / "domain" / "fuel-price-sources.md"
 TIME = "2026-11-01T12:00:00Z"
@@ -106,7 +106,7 @@ def test_each_company_with_a_logo_shows_it_on_its_badge(page: Page, net: Net, sc
     open_five(page, net, scheme)
     badges = page.locator(BADGES)
     expect(badges).to_have_count(len(FIVE))
-    page.wait_for_function("() => [...document.querySelectorAll('#companies img')].every((i) => i.complete)")
+    page.wait_for_function(DRAWN, arg="#companies img")
     for i, (cid, name, _) in enumerate(FIVE):
         expect(badges.nth(i)).to_have_attribute("data-company", cid)
         got = badges.nth(i).evaluate(BADGE_JS)
@@ -216,6 +216,7 @@ def test_only_an_exact_code_in_our_list_gets_a_picture_and_a_name_stays_text(pag
     serve(net, [*companies, ("socar", EVIL, "#e41e30")])
     page.goto(net.base)
     expect(page.locator(BADGES)).to_have_count(len(HOSTILE) + 1)
+    page.wait_for_function(DRAWN, arg="#companies img")
     srcs = page.locator("#companies img").evaluate_all("(i) => i.map((x) => x.getAttribute('src'))")
     assert srcs == ["logos/socar.svg"]
     expect(page.locator(BADGES).first).to_have_text(EVIL)  # a name badge: the name as text only
@@ -245,3 +246,157 @@ def test_a_logo_that_does_not_load_leaves_a_name_badge_and_is_not_asked_again(pa
     socar.click()
     expect(lukoil).to_have_text("Lukoil")
     assert [u for u in net.requests if u.endswith("/logos/lukoil.png")] == [f"{net.base}logos/lukoil.png"]
+
+
+# T3 — the companies' marks on the map (REQ-002, REQ-003, REQ-004; AC-003, AC-004, AC-005)
+MARKS_JS = """async () => {
+  const { LOGOS } = await import('./js/logos.js');
+  const byId = new Map(LOGOS.map((l) => [l.id, l]));
+  return [...document.querySelectorAll('.station')].map((m) => {
+    const logo = byId.get(m.dataset.company), frame = m.querySelector('span'), img = m.querySelector('img');
+    const f = frame.getBoundingClientRect(), s = getComputedStyle(frame);
+    const out = { id: m.dataset.company, near: m.classList.contains('near'), frame: [f.width, f.height],
+                  ground: s.backgroundColor, round: s.borderRadius, text: frame.textContent,
+                  imgs: m.querySelectorAll('img').length };
+    if (img && logo) {
+      const r = img.getBoundingClientRect(), k = r.width / logo.size[0], [x, y, w, h] = logo.mark;
+      const left = r.left + x * k, top = r.top + y * k;
+      Object.assign(out, { src: img.getAttribute('src'), alt: img.getAttribute('alt'), mark: [w * k, h * k],
+                           clip: getComputedStyle(img).clipPath,
+                           loaded: img.complete && img.naturalWidth > 0,
+                           inside: left >= f.left - 0.5 && top >= f.top - 0.5 && left + w * k <= f.right + 0.5
+                                   && top + h * k <= f.bottom + 0.5 });
+    }
+    return out;
+  });
+}"""
+
+
+def open_near(page_at: Callable[[float, float], Page], net: Net, companies: list[tuple[str, str, str]],
+              scheme: str = "light") -> Page:
+    """The visitor's place allowed: the city view, where a station shows its company."""
+    serve(net, companies)
+    page = page_at(*HERE)
+    page.emulate_media(color_scheme=scheme)
+    page.clock.set_fixed_time(TIME)
+    page.goto(net.base)
+    page.get_by_text("დიზელი", exact=True).first.click()
+    expect(page.locator(".station.near")).to_have_count(len(companies))
+    return page
+
+
+def zoom(page: Page, button: str, times: int) -> None:
+    for _ in range(times):
+        page.locator(f".leaflet-control-zoom-{button}").click()
+        page.wait_for_timeout(350)
+
+
+@pytest.mark.parametrize("scheme", ["light", "dark"])
+def test_from_the_city_view_each_station_is_its_companys_mark_in_a_white_round_frame(
+        page_at: Callable[[float, float], Page], net: Net, scheme: str) -> None:
+    # AC-003: the mark is cut from the logo's own file; frame 28 px at least, the mark 22; a decoration (alt="")
+    page = open_near(page_at, net, FIVE, scheme)
+    logos = dict(page.evaluate(LIST_JS))
+    page.wait_for_function(DRAWN, arg=".station img")
+    marks = {m["id"]: m for m in page.evaluate(MARKS_JS)}
+    for cid, *_ in FIVE:
+        m = marks[cid]
+        assert m["near"] and m["imgs"] == 1 and (m["src"], m["alt"], m["loaded"]) == (logos[cid], "", True), m
+        assert min(m["frame"]) >= 28 and max(m["mark"]) >= 21.5 and m["inside"], m
+        assert m["clip"].startswith("inset("), m  # only the mark shows through the frame
+        assert (m["ground"], m["round"], m["text"]) == ("rgb(255, 255, 255)", "50%", ""), m
+    page.locator('.station[data-company="lukoil"]').dispatch_event("click")
+    expect(page.locator(".leaflet-popup-content")).to_contain_text("Lukoil")  # the window names the company
+
+
+def test_from_far_a_station_is_still_its_companys_small_dot(page: Page, net: Net) -> None:
+    # AC-003: the whole country's view keeps the coloured dots (SPEC-0003 REQ-003), no picture
+    serve(net, FIVE)
+    page.clock.set_fixed_time(TIME)
+    page.goto(net.base)  # no place allowed: the first view shows all of Georgia
+    page.get_by_text("დიზელი", exact=True).first.click()  # the fuel the stations sell
+    expect(page.locator(".station:not(.near)")).to_have_count(len(FIVE))
+    marks = page.evaluate(MARKS_JS)
+    assert all(not m["near"] and m["imgs"] == 0 and m["text"] == "" for m in marks), marks
+    assert {m["id"]: m["ground"] for m in marks}["socar"] == "rgb(228, 30, 48)"  # SOCAR's colour, #e41e30
+
+
+def test_each_logo_file_is_asked_once_whatever_the_row_and_the_map_do(page_at: Callable[[float, float], Page],
+                                                                      net: Net) -> None:
+    # AC-004: opening, switching a company off and on, leaving the city view and coming back
+    page = open_near(page_at, net, FIVE)
+    expect(page.locator(".station.near.logo")).to_have_count(len(FIVE))
+    wissol = page.locator('#companies [data-company="wissol"]')
+    wissol.click()
+    wissol.click()
+    zoom(page, "out", 3)
+    expect(page.locator(".station.near")).to_have_count(0)
+    zoom(page, "in", 3)
+    expect(page.locator(".station.near.logo")).to_have_count(len(FIVE))
+    page.wait_for_load_state("networkidle")
+    asked = sorted(u[len(net.base):] for u in net.requests if u.startswith(f"{net.base}logos/"))
+    assert asked == sorted(dict(page.evaluate(LIST_JS)).values()), asked
+
+
+def test_on_the_map_only_an_exact_code_gets_a_mark(page_at: Callable[[float, float], Page], net: Net) -> None:
+    # AC-005 on the map: a code that only looks like ours keeps the letter circle
+    companies = [(cid, f"Co{i}", "#e41e30") for i, cid in enumerate(HOSTILE) if cid] + [("socar", "SOCAR", "#e41e30")]
+    page = open_near(page_at, net, companies)
+    page.wait_for_function(DRAWN, arg=".station img")
+    srcs = page.locator(".station img").evaluate_all("(i) => i.map((x) => x.getAttribute('src'))")
+    assert srcs == ["logos/socar.svg"]
+    expect(page.locator(".station.near:not(.logo) span")).to_have_text(["C"] * (len(companies) - 1))
+
+
+def test_a_logo_that_fails_on_the_map_leaves_letter_circles_and_is_not_asked_again(
+        page_at: Callable[[float, float], Page], net: Net) -> None:
+    # REQ-004, AC-006 on the map
+    net.files["logos/wissol.svg"] = (404, "text/plain", "")
+    page = open_near(page_at, net, FIVE)
+    expect(page.locator('.station[data-company="wissol"] span')).to_have_text("W")
+    expect(page.locator('.station[data-company="wissol"] img')).to_have_count(0)
+    expect(page.locator(".station.near.logo")).to_have_count(len(FIVE) - 1)
+    zoom(page, "out", 3)
+    zoom(page, "in", 3)
+    expect(page.locator('.station[data-company="wissol"] span')).to_have_text("W")
+    assert [u for u in net.requests if u.endswith("/logos/wissol.svg")] == [f"{net.base}logos/wissol.svg"]
+
+
+SIGN_JS = """async () => {
+  const { LOGOS } = await import('./js/logos.js');
+  const out = {};
+  for (const logo of LOGOS) {
+    const [w, h] = logo.size, img = new Image();
+    img.src = logo.file;
+    await img.decode();
+    const canvas = document.createElement('canvas');
+    canvas.width = w;
+    canvas.height = h;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(img, 0, 0, w, h);
+    const px = ctx.getImageData(0, 0, w, h).data;
+    const coloured = (x, y) => {
+      const i = (y * w + x) * 4, c = [px[i], px[i + 1], px[i + 2]];
+      return px[i + 3] > 128 && Math.max(...c) - Math.min(...c) > 60;
+    };
+    let x0 = 0;
+    while (x0 < w && ![...Array(h).keys()].some((y) => coloured(x0, y))) x0++;
+    let x1 = x0;
+    while (x1 + 1 < w && [...Array(h).keys()].some((y) => coloured(x1 + 1, y))) x1++;
+    const rows = [...Array(h).keys()].filter((y) => { for (let x = x0; x <= x1; x++) if (coloured(x, y)) return true; return false; });
+    out[logo.id] = { sign: [x0, rows[0], x1 - x0 + 1, rows[rows.length - 1] - rows[0] + 1], mark: logo.mark, size: logo.size };
+  }
+  return out;
+}"""
+
+
+def test_each_mark_is_the_logos_coloured_sign_and_little_more(page: Page, net: Net) -> None:
+    # REQ-002: the cut shows the sign — the first run of coloured columns in the file (SOCAR's flame, Rompetrol's
+    # flower, Lukoil's red square, Wissol's and Connect's whole sign), not the letters and not the empty margins
+    page.goto(net.base)
+    for cid, got in page.evaluate(SIGN_JS).items():
+        (sx, sy, sw, sh), (mx, my, mw, mh) = got["sign"], got["mark"]
+        slack = max(3, 0.02 * max(got["size"]))
+        assert mx <= sx and my <= sy and mx + mw >= sx + sw and my + mh >= sy + sh, (cid, got)  # the whole sign
+        assert sx - mx <= slack and sy - my <= slack, (cid, got)  # and little else
+        assert mx + mw - (sx + sw) <= slack and my + mh - (sy + sh) <= slack, (cid, got)
