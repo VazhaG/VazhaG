@@ -89,10 +89,10 @@ def test_the_chosen_fuel_is_shown_whole_in_its_row(page: Page, net: Net) -> None
 
 
 def test_at_night_the_page_follows_the_phones_dark_mode(page: Page, net: Net) -> None:
-    # the owner's choice (2026-10-30); by day palette II of intent §5 stays
+    # the owner's choice (2026-10-30); SPEC-0004 REQ-005: white by day, black at night
     background = "getComputedStyle(document.body).backgroundColor.match(/\\d+/g).slice(0, 3).map(Number)"
     page.emulate_media(color_scheme="dark")
     page.goto(net.base)
     assert max(page.evaluate(background)) < 64
     page.emulate_media(color_scheme="light")
-    assert page.evaluate(background) == [255, 255, 255]  # palette II: white
+    assert page.evaluate(background) == [255, 255, 255]  # white by day

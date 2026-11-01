@@ -29,7 +29,7 @@ FIVE = [("socar", "SOCAR", "#e41e30", 4.90, 1.0), ("rompetrol", "Rompetrol", "#f
         ("connect", "Connect", "#ffe900", 4.80, 4.5)]
 LIGHT = {"rompetrol", "connect"}  # the companies whose letters are dark (SPEC-0002 REQ-007)
 DARK_INK, WHITE = (15, 23, 42), (255, 255, 255)
-NIGHT_PAGE = (11, 18, 32)  # #0b1220, the page at night — the map's tiles are darkened to it (AC-007)
+NIGHT_PAGE = (0, 0, 0)  # #000000, the page at night (SPEC-0004 REQ-005) — the map's tiles are darkened to it
 BACKGROUND_JS = """(el) => {
   for (; el; el = el.parentElement) {
     const c = getComputedStyle(el).backgroundColor.match(/[\\d.]+/g).map(Number);

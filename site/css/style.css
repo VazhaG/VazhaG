@@ -1,21 +1,24 @@
-/* Look chosen by the owner (intent §5): layout 1 "map on top", palette II "light day" — in the app style the owner
-   chose on 2026-10-30: the map fills the first screen, the fuel choice floats on it and the sheet with the ★ card
-   rises over its lower edge; at night the page follows the phone's dark mode. */
+/* Layout chosen by the owner (intent §5): layout 1 "map on top", in the app style of 2026-10-30 — the map fills the
+   first screen, the fuel choice floats on it and the sheet with the ★ card rises over its lower edge. Colours:
+   black and orange, a light and a dark look (SPEC-0004 REQ-005; the codes are Claude's choice — a hypothesis the
+   owner saw in a picture on 2026-11-01). */
 :root {
   --white: #ffffff;
-  --mist: #f1f5f9;
-  --graphite: #334155;
-  --violet: #7c3aed;
+  --black: #111111;
+  --orange: #f97316;
   --page: var(--white);
   --sheet: var(--white);
-  --raised: var(--mist);
-  --text: var(--graphite);
-  --muted: #64748b;
-  --line: #e2e8f0;
-  --accent: var(--violet);
-  --on-accent: var(--white);
-  --link: var(--violet);
-  --shadow: rgb(15 23 42 / 0.16);
+  --raised: #f3f4f6;
+  --text: var(--black);
+  --muted: #4b5563;
+  --line: #e5e7eb;
+  --accent: var(--orange); /* the main and the chosen buttons, the ★ */
+  --on-accent: var(--black);
+  --link: #c2410c;
+  --bar: var(--black); /* the header bar, the same in both looks */
+  --on-bar: var(--white);
+  --frame: #6b7280; /* a neutral frame: 3 : 1 on the white and on the black */
+  --shadow: rgb(17 17 17 / 0.16);
   --header-h: 52px;
   --overlap: 24px; /* how far the sheet rises over the map */
   color-scheme: light;
@@ -23,14 +26,14 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --page: #0b1220;
-    --sheet: #0f172a;
-    --raised: #1e293b;
-    --text: #e2e8f0;
-    --muted: #94a3b8;
-    --line: #334155;
-    --link: #c4b5fd;
-    --shadow: rgb(0 0 0 / 0.5);
+    --page: #000000;
+    --sheet: var(--black);
+    --raised: #1c1c1c;
+    --text: #f5f5f5;
+    --muted: #a3a3a3;
+    --line: #2a2a2a;
+    --link: #fb923c;
+    --shadow: rgb(0 0 0 / 0.6);
     color-scheme: dark;
   }
 }
@@ -60,7 +63,7 @@ body {
   gap: 8px;
   height: var(--header-h);
   padding: 0 16px;
-  background: var(--page);
+  background: var(--bar);
   border-bottom: 1px solid var(--line);
 }
 
@@ -70,10 +73,14 @@ h1 {
   font-weight: 700;
 }
 
+.top h1 {
+  color: var(--on-bar);
+}
+
 .lang {
   display: flex;
   flex: none;
-  border: 1px solid var(--line);
+  border: 1px solid var(--frame);
   border-radius: 999px;
   overflow: hidden;
 }
@@ -81,16 +88,18 @@ h1 {
 .lang button {
   padding: 6px 12px;
   border: 0;
-  background: var(--page);
-  color: var(--text);
+  background: var(--bar);
+  color: var(--on-bar);
   font: inherit;
   font-size: 0.85rem;
   cursor: pointer;
 }
 
+/* REQ-005: the chosen language — orange, and in bold letters, so it shows without colour too */
 .lang button[aria-pressed="true"] {
   background: var(--accent);
   color: var(--on-accent);
+  font-weight: 700;
 }
 
 /* The map and the fuel choice on it */
@@ -145,7 +154,8 @@ h1 {
 
 .chip span {
   display: inline-block;
-  padding: 8px 15px;
+  padding: 7px 14px;
+  border: 1px solid var(--frame);
   border-radius: 999px;
   background: var(--sheet);
   color: var(--text);
@@ -155,13 +165,16 @@ h1 {
   white-space: nowrap;
 }
 
+/* REQ-005: the chosen fuel — orange with black letters, and in bold letters, so it shows without colour too */
 .chip input:checked + span {
+  border-color: var(--accent);
   background: var(--accent);
   color: var(--on-accent);
+  font-weight: 700;
 }
 
 .chip input:focus-visible + span {
-  outline: 2px solid var(--accent);
+  outline: 2px solid var(--text);
   outline-offset: 2px;
 }
 
@@ -402,7 +415,7 @@ h1 {
   color: var(--link);
   font-weight: 600;
   text-align: center;
-  text-decoration: none;
+  text-decoration: underline; /* REQ-005: a link shows by its line, not only by its colour */
 }
 
 .to-prices::before {
@@ -586,7 +599,7 @@ tr.stale .price {
   }
 
   .leaflet-container .leaflet-control-attribution {
-    background: rgb(15 23 42 / 0.85);
+    background: rgb(0 0 0 / 0.8);
     color: var(--muted);
   }
 
