@@ -68,7 +68,9 @@ related:
 | Wissol | https://wissol.ge/images/Wissol.svg — ფასების გვერდიდან (Wissol_big.svg იგივე ფაილია) | SVG, 855 B, 56 × 56 | მწვანე წრე ოთხქიმიანი ვარსკვლავით; წარწერა არ არის | ნათელიც და მუქიც |
 | Connect | https://connect.com.ge/wp-content/uploads/2025/07/cropped-87.png — საიტის ხატულა (21.png — იგივე, 79 × 77) | PNG, 512 × 512 | ყვითელი სამკუთხედი; წარწერა არ არის. სრული ლოგო წარწერით connect.aspekt.ge-ზეა, რომელსაც ჩვენი გარემო ბლოკავს (502) | ნათელიც და მუქიც |
 
-- ორ SVG ფაილში `script`, `foreignObject`, გარე ბმული ან მოვლენის ატრიბუტი (`on…=`) არ არის (2026-11-01).
+- ფაილების ბაიტები და SHA-256 (2026-11-01): SOCAR `logo.svg` — 3 056 B, `56b4c381dfa4021c3907f86de57e3e8b3934ae9466ac025af6b9bf2d46d3aa72`; Rompetrol `logo.png` — 17 928 B, `dddb9a8c191e63b1e4063912dc4e5f72c5c19289514008cf359e09a3e2bc3825`; Lukoil — 17 632 B, `2b7734ea78eb7324edaf756e294bfe8f81e9c227e58839810293cf0736639e04`; Wissol `Wissol.svg` — 855 B, `037a691e3cda6b0946bb147fdb0431db624e749cd563a4e657f1e82799fb7c67`; Connect `cropped-87.png` — 43 454 B, `0c5ea8052fcb58bd23eb63a582bb1c52a58f90412e5d1e9517bb887fd879ad67`. ჯამი — 82 925 B.
+- ორ SVG ფაილში `script`, `foreignObject`, `style`, `@import`, `url()`, `href` ან `src` და მოვლენის ატრიბუტი (`on…=`) არ არის; ერთადერთი მისამართი `xmlns="http://www.w3.org/2000/svg"`-ია (2026-11-01).
+- Wissol-ისა და Connect-ის პირობები საიტის შინაარსის კოპირებასა და ხელახლა გამოყენებას კრძალავს (ზემოთ, „პირდაპირი გადამოწმება“) — ლოგოც ამ შინაარსის ნაწილია; Lukoil-ის ფაილი კი lukoil.ge-ზე არ ინახება — მას გვერდი სხვა საიტიდან (brandlogos.net) აჩვენებს.
 - Wissol-ისა და Connect-ის ლოგოები ნიშანია წარწერის გარეშე; SOCAR-ის, Rompetrol-ისა და Lukoil-ისა — ნიშანი წარწერით.
 
 ## ნავიგაციის ბმულები (2026-10-30, ოფიციალური დოკუმენტაცია)
