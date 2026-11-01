@@ -180,8 +180,14 @@ def faded(mask: str) -> set[str]:
     """Which edges of the row a computed mask fades — read from the gradient itself, not from the classes."""
     if mask == "none":
         return set()
+    if mask.startswith("linear-gradient(to right"):
+        first, last = "left", "right"
+    elif mask.startswith("linear-gradient(to left"):
+        first, last = "right", "left"
+    else:
+        raise AssertionError(f"a mask that fades neither towards the left nor the right: {mask}")
+    assert f"{STRIP}px" in mask, mask
     clear = [s.replace(" ", "") == "rgba(0,0,0,0)" for s in re.findall(r"rgba?\([^)]*\)", mask)]
-    first, last = ("left", "right") if mask.startswith("linear-gradient(to right") else ("right", "left")
     return ({first} if clear[0] else set()) | ({last} if clear[-1] else set())
 
 

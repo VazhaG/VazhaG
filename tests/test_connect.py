@@ -147,6 +147,29 @@ def test_more_cards_than_the_block_holds_are_refused() -> None:
     assert len(connect.parse(f'<div id="fpc1">{CARD * 20}</div>')) == 20
 
 
+def test_a_block_cut_by_the_reading_window_is_refused_not_read_in_part() -> None:
+    # correctness review C4: a block grown past the window would lose its last cards without a word
+    padding = "<!-- " + "ბ" * connect.BLOCK_CHARS + " -->"
+    page = fixture("connect.html").replace(
+        '                <div class="fpc-card">\n            <div class="fpc-card-name">დიზელი 10PPM</div>',
+        padding + '\n                <div class="fpc-card">\n            <div class="fpc-card-name">დიზელი 10PPM</div>', 1)
+    assert padding in page
+    with pytest.raises(ParseError, match="does not end"):
+        connect.parse(page)
+
+
+def test_a_block_that_is_not_a_div_is_refused() -> None:
+    # its end is found by counting <div> and </div>: another wrapper would make that count meaningless
+    page = fixture("connect.html").replace('<div id="fpc22875a6">', '<section id="fpc22875a6">', 1)
+    with pytest.raises(ParseError, match="no price block"):
+        connect.parse(page)
+
+
+def test_only_the_first_price_block_is_read() -> None:
+    page = fixture("connect.html").replace("</body>", "<p>სხვა</p>" + fixture("connect.html") + "</body>", 1)
+    assert connect.parse(page) == STANDARD
+
+
 def test_the_block_is_found_far_down_a_large_page_and_read_alone() -> None:
     page = "<html><body>" + "<p>ტექსტი</p>" * 300_000 + fixture("connect.html")  # about 8 MB before the block
     start = time.perf_counter()

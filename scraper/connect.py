@@ -40,18 +40,33 @@ FUEL_BY_NAME = {
 
 # The security review's S1 (2026-10-31): each card's own search walks everything inside it, so cards nested in cards
 # cost the square of their number, and reading a downloaded page has no deadline (core.fetch's covers the download
-# only). The block is about 3 kB with five cards (2026-10-31): only BLOCK_CHARS from where it begins are read, and more
-# than MAX_CARDS cards are a misreading.
+# only). The block is about 3 kB with five cards (2026-10-31): only the first block is read, it must end within
+# BLOCK_CHARS of where it begins — a block cut there would lose its last cards without a word (the correctness review's
+# C4) —, and more than MAX_CARDS cards are a misreading.
 BLOCK_CHARS = 50_000
 MAX_CARDS = 20
+_DIV_RE = re.compile(r"<(/?)div\b", re.IGNORECASE)
+
+
+def _price_block(html: str) -> str:
+    """The first price block (div#fpc…), from its own <div> to where that closes."""
+    at = html.find('id="fpc')
+    start = html.rfind("<", 0, at)
+    if at < 0 or start < 0 or not _DIV_RE.match(html, start):
+        raise ParseError("no price block")
+    depth = 0
+    for m in _DIV_RE.finditer(html, start, start + BLOCK_CHARS):
+        depth += -1 if m.group(1) else 1
+        if depth == 0:
+            end = html.find(">", m.end(), start + BLOCK_CHARS)
+            if end >= 0:
+                return html[start:end + 1]
+            break
+    raise ParseError(f"the price block does not end within {BLOCK_CHARS} characters")
 
 
 def parse(html: str) -> list[Reading]:
-    at = html.find('id="fpc')
-    if at < 0:
-        raise ParseError("no price block")
-    start = max(html.rfind("<", 0, at), 0)
-    soup = BeautifulSoup(html[start:start + BLOCK_CHARS], "html.parser")
+    soup = BeautifulSoup(_price_block(html), "html.parser")
     cards = soup.select(".fpc-featured, .fpc-card")
     if len(cards) > MAX_CARDS:
         raise ParseError(f"{len(cards)} price cards, more than {MAX_CARDS}")
