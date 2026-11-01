@@ -152,16 +152,42 @@ function markBest(b) {
 // both are set before the picture arrives, so a slow or failed file never moves the row (REQ-003).
 const LOGO_HEIGHT = 30;
 
+// SPEC-0004 REQ-004: the logo files that could not be loaded on this visit — their companies show their names instead,
+// and a file is not asked for again until the page is opened anew.
+const failedLogos = new Set();
+
+function usableLogo(id) {
+  const logo = logoOf(id);
+  return logo && !failedLogos.has(logo.file) ? logo : null;
+}
+
+// SPEC-0002: a company without a logo — its name on its colour.
+function nameBadge(badge, c) {
+  badge.classList.remove('logo');
+  badge.removeAttribute('aria-label');
+  badge.textContent = c.name || '?';
+  badge.style.setProperty('--company', c.color);
+  badge.style.setProperty('--ink', inkOn(c.color));
+  setEdge(badge, c.color);
+}
+
 // SPEC-0004 REQ-001: a company with a logo in our list shows it on its own ground; its name is what a screen reader
-// says. Without one, the badge is its name on its colour, as SPEC-0002 has it (REQ-004).
-function logoBadge(badge, logo, name) {
+// says. Switched off, the stylesheet greys it and crosses it out with a line in --strike, the ink that reads on the
+// ground. A file that fails turns the badge into its name badge (REQ-004).
+function logoBadge(badge, logo, c) {
   badge.classList.add('logo');
-  badge.setAttribute('aria-label', name);
+  badge.setAttribute('aria-label', c.name || '?');
   badge.style.setProperty('--ground', logo.ground);
+  badge.style.setProperty('--strike', inkOn(logo.ground));
   const img = element('img');
   img.alt = '';
   img.width = Math.round((LOGO_HEIGHT * logo.size[0]) / logo.size[1]);
   img.height = LOGO_HEIGHT;
+  img.addEventListener('error', () => {
+    failedLogos.add(logo.file);
+    nameBadge(badge, c);
+    markRowEdges();
+  }, { once: true });
   img.src = logo.file;
   badge.append(img);
 }
@@ -175,15 +201,9 @@ function renderCompanies() {
     badge.type = 'button';
     badge.dataset.company = c.id;
     badge.setAttribute('aria-pressed', String(!state.off.has(c.id)));
-    const logo = logoOf(c.id);
-    if (logo) {
-      logoBadge(badge, logo, c.name || '?');
-    } else {
-      badge.textContent = c.name || '?';
-      badge.style.setProperty('--company', c.color);
-      badge.style.setProperty('--ink', inkOn(c.color));
-      setEdge(badge, c.color);
-    }
+    const logo = usableLogo(c.id);
+    if (logo) logoBadge(badge, logo, c);
+    else nameBadge(badge, c);
     badge.addEventListener('click', () => toggleCompany(c.id));
     return badge;
   }));

@@ -291,6 +291,7 @@ h1 {
 /* SPEC-0004 REQ-001: a company's logo on its own ground in a neutral frame (3 : 1 on the page in both looks) — the
    same in both looks; the name is the button's label */
 .badge.logo {
+  position: relative;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -301,6 +302,32 @@ h1 {
 
 .badge.logo img {
   display: block;
+}
+
+/* SPEC-0004 REQ-001: switched off, the logo loses its colour and fades, and a line crosses it — off shows without
+   colour too; the line is the ink that reads on the logo's ground (3 : 1 at least) */
+.badge.logo[aria-pressed="false"] {
+  background: var(--ground);
+  text-decoration: none;
+}
+
+.badge.logo[aria-pressed="false"] img {
+  filter: grayscale(1);
+  opacity: 0.45;
+}
+
+.badge.logo[aria-pressed="false"]::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  right: 10px;
+  left: 10px;
+  height: 3px;
+  margin-top: -1.5px;
+  border-radius: 2px;
+  background: var(--strike);
+  transform: rotate(-14deg);
+  pointer-events: none;
 }
 
 .best[hidden] {

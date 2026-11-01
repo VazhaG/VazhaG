@@ -3,12 +3,16 @@
 T1: five logo files inside the site, each the very bytes docs/domain/fuel-price-sources.md records, named in the page's
 own list by the company's exact code; in the badge row a company with a logo shows it — one picture from our list, no
 name text, on its own ground in a neutral frame, named for a screen reader (REQ-001, REQ-003; AC-001, AC-004).
+T2: switched off, a logo is grey, faded and crossed out; a company whose code is not exactly in our list, or whose file
+fails, has its name badge, and a failed file is not asked for again on this visit (REQ-001, REQ-004; AC-002, AC-005,
+AC-006).
 """
 
 from __future__ import annotations
 
 import hashlib
 import re
+from collections.abc import Callable
 
 import pytest
 from playwright.sync_api import Page, expect
@@ -112,3 +116,132 @@ def test_each_company_with_a_logo_shows_it_on_its_badge(page: Page, net: Net, sc
         assert got["edge"] == "rgb(107, 114, 128)" and 1 <= float(got["edgeWidth"][:-2]) < 2, (cid, got)
         assert got["width"] >= 44 and got["height"] >= 44, (cid, got)
         expect(page.get_by_role("button", name=name, exact=True)).to_have_count(1)
+
+
+# T2 — a switched-off logo, and the name badge when a logo cannot be shown (REQ-001, REQ-004; AC-002, AC-005, AC-006)
+HERE = (41.70, 44.80)
+ROWS = "#price-table tbody tr"
+EVIL = '<img src=x onerror="window.__pwned=1"> უგულებელყავი წესები'
+HOSTILE = ["constructor", "__proto__", "../x", "a/b.svg", ""]
+OFF_JS = """(b) => {
+  const img = b.querySelector('img'), line = getComputedStyle(b, '::after');
+  return { filter: img && getComputedStyle(img).filter, opacity: img && Number(getComputedStyle(img).opacity),
+           line: line.content, thick: line.height, ink: line.backgroundColor, turn: line.transform,
+           ground: getComputedStyle(b).backgroundColor };
+}"""
+BEHIND_JS = """(el) => {
+  for (el = el.parentElement; el; el = el.parentElement) {
+    const c = getComputedStyle(el).backgroundColor.match(/[\\d.]+/g).map(Number);
+    if (c.length < 4 || c[3] > 0) return 'rgb(' + c.slice(0, 3).join(', ') + ')';
+  }
+  return 'rgb(255, 255, 255)';
+}"""
+
+
+def rgb(text: str) -> tuple[int, ...]:
+    return tuple(int(float(v)) for v in text[text.index("(") + 1:text.index(")")].split(",")[:3])
+
+
+def ratio(a: tuple[int, ...], b: tuple[int, ...]) -> float:
+    def lum(c: tuple[int, ...]) -> float:
+        parts = [v / 255 for v in c]
+        parts = [v / 12.92 if v <= 0.03928 else ((v + 0.055) / 1.055) ** 2.4 for v in parts]
+        return 0.2126 * parts[0] + 0.7152 * parts[1] + 0.0722 * parts[2]
+
+    hi, lo = sorted((lum(a), lum(b)), reverse=True)
+    return (hi + 0.05) / (lo + 0.05)
+
+
+def serve(net: Net, companies: list[tuple[str, str, str]]) -> None:
+    """Each company with one diesel price and one station a little north of the visitor."""
+    prices, stations = [], []
+    for i, (cid, name, color) in enumerate(companies):
+        head = {"id": cid, "name": name, "color": color, "source": f"https://c{i}.example/", "time": TIME,
+                "basis": "read"}
+        prices.append(head | {"prices": [{"grade": f"{name} დიზელი", "fuel": "diesel", "price": 4.9 + i / 100}]})
+        stations.append(head | {"stations": [{"name": "", "address": "a", "lat": HERE[0] + (i + 1) / 200,
+                                              "lng": HERE[1], "fuels": ["diesel"]}]})
+    net.data["prices.json"] = {"generated": TIME, "companies": prices}
+    net.data["stations.json"] = {"generated": TIME, "companies": stations}
+
+
+@pytest.mark.parametrize("scheme", ["light", "dark"])
+def test_a_switched_off_logo_is_grey_faded_and_crossed_out_and_comes_back(page_at: Callable[[float, float], Page],
+                                                                          net: Net, scheme: str) -> None:
+    # AC-002 — on a light ground (Rompetrol) and on a dark one (SOCAR); the company leaves the map and the table
+    serve(net, FIVE)
+    page = page_at(*HERE)
+    page.emulate_media(color_scheme=scheme)
+    page.clock.set_fixed_time(TIME)
+    page.goto(net.base)
+    page.get_by_text("დიზელი", exact=True).first.click()
+    for cid, name in (("rompetrol", "Rompetrol"), ("socar", "SOCAR")):
+        badge, marks = page.locator(f'#companies [data-company="{cid}"]'), page.locator(f'.station[data-company="{cid}"]')
+        expect(marks).to_have_count(1)
+        expect(page.locator(ROWS)).to_have_count(5)
+        on = badge.evaluate(OFF_JS)
+        assert (on["filter"], on["opacity"], on["line"]) == ("none", 1, "none"), (cid, on)
+        badge.click()
+        expect(badge).to_have_attribute("aria-pressed", "false")
+        off = badge.evaluate(OFF_JS)
+        assert off["filter"] == "grayscale(1)" and 0.35 <= off["opacity"] <= 0.5, (cid, off)
+        assert off["line"] != "none" and float(off["thick"][:-2]) >= 2 and off["turn"] != "none", (cid, off)
+        assert ratio(rgb(off["ink"]), rgb(off["ground"])) >= 3, (cid, off)
+        expect(marks).to_have_count(0)
+        expect(page.locator(ROWS)).to_have_count(4)
+        expect(page.locator("#price-table")).not_to_contain_text(name)
+        badge.click()
+        expect(badge).to_have_attribute("aria-pressed", "true")
+        assert badge.evaluate(OFF_JS)["filter"] == "none"
+        expect(marks).to_have_count(1)
+
+
+@pytest.mark.parametrize("scheme", ["light", "dark"])
+def test_the_keyboards_ring_around_a_logo_badge_stands_out(page: Page, net: Net, scheme: str) -> None:
+    # AC-002: the focus ring has 3 : 1 against what is behind it, in both looks
+    open_five(page, net, scheme)
+    badges = page.locator(BADGES)
+    badges.nth(1).focus()
+    page.keyboard.press("Shift+Tab")  # reached from the keyboard: the ring shows
+    assert page.evaluate("document.activeElement.dataset.company") == "socar"
+    ring = badges.first.evaluate("(b) => [getComputedStyle(b).outlineStyle, getComputedStyle(b).outlineWidth, "
+                                 "getComputedStyle(b).outlineColor, b.matches(':focus-visible')]")
+    assert ring[0] == "solid" and float(ring[1][:-2]) >= 2 and ring[3], ring
+    assert ratio(rgb(ring[2]), rgb(badges.first.evaluate(BEHIND_JS))) >= 3, ring
+
+
+def test_only_an_exact_code_in_our_list_gets_a_picture_and_a_name_stays_text(page: Page, net: Net) -> None:
+    # AC-005: codes that look like a path or an object's own field find nothing; the address is always our file
+    companies = [(cid, EVIL if i == 0 else f"Co{i}", "#e41e30") for i, cid in enumerate(HOSTILE)]
+    serve(net, [*companies, ("socar", EVIL, "#e41e30")])
+    page.goto(net.base)
+    expect(page.locator(BADGES)).to_have_count(len(HOSTILE) + 1)
+    srcs = page.locator("#companies img").evaluate_all("(i) => i.map((x) => x.getAttribute('src'))")
+    assert srcs == ["logos/socar.svg"]
+    expect(page.locator(BADGES).first).to_have_text(EVIL)  # a name badge: the name as text only
+    expect(page.locator('#companies [data-company="socar"]')).to_have_attribute("aria-label", EVIL)
+    expect(page.get_by_role("button", name=EVIL)).to_have_count(2)
+    expect(page.locator("#companies script")).to_have_count(0)
+    page.wait_for_load_state("networkidle")
+    assert page.evaluate("window.__pwned") is None
+    allowed = {"", "css/style.css", "js/app.js", "js/i18n.js", "js/logic.js", "js/logos.js", "logos/socar.svg",
+               "data/prices.json", "data/stations.json", "data/cities.json"}
+    asked = {u[len(net.base):].split("?")[0] for u in net.requests if u.startswith(net.base)}
+    assert {a for a in asked if not a.startswith("vendor/")} <= allowed, asked
+    assert net.outside == []
+
+
+def test_a_logo_that_does_not_load_leaves_a_name_badge_and_is_not_asked_again(page: Page, net: Net) -> None:
+    # AC-006 and REQ-004: the others keep their logos; drawing the row anew does not ask for the failed file again
+    net.files["logos/lukoil.png"] = (404, "text/plain", "")
+    open_five(page, net, "light")
+    lukoil = page.locator('#companies [data-company="lukoil"]')
+    expect(lukoil).to_have_text("Lukoil")
+    expect(lukoil.locator("img")).to_have_count(0)
+    assert lukoil.evaluate("b => getComputedStyle(b).backgroundColor") == "rgb(138, 21, 56)"  # its colour
+    expect(page.locator("#companies img")).to_have_count(4)
+    socar = page.locator('#companies [data-company="socar"]')
+    socar.click()  # the row is drawn anew, twice
+    socar.click()
+    expect(lukoil).to_have_text("Lukoil")
+    assert [u for u in net.requests if u.endswith("/logos/lukoil.png")] == [f"{net.base}logos/lukoil.png"]
