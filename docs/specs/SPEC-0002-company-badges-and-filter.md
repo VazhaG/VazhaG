@@ -2,7 +2,7 @@
 id: SPEC-0002
 type: spec
 title: კომპანიების ნიშნები და კომპანიით ფილტრი
-status: draft
+status: approved
 created: 2026-10-30
 updated: 2026-11-01
 intent: "[[intent]]"
