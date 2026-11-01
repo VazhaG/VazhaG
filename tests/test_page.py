@@ -94,5 +94,6 @@ def test_at_night_the_page_follows_the_phones_dark_mode(page: Page, net: Net) ->
     page.emulate_media(color_scheme="dark")
     page.goto(net.base)
     assert max(page.evaluate(background)) < 64
-    page.emulate_media(color_scheme="light")
-    assert page.evaluate(background) == [255, 255, 255]  # white by day
+    page.emulate_media(color_scheme="light")  # the phone turns light: with no choice of their own, the page follows
+    page.wait_for_function("() => getComputedStyle(document.body).backgroundColor === 'rgb(255, 255, 255)'",
+                           timeout=5000)  # white by day

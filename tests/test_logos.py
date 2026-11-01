@@ -225,7 +225,8 @@ def test_only_an_exact_code_in_our_list_gets_a_picture_and_a_name_stays_text(pag
     expect(page.locator("#companies script")).to_have_count(0)
     page.wait_for_load_state("networkidle")
     assert page.evaluate("window.__pwned") is None
-    allowed = {"", "css/style.css", "js/app.js", "js/i18n.js", "js/logic.js", "js/logos.js", "logos/socar.svg",
+    allowed = {"", "css/style.css", "js/theme.js", "js/app.js", "js/i18n.js", "js/logic.js", "js/logos.js",
+               "logos/socar.svg",
                "data/prices.json", "data/stations.json", "data/cities.json"}
     asked = {u[len(net.base):].split("?")[0] for u in net.requests if u.startswith(net.base)}
     assert {a for a in asked if not a.startswith("vendor/")} <= allowed, asked

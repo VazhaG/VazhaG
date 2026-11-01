@@ -37,12 +37,15 @@ class Net:
     bodies: list[str] = field(default_factory=list)  # what the page sent, if anything
     outside: list[str] = field(default_factory=list)  # requests that would have left the machine
     files: dict[str, tuple[int, str, str | bytes]] = field(default_factory=dict)  # a site file as the test serves it
+    held: set[str] = field(default_factory=set)  # site files left unanswered, as on a stalled network
 
     def handle(self, route: Route) -> None:
         url = route.request.url
         self.requests.append(url)
         if route.request.post_data:
             self.bodies.append(route.request.post_data)
+        if url.startswith(self.base) and url[len(self.base):].split("?", 1)[0] in self.held:
+            return  # never answered: the request stays open until the page closes
         if url.startswith(TILE_HOST):
             route.fulfill(status=200, content_type="image/png", body=BLANK_PNG)
         elif url.startswith(self.base):

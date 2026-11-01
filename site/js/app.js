@@ -13,9 +13,11 @@ const LOCATE = { enableHighAccuracy: false, timeout: 10000, maximumAge: 300000 }
 const NEAR_ZOOM = 12;
 // a station's window opens clear of the fuel choice on the map's top and of the sheet over its lower edge
 const POPUP = { autoPanPaddingTopLeft: [12, 72], autoPanPaddingBottomRight: [12, 48] };
-// What stays on this phone, and nothing else: the chosen language, and the companies switched off (SPEC-0002 REQ-004)
+// What stays on this phone, and nothing else: the chosen language, the companies switched off (SPEC-0002 REQ-004)
+// and the chosen look (SPEC-0004 REQ-006)
 const LANG_KEY = 'fuel-map.lang';
 const OFF_KEY = 'fuel-map.off';
+const THEME_KEY = 'fuel-map.theme';
 // Georgian time, written the Georgian way ("30.10 15:00") — the browser's own "ka" format gives "10-30".
 const TIME_PARTS = new Intl.DateTimeFormat('en-GB', {
   timeZone: 'Asia/Tbilisi',
@@ -523,6 +525,7 @@ function applyStatic() {
   document.title = t('title.page');
   for (const el of document.querySelectorAll('[data-i18n]')) el.textContent = t(el.dataset.i18n);
   document.querySelector('.lang').setAttribute('aria-label', t('lang.group'));
+  document.getElementById('theme').setAttribute('aria-label', t('theme.label'));
   for (const button of document.querySelectorAll('.lang button')) {
     button.setAttribute('aria-pressed', String(button.dataset.lang === lang()));
   }
@@ -539,6 +542,38 @@ function setLanguage(code) {
   applyStatic();
   renderFuels();
   render();
+}
+
+// SPEC-0004 REQ-006: the visitor's look — 'light' or 'dark' once chosen (kept on the phone; with a blocked storage, for
+// this visit only), else null and the phone's own setting rules. js/theme.js drew the first look the same way.
+let chosenTheme = null;
+const phoneDark = window.matchMedia('(prefers-color-scheme: dark)');
+
+function savedTheme() {
+  try {
+    const kept = localStorage.getItem(THEME_KEY);
+    return kept === 'light' || kept === 'dark' ? kept : null;
+  } catch {
+    return null;
+  }
+}
+
+function applyTheme() {
+  const dark = (chosenTheme ?? (phoneDark.matches ? 'dark' : 'light')) === 'dark';
+  document.documentElement.dataset.theme = dark ? 'dark' : 'light';
+  const button = document.getElementById('theme');
+  button.setAttribute('aria-pressed', String(dark)); // its name stays "dark mode": pressed means dark
+  button.textContent = dark ? '☀' : '☾'; // where a press takes the page
+}
+
+function toggleTheme() {
+  chosenTheme = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark';
+  try {
+    localStorage.setItem(THEME_KEY, chosenTheme);
+  } catch {
+    // a private window or a blocked storage: the choice holds for this visit only
+  }
+  applyTheme();
 }
 
 function savedLanguage() {
@@ -560,6 +595,12 @@ function validCities(data) {
 async function main() {
   setLang(savedLanguage() ?? 'ka');
   state.off = savedOff();
+  chosenTheme = savedTheme();
+  applyTheme();
+  document.getElementById('theme').addEventListener('click', toggleTheme);
+  phoneDark.addEventListener('change', () => {
+    if (!chosenTheme) applyTheme(); // no choice of their own: the page follows the phone
+  });
   applyStatic();
   for (const button of document.querySelectorAll('.lang button')) {
     button.addEventListener('click', () => setLanguage(button.dataset.lang));

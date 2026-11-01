@@ -281,8 +281,8 @@ def test_a_gas_price_whose_stations_are_unknown_is_also_told_apart(page_at: Call
 
 # PLAN-0002 T5: the choice stays on the phone — only the companies switched off (REQ-004; AC-005, AC-011)
 STORED_OFF = "localStorage.getItem('fuel-map.off')"
-STORAGE_KA = "ენა და კომპანიების არჩევანი მხოლოდ შენს ტელეფონში ინახება"
-STORAGE_EN = "The language and the companies you choose are kept only on your phone"
+STORAGE_KA = "ენა, კომპანიების არჩევანი და ნათელი თუ მუქი რეჟიმი მხოლოდ შენს ტელეფონში ინახება"  # SPEC-0004
+STORAGE_EN = "The language, your choice of companies and the light or dark mode are kept only on your phone"
 
 
 def reopen(page: Page) -> None:
