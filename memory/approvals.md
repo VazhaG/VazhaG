@@ -34,3 +34,4 @@ status: living
 | 2026-11-01 16:31 +0000 | PLAN-0001 | draft → approved | docs/plans/PLAN-0001-fuel-prices-map.md | — |
 | 2026-11-01 16:32 +0000 | PLAN-0002 | draft → approved | docs/plans/PLAN-0002-company-badges-and-filter.md | — |
 | 2026-11-01 16:34 +0000 | PLAN-0003 | draft → approved | docs/plans/PLAN-0003-connect-stations-and-prices.md | — |
+| 2026-11-01 17:21 +0000 | SPEC-0004 | review → approved | docs/specs/SPEC-0004-logos-and-black-orange-look.md | — |

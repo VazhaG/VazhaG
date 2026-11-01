@@ -2,7 +2,7 @@
 id: SPEC-0004
 type: spec
 title: კომპანიების ლოგოები და შავ-ნარინჯისფერი რეჟიმები გადამრთველით
-status: review
+status: approved
 created: 2026-11-01
 updated: 2026-11-01
 intent: "[[intent]]"
