@@ -142,6 +142,27 @@ def test_text_from_a_source_cannot_start_a_line_of_its_own(tmp_path: Path, monke
     assert "„ნახევარი \\ud83d“ is not in the fuel table" in err
 
 
+def test_the_runners_older_command_form_is_broken_up_anywhere_in_a_line(
+        tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]) -> None:
+    # The security review's U1 (2026-10-31): the runner may also read its older form "##[command]" in the middle of a
+    # line — a fuel name or an error from a page reaches the log, so it is split up there too
+    def forged(html: str) -> list[Reading]:
+        raise ParseError("x ##[error]forged ###[add-mask]SOCAR ##[stop-commands]y")
+
+    def odd_name(html: str) -> list[Reading]:
+        return [Reading("დიზელი", "diesel", 4.9), Reading("ნავთი ##[warning]too", None, 5.0)]
+
+    monkeypatch.setattr(cli, "COMPANIES", [
+        Company(id="f", name="F", color="#123456", url="https://f.example/", parse=forged),
+        Company(id="o", name="O", color="#123456", url="https://o.example/", parse=odd_name)])
+    monkeypatch.setattr(cli, "fetch", lambda url: "<html></html>")
+    cli.main(["--out", str(tmp_path / "prices.json"), "--stations-out", str(tmp_path / "stations.json")])
+    err = capsys.readouterr().err
+    assert "##[" not in err
+    assert "F: not read — x # #[error]forged ## #[add-mask]SOCAR # #[stop-commands]y" in err
+    assert "„ნავთი # #[warning]too“ is not in the fuel table" in err
+
+
 def test_a_data_file_that_cannot_be_written_whole_stays_as_it_was(tmp_path: Path) -> None:
     out = tmp_path / "prices.json"
     out.write_text('{"companies": []}', encoding="utf-8")

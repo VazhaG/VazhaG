@@ -1,5 +1,5 @@
 {
-  "generated": "2026-10-30T12:16:16Z",
+  "generated": "2026-10-31T20:40:33Z",
   "companies": [
     {
       "id": "socar",
@@ -5631,6 +5631,1576 @@
           "address": "თბილისი, კახეთის გზატკეცილის მე-7 კმ",
           "lat": 41.6887645,
           "lng": 44.931147,
+          "fuels": [
+            "regular",
+            "premium",
+            "super",
+            "diesel"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "connect",
+      "name": "Connect",
+      "color": "#ffe900",
+      "source": "https://connect.com.ge/map/",
+      "time": "2026-10-31T20:40:33Z",
+      "basis": "read",
+      "stations": [
+        {
+          "name": "აბაშა",
+          "address": "ნორიო, სოფელი საბოკუჩავო",
+          "lat": 42.21822832,
+          "lng": 42.18347592,
+          "fuels": [
+            "regular",
+            "premium",
+            "super",
+            "diesel"
+          ]
+        },
+        {
+          "name": "აბაშა",
+          "address": "სოფელი ქოლობანი(ბულვანი)",
+          "lat": 42.18015639,
+          "lng": 42.25184374,
+          "fuels": [
+            "regular",
+            "premium",
+            "super",
+            "diesel"
+          ]
+        },
+        {
+          "name": "აბაშა",
+          "address": "კ.გამსახურდიას ქუჩა #39",
+          "lat": 42.22009138,
+          "lng": 42.2182515,
+          "fuels": [
+            "regular",
+            "premium",
+            "super",
+            "diesel"
+          ]
+        },
+        {
+          "name": "ადიგენი",
+          "address": "ადიგენის რ-ნი სოფ. ბენარა",
+          "lat": 41.66448678,
+          "lng": 42.82811428,
+          "fuels": [
+            "regular",
+            "premium",
+            "super",
+            "diesel"
+          ]
+        },
+        {
+          "name": "ასპინძა",
+          "address": "ვარძიის ქუჩა #97",
+          "lat": 41.5681358,
+          "lng": 43.25472811,
+          "fuels": [
+            "regular",
+            "premium",
+            "super",
+            "diesel"
+          ]
+        },
+        {
+          "name": "ახალქალაქი",
+          "address": "შაუმიანის 1 გ",
+          "lat": 41.41365697,
+          "lng": 43.48613341,
+          "fuels": [
+            "regular",
+            "premium",
+            "super",
+            "diesel"
+          ]
+        },
+        {
+          "name": "ახალქალაქი",
+          "address": "აღმაშენებლის ქ. 30 ა",
+          "lat": 41.3928307,
+          "lng": 43.49030919,
+          "fuels": [
+            "regular",
+            "premium",
+            "super",
+            "diesel"
+          ]
+        },
+        {
+          "name": "ახალქალაქი",
+          "address": "კარწახი",
+          "lat": 41.24210827,
+          "lng": 43.27039485,
+          "fuels": [
+            "regular",
+            "premium",
+            "super",
+            "diesel"
+          ]
+        },
+        {
+          "name": "ახალქალაქი",
+          "address": "ნინოწმინდა",
+          "lat": 41.27389675,
+          "lng": 43.58528795,
+          "fuels": [
+            "regular",
+            "premium",
+            "super",
+            "diesel"
+          ]
+        },
+        {
+          "name": "ახალციხე",
+          "address": "აბასთუმნის გზატკეცილი",
+          "lat": 41.64145206,
+          "lng": 42.97760674,
+          "fuels": [
+            "regular",
+            "premium",
+            "super",
+            "diesel"
+          ]
+        },
+        {
+          "name": "ახალციხე",
+          "address": "თამარაშვილის ქ 57აღ.მხარეს მი",
+          "lat": 41.64435738,
+          "lng": 42.99272552,
+          "fuels": [
+            "regular",
+            "premium",
+            "super",
+            "diesel"
+          ]
+        },
+        {
+          "name": "ახალციხე",
+          "address": "რუსთაველის 120",
+          "lat": 41.6394898,
+          "lng": 43.0071352,
+          "fuels": [
+            "regular",
+            "premium",
+            "super",
+            "diesel"
+          ]
+        },
+        {
+          "name": "ახმეტა",
+          "address": "რუსთაველის ქ.55",
+          "lat": 42.03619785,
+          "lng": 45.207141,
+          "fuels": [
+            "regular",
+            "premium",
+            "super",
+            "diesel"
+          ]
+        },
+        {
+          "name": "ახმეტა",
+          "address": "სანაპიროს ქ.1",
+          "lat": 42.0267096,
+          "lng": 45.2135953,
+          "fuels": [
+            "regular",
+            "premium",
+            "super",
+            "diesel"
+          ]
+        },
+        {
+          "name": "ახმეტა",
+          "address": "სოფელი ყვარელწყალი",
+          "lat": 42.14508705,
+          "lng": 45.27486229,
+          "fuels": [
+            "regular",
+            "premium",
+            "super",
+            "diesel"
+          ]
+        },
+        {
+          "name": "ბათუმი",
+          "address": "მაიაკოვსკის ქ. N55/17",
+          "lat": 41.61595357,
+          "lng": 41.61130055,
+          "fuels": [
+            "regular",
+            "premium",
+            "super",
+            "diesel"
+          ]
+        },
+        {
+          "name": "ბათუმი",
+          "address": "ხახული ქ. 43",
+          "lat": 41.62279045,
+          "lng": 41.6282639,
+          "fuels": [
+            "regular",
+            "premium",
+            "super",
+            "diesel"
+          ]
+        },
+        {
+          "name": "ბათუმი",
+          "address": "აღმაშენებლის 20ა/ტაბიძის კვეთა",
+          "lat": 41.62637522,
+          "lng": 41.61718467,
+          "fuels": [
+            "regular",
+            "premium",
+            "super",
+            "diesel"
+          ]
+        },
+        {
+          "name": "ბათუმი",
+          "address": "ფრიდონ ხალვაში გამზ. N247",
+          "lat": 41.58961183,
+          "lng": 41.6477929,
+          "fuels": [
+            "regular",
+            "premium",
+            "super",
+            "diesel"
+          ]
+        },
+        {
+          "name": "ბათუმი",
+          "address": "ლერმონტოვის N34ა",
+          "lat": 41.64082888,
+          "lng": 41.62681744,
+          "fuels": [
+            "regular",
+            "premium",
+            "super",
+            "diesel"
+          ]
+        },
+        {
+          "name": "ბათუმი",
+          "address": "აეროპორტის გზატ.N131",
+          "lat": 41.615414,
+          "lng": 41.61144383,
+          "fuels": [
+            "regular",
+            "premium",
+            "super",
+            "diesel"
+          ]
+        },
+        {
+          "name": "ბაღდათი",
+          "address": "სოფელი როხი",
+          "lat": 42.10747018,
+          "lng": 42.71153924,
+          "fuels": [
+            "regular",
+            "premium",
+            "super",
+            "diesel"
+          ]
+        },
+        {
+          "name": "ბორჯომი",
+          "address": "ლიკანი მესხეთის 42",
+          "lat": 41.81660236,
+          "lng": 43.35040413,
+          "fuels": [
+            "regular",
+            "premium",
+            "super",
+            "diesel"
+          ]
+        },
+        {
+          "name": "ბორჯომი",
+          "address": "წაღვერი",
+          "lat": 41.80542368,
+          "lng": 43.47542183,
+          "fuels": [
+            "regular",
+            "premium",
+            "super",
+            "diesel"
+          ]
+        },
+        {
+          "name": "ბორჯომი",
+          "address": "რუსთაველის ქუჩა #20რ",
+          "lat": 41.84233066,
+          "lng": 43.38726481,
+          "fuels": [
+            "regular",
+            "premium",
+            "super",
+            "diesel"
+          ]
+        },
+        {
+          "name": "გარდაბანი",
+          "address": "ქესალო",
+          "lat": 41.4406768,
+          "lng": 45.10297652,
+          "fuels": [
+            "regular",
+            "premium",
+            "super",
+            "diesel"
+          ]
+        },
+        {
+          "name": "გარდაბანი",
+          "address": "მეგობრობის ქ. 2",
+          "lat": 41.47174135,
+          "lng": 45.10311509,
+          "fuels": [
+            "regular",
+            "premium",
+            "super",
+            "diesel"
+          ]
+        },
+        {
+          "name": "გონიო",
+          "address": "ანდრია პირველწოდებულის გზატკეცილი #12",
+          "lat": 41.56802597,
+          "lng": 41.57107736,
+          "fuels": [
+            "regular",
+            "premium",
+            "super",
+            "diesel"
+          ]
+        },
+        {
+          "name": "გორი",
+          "address": "გურამიშვილის ქუჩა #5",
+          "lat": 41.98385647,
+          "lng": 44.10554957,
+          "fuels": [
+            "regular",
+            "premium",
+            "super",
+            "diesel"
+          ]
+        },
+        {
+          "name": "გორი",
+          "address": "ჭონქაძის ქუჩა #6",
+          "lat": 41.98597875,
+          "lng": 44.10175519,
+          "fuels": [
+            "regular",
+            "premium",
+            "super",
+            "diesel"
+          ]
+        },
+        {
+          "name": "გორი",
+          "address": "პუშკინის ქუჩა #2",
+          "lat": 41.99379473,
+          "lng": 44.11369659,
+          "fuels": [
+            "regular",
+            "premium",
+            "super",
+            "diesel"
+          ]
+        },
+        {
+          "name": "გორი",
+          "address": "სოფელი ბერბუკი",
+          "lat": 42.01926148,
+          "lng": 44.13041576,
+          "fuels": [
+            "regular",
+            "premium",
+            "super",
+            "diesel"
+          ]
+        },
+        {
+          "name": "გორი",
+          "address": "სოფელი ახალსოფელი",
+          "lat": 42.02674452,
+          "lng": 44.19793468,
+          "fuels": [
+            "regular",
+            "premium",
+            "super",
+            "diesel"
+          ]
+        },
+        {
+          "name": "გორი",
+          "address": "შინდისის გზატკეცილი მე-2 კმ",
+          "lat": 41.99798645,
+          "lng": 44.09392433,
+          "fuels": [
+            "regular",
+            "premium",
+            "super",
+            "diesel"
+          ]
+        },
+        {
+          "name": "გორი",
+          "address": "სოფ.ვარიანი",
+          "lat": 42.08942221,
+          "lng": 44.03170944,
+          "fuels": [
+            "regular",
+            "premium",
+            "super",
+            "diesel"
+          ]
+        },
+        {
+          "name": "გურჯაანი",
+          "address": "სოფ. კოლაგი",
+          "lat": 41.69983104,
+          "lng": 45.84921077,
+          "fuels": [
+            "regular",
+            "premium",
+            "super",
+            "diesel"
+          ]
+        },
+        {
+          "name": "გურჯაანი",
+          "address": "სოფელი კაჭრეთი",
+          "lat": 41.63539103,
+          "lng": 45.68425338,
+          "fuels": [
+            "regular",
+            "premium",
+            "super",
+            "diesel"
+          ]
+        },
+        {
+          "name": "გურჯაანი",
+          "address": "მუკუზანი (ველისციხე)",
+          "lat": 41.80196053,
+          "lng": 45.7517032,
+          "fuels": [
+            "regular",
+            "premium",
+            "super",
+            "diesel"
+          ]
+        },
+        {
+          "name": "დუშეთი",
+          "address": "დუშეთის რაიონი სოფ წითელსოფელი",
+          "lat": 42.00942294,
+          "lng": 44.75239204,
+          "fuels": [
+            "regular",
+            "premium",
+            "super",
+            "diesel"
+          ]
+        },
+        {
+          "name": "ვანი",
+          "address": "სოფელი ზეინდარი",
+          "lat": 42.09878113,
+          "lng": 42.66408093,
+          "fuels": [
+            "regular",
+            "premium",
+            "super",
+            "diesel"
+          ]
+        },
+        {
+          "name": "ვანი",
+          "address": "თამარ მეფის #15",
+          "lat": 42.26915248,
+          "lng": 42.7058881,
+          "fuels": [
+            "regular",
+            "premium",
+            "super",
+            "diesel"
+          ]
+        },
+        {
+          "name": "ზესტაფონი",
+          "address": "თამარ მეფის ქ. 75",
+          "lat": 42.11372275,
+          "lng": 43.03184949,
+          "fuels": [
+            "regular",
+            "premium",
+            "super",
+            "diesel"
+          ]
+        },
+        {
+          "name": "ზესტაფონი",
+          "address": "ზესტაფონის რაიონი, სოფ ქვედა საქარა",
+          "lat": 42.14935517,
+          "lng": 43.03841134,
+          "fuels": [
+            "regular",
+            "premium",
+            "super",
+            "diesel"
+          ]
+        },
+        {
+          "name": "ზუგდიდი",
+          "address": "მესხიას ქუჩა #3",
+          "lat": 42.51163828,
+          "lng": 41.86363909,
+          "fuels": [
+            "regular",
+            "premium",
+            "super",
+            "diesel"
+          ]
+        },
+        {
+          "name": "ზუგდიდი",
+          "address": "სოფელი ინგირი 2, ხუბულავას ქუჩა",
+          "lat": 42.49525917,
+          "lng": 41.84052872,
+          "fuels": [
+            "regular",
+            "premium",
+            "super",
+            "diesel"
+          ]
+        },
+        {
+          "name": "ზუგდიდი",
+          "address": "სოფელი ინგირი 1",
+          "lat": 42.49710592,
+          "lng": 41.82743725,
+          "fuels": [
+            "regular",
+            "premium",
+            "super",
+            "diesel"
+          ]
+        },
+        {
+          "name": "ზუგდიდი",
+          "address": "ტოლსტოის ქუჩა #2",
+          "lat": 42.50766303,
+          "lng": 41.85047072,
+          "fuels": [
+            "regular",
+            "premium",
+            "super",
+            "diesel"
+          ]
+        },
+        {
+          "name": "ზუგდიდი",
+          "address": "სოხუმის ქ. #92",
+          "lat": 42.52428014,
+          "lng": 41.86777513,
+          "fuels": [
+            "regular",
+            "premium",
+            "super",
+            "diesel"
+          ]
+        },
+        {
+          "name": "ზუგდიდი",
+          "address": "სოფელი კორცხელი",
+          "lat": 42.5565362,
+          "lng": 41.9364558,
+          "fuels": [
+            "regular",
+            "premium",
+            "super",
+            "diesel"
+          ]
+        },
+        {
+          "name": "თბილისი",
+          "address": "გურამიშვილის გამზ. #170",
+          "lat": 41.7824887,
+          "lng": 44.79799482,
+          "fuels": [
+            "regular",
+            "premium",
+            "super",
+            "diesel"
+          ]
+        },
+        {
+          "name": "თბილისი",
+          "address": "ქავთარაძე #1",
+          "lat": 41.72380477,
+          "lng": 44.73939719,
+          "fuels": [
+            "regular",
+            "premium",
+            "super",
+            "diesel"
+          ]
+        },
+        {
+          "name": "თბილისი",
+          "address": "ყიფშიძე #2",
+          "lat": 41.71227295,
+          "lng": 44.75580235,
+          "fuels": [
+            "regular",
+            "premium",
+            "super",
+            "diesel"
+          ]
+        },
+        {
+          "name": "თბილისი",
+          "address": "ს8- თბილისი, აღმაშენებლის ხეივანი",
+          "lat": 41.80114617,
+          "lng": 44.77136737,
+          "fuels": [
+            "regular",
+            "premium",
+            "super",
+            "diesel"
+          ]
+        },
+        {
+          "name": "თბილისი",
+          "address": "აღმაშენებლის ხეივანი #7",
+          "lat": 41.76304465,
+          "lng": 44.76881297,
+          "fuels": [
+            "regular",
+            "premium",
+            "super",
+            "diesel"
+          ]
+        },
+        {
+          "name": "თბილისი",
+          "address": "სამგორის ქუჩა # 1 (წისქვილკომბინათთან)",
+          "lat": 41.68484179,
+          "lng": 44.85847523,
+          "fuels": [
+            "regular",
+            "premium",
+            "super",
+            "diesel"
+          ]
+        },
+        {
+          "name": "თბილისი",
+          "address": "მოსკ. პროსპექტი - ქინძმარაულის #7",
+          "lat": 41.66894727,
+          "lng": 44.90387718,
+          "fuels": [
+            "regular",
+            "premium",
+            "super",
+            "diesel"
+          ]
+        },
+        {
+          "name": "თბილისი",
+          "address": "მარშალ გელოვანის გამზირი #7",
+          "lat": 41.74702933,
+          "lng": 44.77050862,
+          "fuels": [
+            "regular",
+            "premium",
+            "super",
+            "diesel"
+          ]
+        },
+        {
+          "name": "თბილისი",
+          "address": "დიდუბე, დიდუბის ავტოსადგურსა და დიღმის მასივში შესასვლელს შორის",
+          "lat": 41.75246745,
+          "lng": 44.77853559,
+          "fuels": [
+            "regular",
+            "premium",
+            "super",
+            "diesel"
+          ]
+        },
+        {
+          "name": "თბილისი",
+          "address": "მუხიანი-თემქა",
+          "lat": 41.78085328,
+          "lng": 44.82554931,
+          "fuels": [
+            "regular",
+            "premium",
+            "super",
+            "diesel"
+          ]
+        },
+        {
+          "name": "თბილისი",
+          "address": "კახეთის გზატკეცილი",
+          "lat": 41.68378772,
+          "lng": 44.87544227,
+          "fuels": [
+            "regular",
+            "premium",
+            "super",
+            "diesel"
+          ]
+        },
+        {
+          "name": "თბილისი",
+          "address": "ისანი, აწყურის ქუჩა",
+          "lat": 41.68853137,
+          "lng": 44.84149182,
+          "fuels": [
+            "regular",
+            "premium",
+            "super",
+            "diesel"
+          ]
+        },
+        {
+          "name": "თბილისი",
+          "address": "აღმაშენებლის ხეივანი 123",
+          "lat": 41.7862577,
+          "lng": 44.7701524,
+          "fuels": [
+            "regular",
+            "premium",
+            "super",
+            "diesel"
+          ]
+        },
+        {
+          "name": "თელავი",
+          "address": "სოფელი კურდღელაური, მშვიდობის ქუჩა",
+          "lat": 41.93697798,
+          "lng": 45.50919253,
+          "fuels": [
+            "regular",
+            "premium",
+            "super",
+            "diesel"
+          ]
+        },
+        {
+          "name": "თელავი",
+          "address": "თამარის ქუჩა #38",
+          "lat": 41.91414596,
+          "lng": 45.49072723,
+          "fuels": [
+            "regular",
+            "premium",
+            "super",
+            "diesel"
+          ]
+        },
+        {
+          "name": "თელავი",
+          "address": "ალაზნის გამზირი (ვახტანგ სეხნიაშვილის #1დ)",
+          "lat": 41.92966653,
+          "lng": 45.47352306,
+          "fuels": [
+            "regular",
+            "premium",
+            "super",
+            "diesel"
+          ]
+        },
+        {
+          "name": "თელავი",
+          "address": "თელავი, სოფ. აკურა",
+          "lat": 41.86700647,
+          "lng": 45.61901517,
+          "fuels": [
+            "regular",
+            "premium",
+            "super",
+            "diesel"
+          ]
+        },
+        {
+          "name": "თერჯოლა",
+          "address": "სოფელი კვახჭირი",
+          "lat": 42.19549282,
+          "lng": 42.72495747,
+          "fuels": [
+            "regular",
+            "premium",
+            "super",
+            "diesel"
+          ]
+        },
+        {
+          "name": "კასპი",
+          "address": "დავით აღმაშენებლის ქუჩა",
+          "lat": 41.94268319,
+          "lng": 44.42344652,
+          "fuels": [
+            "regular",
+            "premium",
+            "super",
+            "diesel"
+          ]
+        },
+        {
+          "name": "კასპი",
+          "address": "კასპი სოფ. დოესი",
+          "lat": 41.93663319,
+          "lng": 44.23206539,
+          "fuels": [
+            "regular",
+            "premium",
+            "super",
+            "diesel"
+          ]
+        },
+        {
+          "name": "ლაგოდეხი",
+          "address": "სოფელი ცოდნისკარი",
+          "lat": 41.78811843,
+          "lng": 46.16555925,
+          "fuels": [
+            "regular",
+            "premium",
+            "super",
+            "diesel"
+          ]
+        },
+        {
+          "name": "ლენტეხი",
+          "address": "ლენტეხი, ჭავჭავაძის ქუჩა",
+          "lat": 42.78807467,
+          "lng": 42.71831794,
+          "fuels": [
+            "regular",
+            "premium",
+            "super",
+            "diesel"
+          ]
+        },
+        {
+          "name": "ლენტეხი",
+          "address": "ჭავჭავაძის ქუჩა #7",
+          "lat": 42.78534464,
+          "lng": 42.71987359,
+          "fuels": [
+            "regular",
+            "premium",
+            "super",
+            "diesel"
+          ]
+        },
+        {
+          "name": "მარნეული",
+          "address": "26 მაისის ქუჩა",
+          "lat": 41.48322561,
+          "lng": 44.79174017,
+          "fuels": [
+            "regular",
+            "premium",
+            "super",
+            "diesel"
+          ]
+        },
+        {
+          "name": "მარნეული",
+          "address": "მარნეული, აღმაშენებლის ქუჩა",
+          "lat": 41.47996162,
+          "lng": 44.8086631,
+          "fuels": [
+            "regular",
+            "premium",
+            "super",
+            "diesel"
+          ]
+        },
+        {
+          "name": "მარნეული",
+          "address": "ლეონიძის ქუჩა #19",
+          "lat": 41.46454741,
+          "lng": 44.81565128,
+          "fuels": [
+            "regular",
+            "premium",
+            "super",
+            "diesel"
+          ]
+        },
+        {
+          "name": "მარტვილი",
+          "address": "გამსახურდიას ქუჩა #9",
+          "lat": 42.41671389,
+          "lng": 42.37821674,
+          "fuels": [
+            "regular",
+            "premium",
+            "super",
+            "diesel"
+          ]
+        },
+        {
+          "name": "მარტვილი",
+          "address": "მშვიდობის ქუჩა #12",
+          "lat": 42.40568675,
+          "lng": 42.36952631,
+          "fuels": [
+            "regular",
+            "premium",
+            "super",
+            "diesel"
+          ]
+        },
+        {
+          "name": "მცხეთა",
+          "address": "ზაჰესი, პლატინის #21 (თბილისის გასასვლელი)",
+          "lat": 41.81860159,
+          "lng": 44.75205116,
+          "fuels": [
+            "regular",
+            "premium",
+            "super",
+            "diesel"
+          ]
+        },
+        {
+          "name": "მცხეთა",
+          "address": "სოფელი ძეგვი",
+          "lat": 41.84367356,
+          "lng": 44.62015463,
+          "fuels": [
+            "regular",
+            "premium",
+            "super",
+            "diesel"
+          ]
+        },
+        {
+          "name": "ოზურგეთი",
+          "address": "დაბა ურეკი",
+          "lat": 41.9976634,
+          "lng": 41.78059236,
+          "fuels": [
+            "regular",
+            "premium",
+            "super",
+            "diesel"
+          ]
+        },
+        {
+          "name": "ორთაჭალა",
+          "address": "ტკვრის მარჯვენა სანაპირო, ავტოსადგურის მიმდებ",
+          "lat": 41.67247738,
+          "lng": 44.83733319,
+          "fuels": [
+            "regular",
+            "premium",
+            "super",
+            "diesel"
+          ]
+        },
+        {
+          "name": "რუსთავი",
+          "address": "წმინდა ნინოს და სპორტის ქუჩის გადაკვეთა",
+          "lat": 41.51421463,
+          "lng": 45.04136574,
+          "fuels": [
+            "regular",
+            "premium",
+            "super",
+            "diesel"
+          ]
+        },
+        {
+          "name": "რუსთავი",
+          "address": "დავით აღმაშენებლის გამზირი #1",
+          "lat": 41.56881996,
+          "lng": 45.00131023,
+          "fuels": [
+            "regular",
+            "premium",
+            "super",
+            "diesel"
+          ]
+        },
+        {
+          "name": "რუსთავი",
+          "address": "ბათუმის ქუჩა #41",
+          "lat": 41.54420217,
+          "lng": 45.02159233,
+          "fuels": [
+            "regular",
+            "premium",
+            "super",
+            "diesel"
+          ]
+        },
+        {
+          "name": "რუსთავი",
+          "address": "რუსთავის შემოვლითი გზა/ მშვიდობის ქუჩა",
+          "lat": 41.55157995,
+          "lng": 45.02668488,
+          "fuels": [
+            "regular",
+            "premium",
+            "super",
+            "diesel"
+          ]
+        },
+        {
+          "name": "რუსთავი",
+          "address": "წითელი ხიდის გზატკეცილი მე-20 კმ",
+          "lat": 41.57976815,
+          "lng": 44.95677608,
+          "fuels": [
+            "regular",
+            "premium",
+            "super",
+            "diesel"
+          ]
+        },
+        {
+          "name": "საგარეჯო",
+          "address": "სოფელი წყაროსთავი",
+          "lat": 41.73154823,
+          "lng": 45.2770692,
+          "fuels": [
+            "regular",
+            "premium",
+            "super",
+            "diesel"
+          ]
+        },
+        {
+          "name": "სამგორი",
+          "address": "ბილისი სამგორი წისქვილ კომბინატის მიმდებარე",
+          "lat": 41.68318048,
+          "lng": 44.86387514,
+          "fuels": [
+            "regular",
+            "premium",
+            "super",
+            "diesel"
+          ]
+        },
+        {
+          "name": "საჩხერე",
+          "address": "თამარ მეფის ქუჩა #21",
+          "lat": 42.33380875,
+          "lng": 43.42172401,
+          "fuels": [
+            "regular",
+            "premium",
+            "super",
+            "diesel"
+          ]
+        },
+        {
+          "name": "საჩხერე",
+          "address": "სოფ:კორბოული",
+          "lat": 42.23906866,
+          "lng": 43.47245866,
+          "fuels": [
+            "regular",
+            "premium",
+            "super",
+            "diesel"
+          ]
+        },
+        {
+          "name": "საჩხერე",
+          "address": "სოფელი სხვიტორი, თამარ მეფის ქუჩა N6",
+          "lat": 42.33380954,
+          "lng": 43.42129447,
+          "fuels": [
+            "regular",
+            "premium",
+            "super",
+            "diesel"
+          ]
+        },
+        {
+          "name": "სურამი",
+          "address": "დაბა სურამი, გრ. სურამელისა და კიკვიძის კვეთა",
+          "lat": 41.84396529,
+          "lng": 44.6215524,
+          "fuels": [
+            "regular",
+            "premium",
+            "super",
+            "diesel"
+          ]
+        },
+        {
+          "name": "ფოთი",
+          "address": "ხობის გზატკეცილი",
+          "lat": 42.16812082,
+          "lng": 41.67177112,
+          "fuels": [
+            "regular",
+            "premium",
+            "super",
+            "diesel"
+          ]
+        },
+        {
+          "name": "ფონიჭალა",
+          "address": "ქ თბილისი რუსთავის გზატკეცილი 247",
+          "lat": 41.64993497,
+          "lng": 44.90804981,
+          "fuels": [
+            "regular",
+            "premium",
+            "super",
+            "diesel"
+          ]
+        },
+        {
+          "name": "ქარელი",
+          "address": "სოფელი რუისი",
+          "lat": 42.03396409,
+          "lng": 43.93913245,
+          "fuels": [
+            "regular",
+            "premium",
+            "super",
+            "diesel"
+          ]
+        },
+        {
+          "name": "ქარელი",
+          "address": "სოფელი ბრეთი",
+          "lat": 42.08170143,
+          "lng": 43.93735538,
+          "fuels": [
+            "regular",
+            "premium",
+            "super",
+            "diesel"
+          ]
+        },
+        {
+          "name": "ქედა",
+          "address": "ს.საფარიძეები/დოლოგანი",
+          "lat": 41.54641601,
+          "lng": 41.78156965,
+          "fuels": [
+            "regular",
+            "premium",
+            "super",
+            "diesel"
+          ]
+        },
+        {
+          "name": "ქედა",
+          "address": "წონიარისი",
+          "lat": 41.64589416,
+          "lng": 42.02664293,
+          "fuels": [
+            "regular",
+            "premium",
+            "super",
+            "diesel"
+          ]
+        },
+        {
+          "name": "ქობულეთი",
+          "address": "თავისუფლების ქ. 18",
+          "lat": 41.82100722,
+          "lng": 41.77788718,
+          "fuels": [
+            "regular",
+            "premium",
+            "super",
+            "diesel"
+          ]
+        },
+        {
+          "name": "ქობულეთი",
+          "address": "თავისუფლების ქ.20",
+          "lat": 41.81217585,
+          "lng": 41.78185885,
+          "fuels": [
+            "regular",
+            "premium",
+            "super",
+            "diesel"
+          ]
+        },
+        {
+          "name": "ქობულეთი",
+          "address": "სოფელი მუხაესტატე",
+          "lat": 41.84171142,
+          "lng": 41.86481027,
+          "fuels": [
+            "regular",
+            "premium",
+            "super",
+            "diesel"
+          ]
+        },
+        {
+          "name": "ქობულეთი",
+          "address": "დაბა ჩაქვი, თამარ მეფის ქუჩა #22ბ",
+          "lat": 41.72401089,
+          "lng": 41.73289879,
+          "fuels": [
+            "regular",
+            "premium",
+            "super",
+            "diesel"
+          ]
+        },
+        {
+          "name": "ქობულეთი",
+          "address": "დ. აღმაშენებლის გამზირი #840ა",
+          "lat": 41.62727426,
+          "lng": 41.61617568,
+          "fuels": [
+            "regular",
+            "premium",
+            "super",
+            "diesel"
+          ]
+        },
+        {
+          "name": "ქობულეთი",
+          "address": "ჯავახიშვილის ქუჩა",
+          "lat": 41.81217034,
+          "lng": 41.78185165,
+          "fuels": [
+            "regular",
+            "premium",
+            "super",
+            "diesel"
+          ]
+        },
+        {
+          "name": "ქუთაისი",
+          "address": "კ. გამსახურდიას ქუჩა #14 (მე-15 ჩიხი)",
+          "lat": 42.23044291,
+          "lng": 42.67050966,
+          "fuels": [
+            "regular",
+            "premium",
+            "super",
+            "diesel"
+          ]
+        },
+        {
+          "name": "ქუთაისი",
+          "address": "ჯავახიშვილის ქუჩა #24",
+          "lat": 42.26992721,
+          "lng": 42.67574566,
+          "fuels": [
+            "regular",
+            "premium",
+            "super",
+            "diesel"
+          ]
+        },
+        {
+          "name": "ქუთაისი",
+          "address": "ირ.აბაშიძე",
+          "lat": 42.26245973,
+          "lng": 42.65433424,
+          "fuels": [
+            "regular",
+            "premium",
+            "super",
+            "diesel"
+          ]
+        },
+        {
+          "name": "ქუთაისი",
+          "address": "ქუთაისი, ახალგაზრდობის გამზირი",
+          "lat": 42.23078476,
+          "lng": 42.71329264,
+          "fuels": [
+            "regular",
+            "premium",
+            "super",
+            "diesel"
+          ]
+        },
+        {
+          "name": "ყაზბეგი",
+          "address": "სოფელი არშა",
+          "lat": 42.62443564,
+          "lng": 44.60958959,
+          "fuels": [
+            "regular",
+            "premium",
+            "super",
+            "diesel"
+          ]
+        },
+        {
+          "name": "ყვარელი",
+          "address": "ყვარლის გასასვლელი (პირველი კარის ჩასახვევი)",
+          "lat": 41.93052085,
+          "lng": 45.81105683,
+          "fuels": [
+            "regular",
+            "premium",
+            "super",
+            "diesel"
+          ]
+        },
+        {
+          "name": "ჩხოროწყუ",
+          "address": "შენგელიას ქუჩა #8",
+          "lat": 42.51932181,
+          "lng": 42.12493897,
+          "fuels": [
+            "regular",
+            "premium",
+            "super",
+            "diesel"
+          ]
+        },
+        {
+          "name": "ჩხოროწყუ",
+          "address": "კოსტავა ქუჩა N13",
+          "lat": 42.51893017,
+          "lng": 42.12886065,
+          "fuels": [
+            "regular",
+            "premium",
+            "super",
+            "diesel"
+          ]
+        },
+        {
+          "name": "ცაგერი",
+          "address": "ქვედა ცაგერი .",
+          "lat": 42.63379886,
+          "lng": 42.75398591,
+          "fuels": [
+            "regular",
+            "premium",
+            "super",
+            "diesel"
+          ]
+        },
+        {
+          "name": "წალენჯიხა",
+          "address": "წმინდა ნინოს ქუჩა N143",
+          "lat": 42.64180207,
+          "lng": 42.09121888,
+          "fuels": [
+            "regular",
+            "premium",
+            "super",
+            "diesel"
+          ]
+        },
+        {
+          "name": "წალენჯიხა",
+          "address": "კვარაცხელიას ქუჩა #7",
+          "lat": 42.61421695,
+          "lng": 42.07316551,
+          "fuels": [
+            "regular",
+            "premium",
+            "super",
+            "diesel"
+          ]
+        },
+        {
+          "name": "წყალტუბო",
+          "address": "სოფელი ქვიტირი ზედა მესხეთი",
+          "lat": 42.22683603,
+          "lng": 42.68598085,
+          "fuels": [
+            "regular",
+            "premium",
+            "super",
+            "diesel"
+          ]
+        },
+        {
+          "name": "წყალტუბო",
+          "address": "წყალტუბო, გ. ტაბიძის ქ., შესახვევი 2, N 2",
+          "lat": 42.30346318,
+          "lng": 42.59509908,
+          "fuels": [
+            "regular",
+            "premium",
+            "super",
+            "diesel"
+          ]
+        },
+        {
+          "name": "წყალტუბო",
+          "address": "წყალტუბო, სოფ ფარცხანაყანები",
+          "lat": 42.21805205,
+          "lng": 42.57284403,
+          "fuels": [
+            "regular",
+            "premium",
+            "super",
+            "diesel"
+          ]
+        },
+        {
+          "name": "ჭიათურა",
+          "address": "სოფელი კაცხი",
+          "lat": 42.2765071,
+          "lng": 43.20019895,
+          "fuels": [
+            "regular",
+            "premium",
+            "super",
+            "diesel"
+          ]
+        },
+        {
+          "name": "ხაშური",
+          "address": "ბორჯომის ქუჩა #16",
+          "lat": 41.98998114,
+          "lng": 43.61448617,
+          "fuels": [
+            "regular",
+            "premium",
+            "super",
+            "diesel"
+          ]
+        },
+        {
+          "name": "ხაშური",
+          "address": "სოფ:ქვიშხეთი, I ქუჩა, N15",
+          "lat": 41.96601968,
+          "lng": 43.51967253,
+          "fuels": [
+            "regular",
+            "premium",
+            "super",
+            "diesel"
+          ]
+        },
+        {
+          "name": "ხაშური",
+          "address": "ბორჯომის ქუჩა #26",
+          "lat": 41.99022301,
+          "lng": 43.6142287,
+          "fuels": [
+            "regular",
+            "premium",
+            "super",
+            "diesel"
+          ]
+        },
+        {
+          "name": "ხაშური",
+          "address": "სოფელი ოსიაური",
+          "lat": 41.99893178,
+          "lng": 43.6566091,
+          "fuels": [
+            "regular",
+            "premium",
+            "super",
+            "diesel"
+          ]
+        },
+        {
+          "name": "ხელვაჩაური",
+          "address": "ფრიდონ ხალვაშის გამზ. #247",
+          "lat": 41.59788345,
+          "lng": 41.63750152,
+          "fuels": [
+            "regular",
+            "premium",
+            "super",
+            "diesel"
+          ]
+        },
+        {
+          "name": "ხელვაჩაური",
+          "address": "სოფ.ახალშენი ნიჟარაძის 34.",
+          "lat": 41.62979396,
+          "lng": 41.67759392,
+          "fuels": [
+            "regular",
+            "premium",
+            "super",
+            "diesel"
+          ]
+        },
+        {
+          "name": "ხელვაჩაური",
+          "address": "სოფელი ორთაბათუმი",
+          "lat": 41.65089645,
+          "lng": 41.69583207,
+          "fuels": [
+            "regular",
+            "premium",
+            "super",
+            "diesel"
+          ]
+        },
+        {
+          "name": "ხელვაჩაური",
+          "address": "სოფ.ერგე",
+          "lat": 41.55777037,
+          "lng": 41.69265951,
+          "fuels": [
+            "regular",
+            "premium",
+            "super",
+            "diesel"
+          ]
+        },
+        {
+          "name": "ხელვაჩაური",
+          "address": "სოფ. ახალსოფელი",
+          "lat": 41.58569986,
+          "lng": 41.59332532,
+          "fuels": [
+            "regular",
+            "premium",
+            "super",
+            "diesel"
+          ]
+        },
+        {
+          "name": "ხობი",
+          "address": "დავით აღმაშენებლის ქუჩა #37",
+          "lat": 41.9212965,
+          "lng": 42.01194976,
+          "fuels": [
+            "regular",
+            "premium",
+            "super",
+            "diesel"
+          ]
+        },
+        {
+          "name": "ხონი",
+          "address": "რუსთაველის ქუჩა #1",
+          "lat": 42.4990294,
+          "lng": 41.83409962,
           "fuels": [
             "regular",
             "premium",

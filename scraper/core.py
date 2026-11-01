@@ -45,8 +45,9 @@ MAX_STATIONS = 1000
 # its own, so a page sent a byte at a time would otherwise hold the whole run; the largest page now is about 1 MB.
 DEADLINE_S = 60.0
 MAX_BYTES = 10_000_000
-# One company's prices or stations in a data file: four of them stay under MAX_BYTES, the size at which the next run
-# would refuse the published file (scraper/published.py). The largest entry now is SOCAR's stations, about 46 kB.
+# One company's prices or stations in a data file: every company's together stay under MAX_BYTES, the size at which
+# the next run would refuse the published file (scraper/published.py). The largest entry now is SOCAR's stations,
+# about 46 kB.
 MAX_ENTRY_BYTES = 1_000_000
 
 # one optional tail after the number: two optional runs of spaces side by side would be tried in every split
@@ -85,6 +86,9 @@ class Company:
     enabled: bool = True
     stations_url: str = ""
     parse_stations: Callable[[str], list[Station]] | None = None
+    # When one request to stations_url is not enough (SPEC-0003 REQ-002: Connect's list needs the map page's code
+    # first): given the round's fetcher, the list's text. stations_url stays the list's source, as the page shows it.
+    fetch_stations: Callable[[Callable[[str], str]], str] | None = None
 
 
 def _download(url: str, timeout: float) -> str:
@@ -124,8 +128,9 @@ def fetch(url: str, timeout: float = 30) -> str:
 
 def one_line(text: str) -> str:
     """A log line that text from a source cannot break: the Actions runner takes a line starting with "::" for a
-    command of its own."""
-    return _LINE_BREAKS.sub(" ", text)
+    command of its own, and may read its older form "##[command]" anywhere in a line (the security review's U1,
+    2026-10-31 — not verified on the runner, so the form is split up either way)."""
+    return _LINE_BREAKS.sub(" ", text).replace("##[", "# #[")
 
 
 def to_price(text: str) -> float:
@@ -264,7 +269,7 @@ def refresh_stations(companies: list[Company], previous: dict[str, dict], get: C
     def read(c: Company, old: dict | None) -> tuple[dict, list[str]]:
         if c.parse_stations is None:
             raise ParseError("no station list for this company")
-        stations = c.parse_stations(get(c.stations_url))
+        stations = c.parse_stations(c.fetch_stations(get) if c.fetch_stations else get(c.stations_url))
         kept = [s for s in stations if placed(s)]
         then = parse_time((old or {}).get("time"))
         before = len((old or {}).get("stations", [])) if then is not None and now - then < JUMP_WINDOW else 0

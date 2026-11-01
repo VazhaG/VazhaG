@@ -13,6 +13,7 @@ from datetime import UTC, datetime
 import pytest
 
 from scraper import lukoil, rompetrol, socar, wissol
+from scraper.companies import COMPANIES
 from scraper.core import (
     MAX_BYTES,
     MAX_ENTRY_BYTES,
@@ -155,14 +156,14 @@ def test_a_list_older_than_7_days_no_longer_judges_the_new_one() -> None:
 
 
 def test_one_company_larger_than_its_share_of_a_data_file_is_a_misreading() -> None:
-    # Four companies' entries must stay under the size at which the next run would refuse the published file
+    # Every company's entries together must stay under the size at which the next run would refuse the published file
     # (scraper/published.py); the largest entry now is SOCAR's stations, about 46 kB (2026-10-30)
     previous = {"a": old_entry("a", 1)}
     huge = Station("x" * MAX_ENTRY_BYTES, "მისამართი", 41.7, 44.8, PETROL)
     entries, log, read = refresh_stations([company("a", [huge])], previous, get, NOW)
     assert (entries, read) == ([previous["a"]], 0)
     assert log[0].startswith("A: stations not read — the entry is larger than 1 MB")
-    assert 4 * MAX_ENTRY_BYTES < MAX_BYTES
+    assert len(COMPANIES) * MAX_ENTRY_BYTES < MAX_BYTES
 
 
 def test_a_broken_character_keeps_the_previous_list() -> None:

@@ -107,10 +107,18 @@ function stationWindow(s) {
 // farther away, a small dot, so the whole country's map stays readable.
 const LETTERS_FROM = 11;
 
+// SPEC-0003 REQ-003: a light colour (its letters are dark) gets a dark outline by day — the stylesheet uses --edge only
+// on the light page and map.
+function setEdge(el, color) {
+  const ink = inkOn(color);
+  if (ink !== '#ffffff') el.style.setProperty('--edge', ink);
+}
+
 function stationIcon(s, near) {
   const mark = element('span', '', near ? (s.company.trim()[0] ?? '?') || '?' : '');
   mark.style.backgroundColor = s.color;
   mark.style.color = inkOn(s.color);
+  setEdge(mark, s.color);
   const size = near ? 24 : 12;
   return L.divIcon({ className: near ? 'station near' : 'station', html: mark, iconSize: [size, size] });
 }
@@ -150,9 +158,29 @@ function renderCompanies() {
     badge.setAttribute('aria-pressed', String(!state.off.has(c.id)));
     badge.style.setProperty('--company', c.color);
     badge.style.setProperty('--ink', inkOn(c.color));
+    setEdge(badge, c.color);
     badge.addEventListener('click', () => toggleCompany(c.id));
     return badge;
   }));
+  markRowEdges();
+}
+
+// SPEC-0003 REQ-005: five or more badges scroll in their row; an edge with more badges beyond it fades (the
+// stylesheet's 24 px strip), and a badge reached from the keyboard is brought clear of the strip (the row's padding).
+function markRowEdges() {
+  const row = document.getElementById('companies');
+  row.classList.toggle('more-start', row.scrollLeft > 1);
+  row.classList.toggle('more-end', row.scrollWidth - row.clientWidth - row.scrollLeft > 1);
+}
+
+function watchRow() {
+  const row = document.getElementById('companies');
+  row.addEventListener('scroll', markRowEdges, { passive: true });
+  row.addEventListener('focusin', (event) => {
+    // the keyboard's focus only: a finger's comes before it lifts, and the row must not move under it
+    if (event.target.matches(':focus-visible')) event.target.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+  });
+  window.addEventListener('resize', markRowEdges);
 }
 
 // REQ-003: a badge switches its company off or on — the map, the ★ and the table follow at once.
@@ -445,6 +473,7 @@ async function main() {
   for (const button of document.querySelectorAll('.lang button')) {
     button.addEventListener('click', () => setLanguage(button.dataset.lang));
   }
+  watchRow();
   initMap();
   renderFuels();
   setStatus(t('status.loading'));

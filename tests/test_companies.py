@@ -1,4 +1,5 @@
-"""T3 — reading Rompetrol, Lukoil and Wissol from their saved pages; every company's names map to our fuel list.
+"""T3 — reading Rompetrol, Lukoil, Wissol (and Connect, PLAN-0003) from their saved pages; every company's names map
+to our fuel list.
 
 SPEC-0001: REQ-002, REQ-006, AC-006. Pages come from tests/fixtures/, never the internet.
 """
@@ -10,7 +11,7 @@ from types import ModuleType
 
 import pytest
 
-from scraper import lukoil, rompetrol, socar, wissol
+from scraper import connect, lukoil, rompetrol, socar, wissol
 from scraper.companies import COMPANIES
 from scraper.core import FUELS, ParseError, Reading, to_price
 from support import ROOT
@@ -52,7 +53,7 @@ def test_wissol_reads_the_standard_prices_in_georgian() -> None:
     assert Reading("ვისოლ გაზი", "cng", 1.64) in readings
 
 
-@pytest.mark.parametrize("parse", [rompetrol.parse, lukoil.parse, wissol.parse, socar.parse])
+@pytest.mark.parametrize("parse", [rompetrol.parse, lukoil.parse, wissol.parse, socar.parse, connect.parse])
 def test_a_page_in_another_shape_is_an_error(parse: object) -> None:
     with pytest.raises(ParseError):
         parse("<html><body><p>გვერდი შეიცვალა</p></body></html>")  # type: ignore[operator]
@@ -66,6 +67,7 @@ def test_a_renamed_fuel_is_not_guessed() -> None:
 
 @pytest.mark.parametrize(("module", "name"), [
     (socar, "socar.html"), (rompetrol, "rompetrol.html"), (lukoil, "lukoil.html"), (wissol, "wissol.html"),
+    (connect, "connect.html"),
 ])
 def test_every_known_name_maps_to_one_fuel_of_our_list(module: ModuleType, name: str) -> None:
     table = module.FUEL_BY_NAME if hasattr(module, "FUEL_BY_NAME") else module.FUEL_BY_CODE
@@ -94,7 +96,8 @@ def test_a_price_text_with_a_long_run_of_spaces_is_judged_at_once() -> None:
     assert time.perf_counter() - start < 0.5
 
 
-def test_the_four_companies_and_wissols_switch() -> None:
-    assert [c.id for c in COMPANIES] == ["socar", "rompetrol", "lukoil", "wissol"]
-    assert len({c.color for c in COMPANIES}) == 4
+def test_the_five_companies_and_the_switches_of_wissol_and_connect() -> None:
+    assert [c.id for c in COMPANIES] == ["socar", "rompetrol", "lukoil", "wissol", "connect"]
+    assert len({c.color for c in COMPANIES}) == 5
     assert next(c for c in COMPANIES if c.id == "wissol").enabled is True  # the owner's decision, 2026-10-30
+    assert next(c for c in COMPANIES if c.id == "connect").enabled is True  # the owner's decision, 2026-10-31
