@@ -4,7 +4,7 @@ type: plan
 title: კომპანიების ნიშნები და კომპანიით ფილტრი — აშენება
 status: in-progress
 created: 2026-10-30
-updated: 2026-10-30
+updated: 2026-11-01
 spec: "[[SPEC-0002-company-badges-and-filter]]"
 adrs:
   - "[[ADR-0012-static-site-github-actions-pages]]"

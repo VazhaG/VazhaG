@@ -4,7 +4,7 @@ type: spec
 title: Connect-ის სადგურები და ფასები
 status: approved
 created: 2026-10-31
-updated: 2026-10-31
+updated: 2026-11-01
 intent: "[[intent]]"
 adrs:
   - "[[ADR-0012-static-site-github-actions-pages]]"

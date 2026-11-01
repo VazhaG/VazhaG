@@ -8,15 +8,19 @@
         <title>საწვავის ფასები საქართველოში</title>
         <meta name="description"
               content="სად ჩაასხა ახლოს და იაფად: საწვავის ფასები და სადგურები საქართველოში, კომპანიების ოფიციალური საიტებიდან.">
+        <script src="js/theme.js"></script>
         <link rel="stylesheet" href="vendor/leaflet/leaflet.css">
         <link rel="stylesheet" href="css/style.css">
     </head>
     <body>
         <header class="top">
             <h1 id="title" data-i18n="title.h1">⛽ საწვავის ფასები</h1>
-            <div class="lang" role="group" aria-label="ენა / Language">
-                <button type="button" data-lang="ka" aria-pressed="true">ქარ</button>
-                <button type="button" data-lang="en" aria-pressed="false">ENG</button>
+            <div class="tools">
+                <button type="button" id="theme" class="theme" aria-pressed="false" aria-label="მუქი რეჟიმი"></button>
+                <div class="lang" role="group" aria-label="ენა / Language">
+                    <button type="button" data-lang="ka" aria-pressed="true">ქარ</button>
+                    <button type="button" data-lang="en" aria-pressed="false">ENG</button>
+                </div>
             </div>
         </header>
         <main>
@@ -62,7 +66,7 @@
                 რუკის სურათები OpenStreetMap-ის სერვერიდან იტვირთება იმ არეალისთვის, რომელსაც ეკრანი აჩვენებს; შენი ზუსტი მდებარეობა არსად იგზავნება.
             </p>
             <p id="storage-note" data-i18n="note.storage">
-                ენა და კომპანიების არჩევანი მხოლოდ შენს ტელეფონში ინახება.
+                ენა, კომპანიების არჩევანი და ნათელი თუ მუქი რეჟიმი მხოლოდ შენს ტელეფონში ინახება.
             </p>
             <p id="cities-note">
                 <span data-i18n="note.cities">ქალაქების კოორდინატები:</span>

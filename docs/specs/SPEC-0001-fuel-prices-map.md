@@ -4,7 +4,7 @@ type: spec
 title: საწვავის ფასების რუკა — პირველი ვერსია
 status: approved
 created: 2026-10-30
-updated: 2026-10-30
+updated: 2026-11-01
 intent: "[[intent]]"
 adrs: []
 related:

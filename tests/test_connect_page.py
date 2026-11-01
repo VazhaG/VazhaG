@@ -18,7 +18,7 @@ from collections.abc import Callable
 import pytest
 from playwright.sync_api import Page, expect
 
-from support import Net
+from support import Net, no_logos
 
 TIME = "2026-10-31T12:00:00Z"
 HERE = (41.70, 44.80)
@@ -29,7 +29,7 @@ FIVE = [("socar", "SOCAR", "#e41e30", 4.90, 1.0), ("rompetrol", "Rompetrol", "#f
         ("connect", "Connect", "#ffe900", 4.80, 4.5)]
 LIGHT = {"rompetrol", "connect"}  # the companies whose letters are dark (SPEC-0002 REQ-007)
 DARK_INK, WHITE = (15, 23, 42), (255, 255, 255)
-NIGHT_PAGE = (11, 18, 32)  # #0b1220, the page at night — the map's tiles are darkened to it (AC-007)
+NIGHT_PAGE = (0, 0, 0)  # #000000, the page at night (SPEC-0004 REQ-005) — the map's tiles are darkened to it
 BACKGROUND_JS = """(el) => {
   for (; el; el = el.parentElement) {
     const c = getComputedStyle(el).backgroundColor.match(/[\\d.]+/g).map(Number);
@@ -108,6 +108,7 @@ def circle(cid: str) -> str:
 
 def test_by_day_a_light_colour_has_a_dark_outline_on_its_badge_and_its_circles(
         page_at: Callable[[float, float], Page], net: Net) -> None:
+    no_logos(net)  # SPEC-0004 §3: the outline is a name badge's and a letter circle's (a company without a logo)
     page = open_five(page_at, net, "light")
     for cid, _, color, _, _ in FIVE:
         light = cid in LIGHT
@@ -119,6 +120,7 @@ def test_by_day_a_light_colour_has_a_dark_outline_on_its_badge_and_its_circles(
 
 
 def test_at_night_the_outline_is_as_before(page_at: Callable[[float, float], Page], net: Net) -> None:
+    no_logos(net)
     page = open_five(page_at, net, "dark")
     for cid, _, color, _, _ in FIVE:
         assert style(page, badge(cid), "borderTopColor") == hex_rgb(color), cid
@@ -128,7 +130,9 @@ def test_at_night_the_outline_is_as_before(page_at: Callable[[float, float], Pag
 @pytest.mark.parametrize(("scheme", "ground"), [("light", WHITE), ("dark", NIGHT_PAGE)])
 def test_every_companys_circle_stands_out_from_the_map(page_at: Callable[[float, float], Page], net: Net,
                                                        scheme: str, ground: tuple[int, ...]) -> None:
-    # AC-007: the circle's fill or its outline has at least 3 : 1 against the map
+    # AC-007: the circle's fill or its outline has at least 3 : 1 against the map — a letter circle, as a company
+    # without a logo has it (SPEC-0004 §3); a logo's mark is in its white frame (test_logos.py)
+    no_logos(net)
     page = open_five(page_at, net, scheme)
     for cid, *_ in FIVE:
         fill, edge = style(page, circle(cid), "backgroundColor"), style(page, circle(cid), "borderTopColor")
@@ -151,6 +155,7 @@ def test_from_far_the_small_dots_keep_the_same_outline(page: Page, net: Net, sch
 @pytest.mark.parametrize("scheme", ["light", "dark"])
 def test_connects_name_and_letter_read_well_on_and_off(page_at: Callable[[float, float], Page], net: Net,
                                                        scheme: str) -> None:
+    no_logos(net)  # SPEC-0004 §3: the name and the letter "C" — Connect without its logo
     page = open_five(page_at, net, scheme)
     letter = page.locator(circle("connect"))
     expect(letter).to_have_text("C")
@@ -250,12 +255,19 @@ def test_a_tap_on_the_faded_part_of_a_badge_still_presses_it(page_at: Callable[[
     # critic C3: the row must not scroll between the finger going down and coming up — the tap would land elsewhere
     page = open_five(page_at, net)
     assert edges(page)["end"]
-    wissol, row = page.locator(badge("wissol")).bounding_box(), page.locator(ROW).bounding_box()
-    assert wissol and row
-    x = min(wissol["x"] + wissol["width"], row["x"] + row["width"]) - 6  # inside the faded strip
-    assert x > row["x"] + row["width"] - STRIP
-    page.mouse.click(x, wissol["y"] + wissol["height"] / 2)
-    expect(page.locator(badge("wissol"))).to_have_attribute("aria-pressed", "false")
+    row = page.locator(ROW).bounding_box()
+    assert row
+    strip = (row["x"] + row["width"] - STRIP, row["x"] + row["width"])
+    for cid, *_ in FIVE:  # the badge that reaches into the faded strip (which one depends on the badges' widths)
+        box = page.locator(badge(cid)).bounding_box()
+        assert box
+        left, right = max(box["x"], strip[0]), min(box["x"] + box["width"], strip[1])
+        if right - left >= 4:
+            break
+    else:
+        raise AssertionError("no badge reaches into the faded strip")
+    page.mouse.click((left + right) / 2, box["y"] + box["height"] / 2)
+    expect(page.locator(badge(cid))).to_have_attribute("aria-pressed", "false")
 
 
 def test_every_badge_is_reached_and_pressed_from_the_keyboard_clear_of_the_strip(
@@ -295,6 +307,7 @@ STORED_OFF = "localStorage.getItem('fuel-map.off')"
 
 def test_connects_badge_and_map_letter_in_its_colour_with_dark_letters(page_at: Callable[[float, float], Page],
                                                                        net: Net) -> None:
+    no_logos(net)  # SPEC-0004 §3: Connect's name badge and letter, as a company without a logo shows them
     page = open_five(page_at, net)
     expect(page.locator(f"{ROW} .badge")).to_have_text([name for _, name, *_ in FIVE])
     assert style(page, badge("connect"), "backgroundColor") == hex_rgb("#ffe900")

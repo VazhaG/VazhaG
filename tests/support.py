@@ -15,6 +15,10 @@ from playwright.sync_api import Route
 
 ROOT = Path(__file__).resolve().parent.parent
 SITE = ROOT / "site"
+LOGOS_JS = SITE / "js" / "logos.js"
+LOGO_IDS = ("socar", "rompetrol", "lukoil", "wissol", "connect")  # the companies with a logo (SPEC-0004)
+# every picture the selector finds has its address and is drawn — a logo gets its address once its file has arrived
+DRAWN = "(sel) => [...document.querySelectorAll(sel)].every((i) => i.getAttribute('src') && i.naturalWidth > 0)"
 TILE_HOST = "https://tile.openstreetmap.org/"
 BLANK_PNG = base64.b64decode(
     "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII="
@@ -32,17 +36,27 @@ class Net:
     requests: list[str] = field(default_factory=list)
     bodies: list[str] = field(default_factory=list)  # what the page sent, if anything
     outside: list[str] = field(default_factory=list)  # requests that would have left the machine
+    files: dict[str, tuple[int, str, str | bytes]] = field(default_factory=dict)  # a site file as the test serves it
+    held: set[str] = field(default_factory=set)  # site files left unanswered, as on a stalled network
+    pending: dict[str, Route] = field(default_factory=dict)  # a held file's open request — a test may answer it late
 
     def handle(self, route: Route) -> None:
         url = route.request.url
         self.requests.append(url)
         if route.request.post_data:
             self.bodies.append(route.request.post_data)
+        path = url[len(self.base):].split("?", 1)[0] if url.startswith(self.base) else None
+        if path in self.held:
+            self.pending[path] = route  # unanswered until the test answers it, or the page closes
+            return
         if url.startswith(TILE_HOST):
             route.fulfill(status=200, content_type="image/png", body=BLANK_PNG)
         elif url.startswith(self.base):
             path = url[len(self.base):].split("?", 1)[0]
-            if path.startswith("data/") and not self.real_data:
+            if path in self.files:
+                status, content_type, body = self.files[path]
+                route.fulfill(status=status, content_type=content_type, body=body)
+            elif path.startswith("data/") and not self.real_data:
                 name = path[len("data/"):]
                 if name in self.data:
                     body = json.dumps(self.data[name], ensure_ascii=False)
@@ -54,3 +68,17 @@ class Net:
         else:
             self.outside.append(url)
             route.abort()
+
+
+def logos_without(*ids: str) -> str:
+    """The page's logo list (site/js/logos.js) with these companies' lines taken out — as after a removal
+    (SPEC-0004 REQ-004): one line per company, so each named company must take exactly one line with it."""
+    lines = LOGOS_JS.read_text(encoding="utf-8").splitlines(keepends=True)
+    kept = [line for line in lines if not any(f"id: '{cid}'" in line for cid in ids)]
+    assert len(lines) - len(kept) == len(ids), ids
+    return "".join(kept)
+
+
+def no_logos(net: Net) -> None:
+    """Serve a logo list without any company: every badge is a name on its colour, as for a company without a logo."""
+    net.files["js/logos.js"] = (200, "text/javascript", logos_without(*LOGO_IDS))

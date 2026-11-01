@@ -13,7 +13,7 @@ from datetime import UTC, datetime
 import pytest
 from playwright.sync_api import Page, expect
 
-from support import SITE, TILE_HOST, Net
+from support import DRAWN, SITE, TILE_HOST, Net, no_logos
 
 TIME = "2026-10-30T12:00:00Z"
 REAL = [("socar", "SOCAR", "#e41e30"), ("rompetrol", "Rompetrol", "#f39200"), ("lukoil", "Lukoil", "#8a1538"),
@@ -45,6 +45,8 @@ def rgb(hex_color: str) -> str:
 
 
 def test_one_badge_per_company_in_its_colour_with_its_name(page: Page, net: Net) -> None:
+    # SPEC-0004 §3: a company without a logo in our list keeps the name on its colour (REQ-004)
+    no_logos(net)
     open_with(page, net, [prices_of(*c) for c in REAL])
     badges = page.locator(BADGES)
     expect(badges).to_have_text([name for _, name, _ in REAL])
@@ -69,22 +71,41 @@ def test_the_row_follows_the_data_and_stands_above_the_card(page: Page, net: Net
 
 
 def test_the_letters_colour_is_the_one_that_reads_best_on_the_badge(page: Page, net: Net) -> None:
-    # REQ-007: white on SOCAR's red, Lukoil's crimson and Wissol's green; dark on Rompetrol's orange
+    # REQ-007: white on SOCAR's red, Lukoil's crimson and Wissol's green; dark on Rompetrol's orange — on a name badge
+    no_logos(net)
     open_with(page, net, [prices_of(*c) for c in REAL])
     inks = [b.evaluate("b => getComputedStyle(b).color") for b in page.locator(BADGES).all()]
     assert inks == ["rgb(255, 255, 255)", "rgb(15, 23, 42)", "rgb(255, 255, 255)", "rgb(255, 255, 255)"]
 
 
-def test_a_badge_is_text_on_colour_never_a_picture(page: Page, net: Net) -> None:
-    # REQ-001, AC-009: no official logo until a company's written permission — and no other picture either
+def pictures_asked(net: Net) -> list[str]:
+    return sorted(u[len(net.base):] for u in net.requests
+                  if not u.startswith(TILE_HOST) and u.split("?")[0].lower().endswith(PICTURES))
+
+
+def test_a_badges_only_picture_is_its_companys_logo_from_our_list(page: Page, net: Net) -> None:
+    # SPEC-0004 REQ-003 (it changes SPEC-0002 AC-009): a picture on a badge is one of our own logo files, asked once
     open_with(page, net, [prices_of(*c) for c in REAL])
     expect(page.locator(BADGES)).to_have_count(4)
+    own = ["logos/socar.svg", "logos/rompetrol.png", "logos/lukoil.png", "logos/wissol.svg"]
+    expect(page.locator("#companies img")).to_have_count(4)
+    page.wait_for_function(DRAWN, arg="#companies img")
+    assert page.locator("#companies img").evaluate_all("(i) => i.map((x) => x.getAttribute('src'))") == own
+    expect(page.locator("#companies svg, #companies picture")).to_have_count(0)
+    assert {b.evaluate("b => getComputedStyle(b).backgroundImage") for b in page.locator(BADGES).all()} == {"none"}
+    assert pictures_asked(net) == sorted(own)
+    files = sorted(p.relative_to(SITE).as_posix() for p in SITE.rglob("*") if p.suffix.lower() in PICTURES)
+    assert files and all(f.startswith(("vendor/leaflet/images/", "logos/")) for f in files), files
+
+
+def test_a_badge_without_a_logo_in_our_list_is_text_on_colour_and_no_picture(page: Page, net: Net) -> None:
+    # REQ-001, AC-009 of SPEC-0002 for a company our list has no logo for (SPEC-0004 REQ-004)
+    no_logos(net)
+    open_with(page, net, [prices_of(*c) for c in REAL])
+    expect(page.locator(BADGES)).to_have_text([name for _, name, _ in REAL])
     expect(page.locator("#companies img, #companies svg, #companies picture")).to_have_count(0)
     assert {b.evaluate("b => getComputedStyle(b).backgroundImage") for b in page.locator(BADGES).all()} == {"none"}
-    asked = [u for u in net.requests if not u.startswith(TILE_HOST) and u.split("?")[0].lower().endswith(PICTURES)]
-    assert asked == []
-    files = sorted(p.relative_to(SITE).as_posix() for p in SITE.rglob("*") if p.suffix.lower() in PICTURES)
-    assert files and all(f.startswith("vendor/leaflet/images/") for f in files), files
+    assert pictures_asked(net) == []
 
 
 def test_text_from_the_data_is_only_text_on_a_badge(page: Page, net: Net) -> None:
@@ -151,6 +172,7 @@ def centre(box: dict | None) -> tuple[float, float]:
 
 def test_a_badge_switches_its_company_off_and_on_everywhere(page_at: Callable[[float, float], Page],
                                                             net: Net) -> None:
+    no_logos(net)  # SPEC-0004 §3: the frame and the crossed-out name are a name badge's look when off
     page = open_here(page_at, net, FOUR)
     rompetrol = page.locator(BADGES).nth(1)
     expect(circles_of(page, "rompetrol")).to_have_count(1)  # type: ignore[attr-defined]
@@ -259,8 +281,8 @@ def test_a_gas_price_whose_stations_are_unknown_is_also_told_apart(page_at: Call
 
 # PLAN-0002 T5: the choice stays on the phone — only the companies switched off (REQ-004; AC-005, AC-011)
 STORED_OFF = "localStorage.getItem('fuel-map.off')"
-STORAGE_KA = "ენა და კომპანიების არჩევანი მხოლოდ შენს ტელეფონში ინახება"
-STORAGE_EN = "The language and the companies you choose are kept only on your phone"
+STORAGE_KA = "ენა, კომპანიების არჩევანი და ნათელი თუ მუქი რეჟიმი მხოლოდ შენს ტელეფონში ინახება"  # SPEC-0004
+STORAGE_EN = "The language, your choice of companies and the light or dark mode are kept only on your phone"
 
 
 def reopen(page: Page) -> None:
@@ -283,7 +305,10 @@ def test_the_choice_is_remembered_on_the_phone_and_nowhere_else(page_at: Callabl
     pressed = [b.get_attribute("aria-pressed") for b in page.locator(BADGES).all()]
     assert pressed == ["true", "false", "false", "true"]
     expect(page.locator(ROWS)).to_have_count(2)
-    assert not [u for u in net.requests if "rompetrol" in u or "lukoil" in u] and net.bodies == []
+    # the choice is in no request; our own logo files are asked by every visitor whatever the choice (SPEC-0004)
+    told = [u for u in net.requests if ("rompetrol" in u or "lukoil" in u)
+            and u not in (f"{net.base}logos/rompetrol.png", f"{net.base}logos/lukoil.png")]
+    assert not told and net.bodies == []
     page.locator(BADGES).nth(1).click()
     page.locator(BADGES).nth(2).click()
     assert page.evaluate(STORED_OFF) is None  # all on again: the list is gone
@@ -314,6 +339,7 @@ def test_a_broken_or_blocked_store_leaves_every_company_on(page_at: Callable[[fl
 
 def test_from_the_city_view_a_station_shows_its_companys_letter(page_at: Callable[[float, float], Page],
                                                                  net: Net) -> None:
+    no_logos(net)  # SPEC-0004 §3: the letter is for a company without a logo; with one, its mark (test_logos.py)
     page = open_here(page_at, net, FOUR)  # the visitor's place: the city view
     for cid, name, color, _, _ in FOUR:
         mark = page.locator(f'.station[data-company="{cid}"] span')
@@ -327,6 +353,7 @@ def test_from_the_city_view_a_station_shows_its_companys_letter(page_at: Callabl
 
 
 def test_from_far_a_station_is_a_small_dot_until_the_city_view(page: Page, net: Net) -> None:
+    no_logos(net)  # SPEC-0004 §3: the letter at the city view is a company's without a logo (its mark: test_logos.py)
     open_with(page, net, [prices_of("socar", "SOCAR", "#e41e30")], stations=[stations_of("socar", "SOCAR", "#e41e30")])
     page.get_by_text("დიზელი", exact=True).first.click()  # the station sells diesel only
     mark = page.locator(".station span")
@@ -364,6 +391,7 @@ def test_the_badges_fit_a_phone_by_day_and_at_night(page_at: Callable[[float, fl
 
 # The reviewers' findings on PLAN-0002 (critic-correctness, critic-security; 2026-10-30)
 def test_an_open_station_window_stays_open_across_the_city_view(page: Page, net: Net) -> None:
+    no_logos(net)  # the letter shows the city view has come (SPEC-0004 §3: a company without a logo)
     open_with(page, net, [prices_of("socar", "SOCAR", "#e41e30")], stations=[stations_of("socar", "SOCAR", "#e41e30")])
     page.get_by_text("დიზელი", exact=True).first.click()
     page.locator(".station").first.dispatch_event("click")  # the dot, from the whole country's view
@@ -373,6 +401,8 @@ def test_an_open_station_window_stays_open_across_the_city_view(page: Page, net:
         page.locator(".leaflet-control-zoom-in").click()
         page.wait_for_timeout(350)
     expect(page.locator(".station span")).to_have_text("S")  # the letter came
+    page.wait_for_timeout(300)  # past Leaflet's 200 ms fade: a closed window would be gone by now (review C2)
+    expect(page.locator(".leaflet-popup")).to_have_count(1)
     expect(window).to_contain_text("SOCAR")  # and the window is still open
     expect(page.locator('.station[data-company="socar"]')).to_have_count(1)
 
@@ -412,7 +442,7 @@ def test_a_company_whose_prices_are_hidden_keeps_its_badge_and_its_switch(page_a
     page.clock.set_fixed_time(NOW)
     page.goto(net.base)
     page.get_by_text("დიზელი", exact=True).first.click()
-    expect(page.locator(BADGES)).to_have_text(["SOCAR", "Wissol"])
+    assert page.locator(BADGES).evaluate_all("(b) => b.map((x) => x.dataset.company)") == ["socar", "wissol"]
     expect(page.locator(ROWS)).to_have_count(1)  # only Wissol's price is shown
     expect(circles_of(page, "socar")).to_have_count(1)  # type: ignore[attr-defined]
     page.locator(BADGES).nth(0).click()

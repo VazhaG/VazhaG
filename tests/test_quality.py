@@ -15,7 +15,7 @@ from datetime import datetime
 import pytest
 from playwright.sync_api import Page, expect
 
-from support import SITE, Net
+from support import SITE, Net, no_logos
 
 # An odd place in Tbilisi, so its digits cannot turn up by chance in a station's or a tile's address.
 VISITOR = (41.723457, 44.766531)
@@ -124,15 +124,22 @@ CONTRAST_JS = """() => {
 }"""
 
 
+@pytest.mark.parametrize("logos", [True, False])  # SPEC-0004: the logos; without them, names and letters
 @pytest.mark.parametrize("scheme", ["light", "dark"])  # the night look follows the phone (the owner, 2026-10-30)
-def test_every_text_has_wcag_aa_contrast(page_at: Callable[[float, float], Page], net: Net, scheme: str) -> None:
+def test_every_text_has_wcag_aa_contrast(page_at: Callable[[float, float], Page], net: Net, scheme: str,
+                                         logos: bool) -> None:
     net.real_data = True
+    if not logos:
+        no_logos(net)
     page = at_data_time(page_at(*VISITOR))
     page.emulate_media(color_scheme=scheme)
     page.goto(net.base)
     expect(page.locator("#best a.go-google")).to_be_visible()
-    page.get_by_text("დიზელი", exact=True).first.click()  # a chosen chip: white on violet
-    expect(page.locator(".station.near span").first).to_have_text(re.compile(r"\S"))  # letters on the map
+    page.get_by_text("დიზელი", exact=True).first.click()  # a chosen chip: black on orange (SPEC-0004 REQ-005)
+    if logos:
+        expect(page.locator(".station.near.logo").first).to_be_visible()  # the companies' marks on the map
+    else:
+        expect(page.locator(".station.near span").first).to_have_text(re.compile(r"\S"))  # letters on the map
     page.evaluate("document.querySelector('#price-table tbody tr')?.classList.add('stale')")  # a greyed-out row
     checked = page.evaluate(CONTRAST_JS)  # every company on: each colour as a badge and as letters on the map
     page.locator("#companies .badge").first.click()  # a switched-off badge: its frame and crossed-out name (SPEC-0002)

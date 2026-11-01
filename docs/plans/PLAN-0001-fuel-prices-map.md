@@ -4,7 +4,7 @@ type: plan
 title: საწვავის ფასების რუკა — პირველი ვერსიის აშენება
 status: approved
 created: 2026-10-30
-updated: 2026-10-30
+updated: 2026-11-01
 spec: "[[SPEC-0001-fuel-prices-map]]"
 adrs:
   - "[[ADR-0012-static-site-github-actions-pages]]"

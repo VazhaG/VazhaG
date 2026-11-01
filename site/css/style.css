@@ -1,38 +1,41 @@
-/* Look chosen by the owner (intent §5): layout 1 "map on top", palette II "light day" — in the app style the owner
-   chose on 2026-10-30: the map fills the first screen, the fuel choice floats on it and the sheet with the ★ card
-   rises over its lower edge; at night the page follows the phone's dark mode. */
+/* Layout chosen by the owner (intent §5): layout 1 "map on top", in the app style of 2026-10-30 — the map fills the
+   first screen, the fuel choice floats on it and the sheet with the ★ card rises over its lower edge. Colours:
+   black and orange, a light and a dark look (SPEC-0004 REQ-005; the codes are Claude's choice — a hypothesis the
+   owner saw in a picture on 2026-11-01). */
 :root {
   --white: #ffffff;
-  --mist: #f1f5f9;
-  --graphite: #334155;
-  --violet: #7c3aed;
+  --black: #111111;
+  --orange: #f97316;
   --page: var(--white);
   --sheet: var(--white);
-  --raised: var(--mist);
-  --text: var(--graphite);
-  --muted: #64748b;
-  --line: #e2e8f0;
-  --accent: var(--violet);
-  --on-accent: var(--white);
-  --link: var(--violet);
-  --shadow: rgb(15 23 42 / 0.16);
+  --raised: #f3f4f6;
+  --text: var(--black);
+  --muted: #4b5563;
+  --line: #e5e7eb;
+  --accent: var(--orange); /* the main and the chosen buttons, the ★ */
+  --on-accent: var(--black);
+  --link: #c2410c;
+  --bar: var(--black); /* the header bar, the same in both looks */
+  --on-bar: var(--white);
+  --frame: #6b7280; /* a neutral frame: 3 : 1 on the white and on the black */
+  --shadow: rgb(17 17 17 / 0.16);
   --header-h: 52px;
   --overlap: 24px; /* how far the sheet rises over the map */
   color-scheme: light;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --page: #0b1220;
-    --sheet: #0f172a;
-    --raised: #1e293b;
-    --text: #e2e8f0;
-    --muted: #94a3b8;
-    --line: #334155;
-    --link: #c4b5fd;
-    --shadow: rgb(0 0 0 / 0.5);
-    color-scheme: dark;
-  }
+/* SPEC-0004 REQ-006: the dark look is the site's own — js/theme.js sets it before the first drawing, from the
+   visitor's choice or else the phone's setting; the switch in the header changes it */
+:root[data-theme="dark"] {
+  --page: #000000;
+  --sheet: var(--black);
+  --raised: #1c1c1c;
+  --text: #f5f5f5;
+  --muted: #a3a3a3;
+  --line: #2a2a2a;
+  --link: #fb923c;
+  --shadow: rgb(0 0 0 / 0.6);
+  color-scheme: dark;
 }
 
 * {
@@ -60,7 +63,7 @@ body {
   gap: 8px;
   height: var(--header-h);
   padding: 0 16px;
-  background: var(--page);
+  background: var(--bar);
   border-bottom: 1px solid var(--line);
 }
 
@@ -70,10 +73,53 @@ h1 {
   font-weight: 700;
 }
 
+.top h1 {
+  color: var(--on-bar);
+}
+
+.tools {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 8px;
+}
+
+/* SPEC-0004 REQ-006: the switch shows where a press takes the page — ☾ in the light look, ☀ in the dark */
+.theme {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: 1px solid var(--frame);
+  border-radius: 50%;
+  background: var(--bar);
+  color: var(--on-bar);
+  font: inherit;
+  font-size: 1.05rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+/* review C3: the sign by the look itself, so it is right before the main script runs */
+.theme::before {
+  content: "☾";
+}
+
+:root[data-theme="dark"] .theme::before {
+  content: "☀";
+}
+
+.theme:focus-visible,
+.lang button:focus-visible {
+  outline: 2px solid var(--on-bar);
+  outline-offset: 2px;
+}
+
 .lang {
   display: flex;
   flex: none;
-  border: 1px solid var(--line);
+  border: 1px solid var(--frame);
   border-radius: 999px;
   overflow: hidden;
 }
@@ -81,16 +127,18 @@ h1 {
 .lang button {
   padding: 6px 12px;
   border: 0;
-  background: var(--page);
-  color: var(--text);
+  background: var(--bar);
+  color: var(--on-bar);
   font: inherit;
   font-size: 0.85rem;
   cursor: pointer;
 }
 
+/* REQ-005: the chosen language — orange, and in bold letters, so it shows without colour too */
 .lang button[aria-pressed="true"] {
   background: var(--accent);
   color: var(--on-accent);
+  font-weight: 700;
 }
 
 /* The map and the fuel choice on it */
@@ -145,7 +193,8 @@ h1 {
 
 .chip span {
   display: inline-block;
-  padding: 8px 15px;
+  padding: 7px 14px;
+  border: 1px solid var(--frame);
   border-radius: 999px;
   background: var(--sheet);
   color: var(--text);
@@ -155,13 +204,16 @@ h1 {
   white-space: nowrap;
 }
 
+/* REQ-005: the chosen fuel — orange with black letters, and in bold letters, so it shows without colour too */
 .chip input:checked + span {
+  border-color: var(--accent);
   background: var(--accent);
   color: var(--on-accent);
+  font-weight: 700;
 }
 
 .chip input:focus-visible + span {
-  outline: 2px solid var(--accent);
+  outline: 2px solid var(--text);
   outline-offset: 2px;
 }
 
@@ -189,6 +241,21 @@ h1 {
 
 .station.near span {
   border-width: 2px;
+}
+
+/* SPEC-0004 REQ-002: from the city view a station with a logo is its company's mark in a white round frame — the part
+   of the logo that reads small, shown through the frame from the same file; the same in both looks */
+.station.logo span {
+  position: relative;
+  overflow: hidden;
+  border: 0;
+  background: #ffffff;
+  box-shadow: 0 1px 4px rgb(15 23 42 / 0.45);
+}
+
+.station.logo img {
+  position: absolute;
+  max-width: none;
 }
 
 .best-pin {
@@ -235,8 +302,8 @@ h1 {
   display: flex;
   flex-wrap: nowrap;
   gap: 8px;
-  margin-bottom: 10px;
-  padding-bottom: 2px;
+  margin-bottom: 6px;
+  padding: 4px; /* room for a badge's focus ring: the row scrolls, so it cuts what sticks out of it */
   overflow-x: auto;
   scrollbar-width: none;
   scroll-padding-inline: 24px; /* a badge reached from the keyboard stops clear of the faded strip */
@@ -286,6 +353,48 @@ h1 {
 .badge:focus-visible {
   outline: 2px solid var(--text);
   outline-offset: 2px;
+}
+
+/* SPEC-0004 REQ-001: a company's logo on its own ground in a neutral frame (3 : 1 on the page in both looks) — the
+   same in both looks; the name is the button's label */
+.badge.logo {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 14px;
+  border: 1.5px solid #6b7280;
+  background: var(--ground);
+}
+
+.badge.logo img {
+  display: block;
+}
+
+/* SPEC-0004 REQ-001: switched off, the logo loses its colour and fades, and a line crosses it — off shows without
+   colour too; the line is the ink that reads on the logo's ground (3 : 1 at least) */
+.badge.logo[aria-pressed="false"] {
+  background: var(--ground);
+  text-decoration: none;
+}
+
+.badge.logo[aria-pressed="false"] img {
+  filter: grayscale(1);
+  opacity: 0.45;
+}
+
+.badge.logo[aria-pressed="false"]::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  right: 10px;
+  left: 10px;
+  height: 3px;
+  margin-top: -1.5px;
+  border-radius: 2px;
+  background: var(--strike);
+  transform: rotate(-14deg);
+  pointer-events: none;
 }
 
 .best[hidden] {
@@ -345,7 +454,7 @@ h1 {
   color: var(--link);
   font-weight: 600;
   text-align: center;
-  text-decoration: none;
+  text-decoration: underline; /* REQ-005: a link shows by its line, not only by its colour */
 }
 
 .to-prices::before {
@@ -502,39 +611,38 @@ tr.stale .price {
   white-space: nowrap;
 }
 
-/* At night: the map's own pictures darkened, Leaflet's controls in the page's colours; the outlines as they were before
-   SPEC-0003 — a dark outline would vanish on the dark page */
-@media (prefers-color-scheme: dark) {
-  .leaflet-container {
-    background: var(--page);
-  }
+/* In the dark look: the map's own pictures darkened, Leaflet's controls in the page's colours; the outlines as they
+   were before SPEC-0003 — a dark outline would vanish on the dark page. By the site's look, not the phone's
+   (SPEC-0004 REQ-005). */
+:root[data-theme="dark"] .leaflet-container {
+  background: var(--page);
+}
 
-  .badge {
-    border-color: var(--company);
-  }
+:root[data-theme="dark"] .badge:not(.logo) {
+  border-color: var(--company);
+}
 
-  .station span {
-    border-color: var(--white);
-  }
+:root[data-theme="dark"] .station span {
+  border-color: var(--white);
+}
 
-  .leaflet-tile-pane {
-    filter: invert(1) hue-rotate(180deg) brightness(0.9) contrast(0.9);
-  }
+:root[data-theme="dark"] .leaflet-tile-pane {
+  filter: invert(1) hue-rotate(180deg) brightness(0.9) contrast(0.9);
+}
 
-  .leaflet-bar a,
-  .leaflet-bar a:hover {
-    border-bottom-color: var(--line);
-    background: var(--raised);
-    color: var(--text);
-  }
+:root[data-theme="dark"] .leaflet-bar a,
+:root[data-theme="dark"] .leaflet-bar a:hover {
+  border-bottom-color: var(--line);
+  background: var(--raised);
+  color: var(--text);
+}
 
-  .leaflet-container .leaflet-control-attribution {
-    background: rgb(15 23 42 / 0.85);
-    color: var(--muted);
-  }
+:root[data-theme="dark"] .leaflet-container .leaflet-control-attribution {
+  background: rgb(0 0 0 / 0.8);
+  color: var(--muted);
+}
 
-  .leaflet-container .leaflet-control-attribution a,
-  .leaflet-container a.leaflet-popup-close-button {
-    color: var(--link);
-  }
+:root[data-theme="dark"] .leaflet-container .leaflet-control-attribution a,
+:root[data-theme="dark"] .leaflet-container a.leaflet-popup-close-button {
+  color: var(--link);
 }

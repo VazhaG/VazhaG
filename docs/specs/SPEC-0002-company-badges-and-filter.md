@@ -4,7 +4,7 @@ type: spec
 title: კომპანიების ნიშნები და კომპანიით ფილტრი
 status: approved
 created: 2026-10-30
-updated: 2026-10-30
+updated: 2026-11-01
 intent: "[[intent]]"
 adrs:
   - "[[ADR-0012-static-site-github-actions-pages]]"

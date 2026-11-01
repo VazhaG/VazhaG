@@ -4,6 +4,7 @@ import { FUELS, lang, LANGS, setLang, t } from './i18n.js';
 import {
   cheapestNearby, companiesOf, inkOn, placed, priceRows, routeLinks, stationPrices, stationsFor,
 } from './logic.js';
+import { logoOf } from './logos.js';
 
 const GEORGIA = [[41.05, 40.0], [43.6, 46.7]]; // south-west and north-east corners: the first view shows it all
 const TILES = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
@@ -12,9 +13,11 @@ const LOCATE = { enableHighAccuracy: false, timeout: 10000, maximumAge: 300000 }
 const NEAR_ZOOM = 12;
 // a station's window opens clear of the fuel choice on the map's top and of the sheet over its lower edge
 const POPUP = { autoPanPaddingTopLeft: [12, 72], autoPanPaddingBottomRight: [12, 48] };
-// What stays on this phone, and nothing else: the chosen language, and the companies switched off (SPEC-0002 REQ-004)
+// What stays on this phone, and nothing else: the chosen language, the companies switched off (SPEC-0002 REQ-004)
+// and the chosen look (SPEC-0004 REQ-006)
 const LANG_KEY = 'fuel-map.lang';
 const OFF_KEY = 'fuel-map.off';
+const THEME_KEY = 'fuel-map.theme';
 // Georgian time, written the Georgian way ("30.10 15:00") — the browser's own "ka" format gives "10-30".
 const TIME_PARTS = new Intl.DateTimeFormat('en-GB', {
   timeZone: 'Asia/Tbilisi',
@@ -62,7 +65,8 @@ function initMap() {
   L.tileLayer(TILES, { maxZoom: 19, attribution: OSM_CREDIT }).addTo(state.map);
   state.markers = L.layerGroup().addTo(state.map);
   state.map.on('zoomend', () => {
-    if ((state.map.getZoom() >= LETTERS_FROM) !== state.near) render(); // the letters come or go
+    const near = state.map.getZoom() >= LETTERS_FROM;
+    if (near !== state.near) redrawMarks(near); // the letters and the marks come or go
   });
 }
 
@@ -104,8 +108,28 @@ function stationWindow(s) {
 }
 
 // SPEC-0002 REQ-002: from the city view on, a station is its company's colour with the company's first letter; from
-// farther away, a small dot, so the whole country's map stays readable.
+// farther away, a small dot, so the whole country's map stays readable. SPEC-0004 REQ-002: from the same view a
+// company with a logo shows its mark instead of the letter.
 const LETTERS_FROM = 11;
+// SPEC-0004 REQ-002: the mark is MARK pixels on its longer side, centred in a white round frame of FRAME pixels; it is
+// the logo's own file, scaled and moved so that only the mark shows through the frame.
+const MARK = 22;
+const FRAME = 30;
+
+function logoMark(logo, onFail) {
+  const frame = element('span');
+  const img = logoImage(logo, onFail);
+  const [x, y, w, h] = logo.mark;
+  const k = MARK / Math.max(w, h);
+  img.style.width = `${logo.size[0] * k}px`;
+  img.style.height = `${logo.size[1] * k}px`;
+  img.style.left = `${(FRAME - w * k) / 2 - x * k}px`;
+  img.style.top = `${(FRAME - h * k) / 2 - y * k}px`;
+  // only the mark shows — not the edge of the letters beside it (Lukoil's word under its square)
+  img.style.clipPath = `inset(${y * k}px ${(logo.size[0] - x - w) * k}px ${(logo.size[1] - y - h) * k}px ${x * k}px)`;
+  frame.append(img);
+  return L.divIcon({ className: 'station near logo', html: frame, iconSize: [FRAME, FRAME] });
+}
 
 // SPEC-0003 REQ-003: a light colour (its letters are dark) gets a dark outline by day — the stylesheet uses --edge only
 // on the light page and map.
@@ -114,7 +138,9 @@ function setEdge(el, color) {
   if (ink !== '#ffffff') el.style.setProperty('--edge', ink);
 }
 
-function stationIcon(s, near) {
+function stationIcon(s, near, marker) {
+  const logo = near ? usableLogo(s.companyId) : null;
+  if (logo) return logoMark(logo, () => setStationIcon(marker)); // a file that fails: this marker's letter instead
   const mark = element('span', '', near ? (s.company.trim()[0] ?? '?') || '?' : '');
   mark.style.backgroundColor = s.color;
   mark.style.color = inkOn(s.color);
@@ -123,15 +149,29 @@ function stationIcon(s, near) {
   return L.divIcon({ className: near ? 'station near' : 'station', html: mark, iconSize: [size, size] });
 }
 
+// A marker's look, set again in place: Leaflet keeps the marker and its open window (review C1, C2).
+function setStationIcon(marker) {
+  const s = marker.options.station;
+  marker.setIcon(stationIcon(s, state.near, marker));
+  marker.getElement()?.setAttribute('data-company', s.companyId);
+}
+
 function renderStations(stations) {
   state.markers.clearLayers();
   state.near = state.map.getZoom() >= LETTERS_FROM;
   for (const s of stationsFor(stations, state.fuel)) {
-    const marker = L.marker([s.lat, s.lng], { icon: stationIcon(s, state.near), keyboard: false })
-      .bindPopup(() => stationWindow(s), POPUP)
-      .addTo(state.markers);
+    const marker = L.marker([s.lat, s.lng], { keyboard: false, station: s });
+    marker.setIcon(stationIcon(s, state.near, marker)); // before it is on the map: no element is drawn twice
+    marker.bindPopup(() => stationWindow(s), POPUP).addTo(state.markers);
     marker.getElement().dataset.company = s.companyId;
   }
+}
+
+// The city view comes or goes: each marker takes its new look in place, so an open station window stays open — a
+// redraw would remove the markers, and Leaflet closes a removed marker's window (review C2).
+function redrawMarks(near) {
+  state.near = near;
+  state.markers.eachLayer(setStationIcon);
 }
 
 function markBest(b) {
@@ -147,18 +187,91 @@ function markBest(b) {
     .addTo(state.map);
 }
 
-// SPEC-0002: the badge row above the ★ card — one per company in the data, its colour and name, text only.
+// SPEC-0004 REQ-001: a logo is drawn this many pixels high on its badge; its width keeps the file's proportions, and
+// both are set before the picture arrives, so a slow or failed file never moves the row (REQ-003).
+const LOGO_HEIGHT = 30;
+
+// SPEC-0004 REQ-003, REQ-004: each logo file is asked for once on a visit. One loader picture per file asks for it;
+// the page's own pictures get the address only once the file has arrived, so the browser gives it from what it
+// already holds — however often the row and the map are drawn meanwhile. A file that fails is remembered: its
+// company shows its name and letter until the page is opened anew. Only the pictures that waited for it change, each
+// in its place, so an open station window, the keyboard's focus and the city list stay as they are (review C1).
+const logoLoads = new Map(); // file -> { state: 'loading' | 'ok' | 'failed', waiting: picture -> onFail, loader }
+
+function logoLoad(logo) {
+  let load = logoLoads.get(logo.file);
+  if (load) return load;
+  load = { state: 'loading', waiting: new Map(), loader: new Image() };
+  logoLoads.set(logo.file, load);
+  load.loader.addEventListener('load', () => {
+    load.state = 'ok';
+    for (const img of load.waiting.keys()) img.src = logo.file;
+    load.waiting.clear();
+  }, { once: true });
+  load.loader.addEventListener('error', () => {
+    load.state = 'failed';
+    const fails = [...load.waiting].filter(([img]) => img.isConnected).map(([, onFail]) => onFail);
+    load.waiting.clear();
+    for (const onFail of fails) onFail();
+  }, { once: true });
+  load.loader.src = logo.file;
+  return load;
+}
+
+function usableLogo(id) {
+  const logo = logoOf(id);
+  return logo && logoLoads.get(logo.file)?.state !== 'failed' ? logo : null;
+}
+
+// The picture keeps its size from the start, so the row and the map do not move when the file arrives (REQ-003).
+function logoImage(logo, onFail) {
+  const img = element('img');
+  img.alt = '';
+  const load = logoLoad(logo);
+  if (load.state === 'ok') img.src = logo.file;
+  else load.waiting.set(img, onFail);
+  return img;
+}
+
+// SPEC-0002: a company without a logo — its name on its colour.
+function nameBadge(badge, c) {
+  badge.classList.remove('logo');
+  badge.removeAttribute('aria-label');
+  badge.textContent = c.name || '?';
+  badge.style.setProperty('--company', c.color);
+  badge.style.setProperty('--ink', inkOn(c.color));
+  setEdge(badge, c.color);
+}
+
+// SPEC-0004 REQ-001: a company with a logo in our list shows it on its own ground; its name is what a screen reader
+// says. Switched off, the stylesheet greys it and crosses it out with a line in --strike, the ink that reads on the
+// ground. A file that fails leaves the name badge (REQ-004).
+function logoBadge(badge, logo, c) {
+  badge.classList.add('logo');
+  badge.setAttribute('aria-label', c.name || '?');
+  badge.style.setProperty('--ground', logo.ground);
+  badge.style.setProperty('--strike', inkOn(logo.ground));
+  const img = logoImage(logo, () => {
+    nameBadge(badge, c); // the same button: the keyboard's focus stays on it
+    markRowEdges();
+  });
+  img.width = Math.round((LOGO_HEIGHT * logo.size[0]) / logo.size[1]);
+  img.height = LOGO_HEIGHT;
+  badge.append(img);
+}
+
+// SPEC-0002: the badge row above the ★ card — one per company in the data.
 function renderCompanies() {
   const box = document.getElementById('companies');
   box.setAttribute('aria-label', t('companies.label'));
   box.replaceChildren(...companiesOf(state.prices, state.stations).map((c) => {
-    const badge = element('button', 'badge', c.name || '?');
+    const badge = element('button', 'badge');
     badge.type = 'button';
     badge.dataset.company = c.id;
     badge.setAttribute('aria-pressed', String(!state.off.has(c.id)));
-    badge.style.setProperty('--company', c.color);
-    badge.style.setProperty('--ink', inkOn(c.color));
-    setEdge(badge, c.color);
+    const logo = usableLogo(c.id);
+    if (logo) logoBadge(badge, logo, c);
+    else nameBadge(badge, c);
     badge.addEventListener('click', () => toggleCompany(c.id));
     return badge;
   }));
@@ -432,6 +545,7 @@ function applyStatic() {
   document.title = t('title.page');
   for (const el of document.querySelectorAll('[data-i18n]')) el.textContent = t(el.dataset.i18n);
   document.querySelector('.lang').setAttribute('aria-label', t('lang.group'));
+  document.getElementById('theme').setAttribute('aria-label', t('theme.label'));
   for (const button of document.querySelectorAll('.lang button')) {
     button.setAttribute('aria-pressed', String(button.dataset.lang === lang()));
   }
@@ -448,6 +562,37 @@ function setLanguage(code) {
   applyStatic();
   renderFuels();
   render();
+}
+
+// SPEC-0004 REQ-006: the visitor's look — 'light' or 'dark' once chosen (kept on the phone; with a blocked storage, for
+// this visit only), else null and the phone's own setting rules. js/theme.js drew the first look the same way.
+let chosenTheme = null;
+const phoneDark = window.matchMedia('(prefers-color-scheme: dark)');
+
+function savedTheme() {
+  try {
+    const kept = localStorage.getItem(THEME_KEY);
+    return kept === 'light' || kept === 'dark' ? kept : null;
+  } catch {
+    return null;
+  }
+}
+
+function applyTheme() {
+  const dark = (chosenTheme ?? (phoneDark.matches ? 'dark' : 'light')) === 'dark';
+  document.documentElement.dataset.theme = dark ? 'dark' : 'light';
+  const button = document.getElementById('theme');
+  button.setAttribute('aria-pressed', String(dark)); // its name stays "dark mode": pressed means dark
+}
+
+function toggleTheme() {
+  chosenTheme = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark';
+  try {
+    localStorage.setItem(THEME_KEY, chosenTheme);
+  } catch {
+    // a private window or a blocked storage: the choice holds for this visit only
+  }
+  applyTheme();
 }
 
 function savedLanguage() {
@@ -469,6 +614,12 @@ function validCities(data) {
 async function main() {
   setLang(savedLanguage() ?? 'ka');
   state.off = savedOff();
+  chosenTheme = savedTheme();
+  applyTheme();
+  document.getElementById('theme').addEventListener('click', toggleTheme);
+  phoneDark.addEventListener('change', () => {
+    if (!chosenTheme) applyTheme(); // no choice of their own: the page follows the phone
+  });
   applyStatic();
   for (const button of document.querySelectorAll('.lang button')) {
     button.addEventListener('click', () => setLanguage(button.dataset.lang));
