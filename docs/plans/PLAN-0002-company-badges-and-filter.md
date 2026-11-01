@@ -2,7 +2,7 @@
 id: PLAN-0002
 type: plan
 title: კომპანიების ნიშნები და კომპანიით ფილტრი — აშენება
-status: approved
+status: in-progress
 created: 2026-10-30
 updated: 2026-11-01
 spec: "[[SPEC-0002-company-badges-and-filter]]"
