@@ -2,7 +2,7 @@
 id: SPEC-0003
 type: spec
 title: Connect-ის სადგურები და ფასები
-status: approved
+status: draft
 created: 2026-10-31
 updated: 2026-11-01
 intent: "[[intent]]"

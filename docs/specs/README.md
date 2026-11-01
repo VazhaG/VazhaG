@@ -12,7 +12,7 @@ title: სპეციფიკაციები — ინდექსი დ�
 
 | სპეციფიკაცია | სათაური | სტატუსი |
 |---|---|---|
-| [[SPEC-0001-fuel-prices-map]] | საწვავის ფასების რუკა — პირველი ვერსია | approved |
-| [[SPEC-0002-company-badges-and-filter]] | კომპანიების ნიშნები და კომპანიით ფილტრი | approved |
-| [[SPEC-0003-connect-stations-and-prices]] | Connect-ის სადგურები და ფასები | approved |
-| [[SPEC-0004-logos-and-black-orange-look]] | კომპანიების ლოგოები და შავ-ნარინჯისფერი რეჟიმები გადამრთველით | approved |
+| [[SPEC-0001-fuel-prices-map]] | საწვავის ფასების რუკა — პირველი ვერსია | draft |
+| [[SPEC-0002-company-badges-and-filter]] | კომპანიების ნიშნები და კომპანიით ფილტრი | draft |
+| [[SPEC-0003-connect-stations-and-prices]] | Connect-ის სადგურები და ფასები | draft |
+| [[SPEC-0004-logos-and-black-orange-look]] | კომპანიების ლოგოები და შავ-ნარინჯისფერი რეჟიმები გადამრთველით | draft |
