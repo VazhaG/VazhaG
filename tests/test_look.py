@@ -207,3 +207,53 @@ def test_the_page_says_what_it_keeps_on_the_phone(page: Page, net: Net) -> None:
     expect(page.locator("footer")).to_contain_text(STORAGE_KA)
     page.get_by_role("button", name="ENG").click()
     expect(page.locator("footer")).to_contain_text(STORAGE_EN)
+
+
+# T6 — on a phone, and when the logos are missing or slow (AC-006, AC-009)
+LOGO_FILES = ["logos/socar.svg", "logos/rompetrol.png", "logos/lukoil.png", "logos/wissol.svg", "logos/connect.png"]
+
+
+@pytest.mark.parametrize("scheme", ["light", "dark"])
+@pytest.mark.parametrize("language", ["ka", "en"])
+def test_on_a_phone_the_card_the_row_and_both_switches_fit(page_at: Callable[[float, float], Page], net: Net,
+                                                           scheme: str, language: str) -> None:
+    # AC-009: 375 × 812 — the ★ card and "all prices" on the first screen, no sideways page, the logos scroll in
+    # their row, and the look switch and the language switch both inside the header bar, clear of the title
+    page = open_look(page_at, net, scheme)
+    if language == "en":
+        page.get_by_role("button", name="ENG").click()
+        expect(page.locator("#best a.to-prices")).to_have_text("All prices")
+    for target in ("#best", "#best a.to-prices"):
+        box = page.locator(target).bounding_box()
+        assert box and box["y"] + box["height"] <= 812, (target, box)
+    assert page.evaluate("document.documentElement.scrollWidth <= window.innerWidth")
+    assert page.locator("#companies").evaluate("(r) => r.scrollWidth > r.clientWidth")
+    bar, title = page.locator(".top").bounding_box(), page.locator(".top h1").bounding_box()
+    assert bar and title and page.locator(".top h1").evaluate("(h) => h.scrollWidth <= h.clientWidth + 1")
+    lines = page.locator(".top h1").evaluate("""(h) => { const r = document.createRange(); r.selectNodeContents(h);
+      return new Set([...r.getClientRects()].map((x) => Math.round(x.top))).size; }""")
+    assert lines == 1  # the title stays on one line beside the two switches
+    for target in ("#theme", ".lang"):
+        box = page.locator(target).bounding_box()
+        assert box and box["x"] >= title["x"] + title["width"] and box["x"] + box["width"] <= 375, (target, box)
+        assert box["y"] >= bar["y"] and box["y"] + box["height"] <= bar["y"] + bar["height"], (target, box)
+
+
+@pytest.mark.parametrize("how", ["missing", "stalled"])
+def test_without_any_logo_the_card_comes_within_10_seconds_and_the_row_stays(
+        page_at: Callable[[float, float], Page], net: Net, how: str) -> None:
+    # AC-006: every logo answers 404, or never answers; the page does not wait for them
+    for file in LOGO_FILES:
+        if how == "missing":
+            net.files[file] = (404, "text/plain", "")
+        else:
+            net.held.add(file)
+    net.real_data = True
+    page = page_at(*TBILISI)
+    generated = json.loads((SITE / "data" / "prices.json").read_text(encoding="utf-8"))["generated"]
+    page.clock.set_fixed_time(datetime.fromisoformat(generated))
+    page.goto(net.base, wait_until="domcontentloaded")  # a stalled picture holds the page's "load" back
+    expect(page.locator("#best a.go-google")).to_be_visible(timeout=10_000)
+    row = page.locator("#companies").bounding_box()
+    page.wait_for_timeout(1500)
+    assert page.locator("#companies").bounding_box() == row  # the row stays where it is

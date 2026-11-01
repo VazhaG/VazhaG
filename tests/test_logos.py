@@ -17,7 +17,7 @@ from collections.abc import Callable
 import pytest
 from playwright.sync_api import Page, expect
 
-from support import DRAWN, LOGO_IDS, ROOT, SITE, Net
+from support import DRAWN, LOGO_IDS, ROOT, SITE, Net, logos_without
 
 DOMAIN = ROOT / "docs" / "domain" / "fuel-price-sources.md"
 TIME = "2026-11-01T12:00:00Z"
@@ -401,3 +401,41 @@ def test_each_mark_is_the_logos_coloured_sign_and_little_more(page: Page, net: N
         assert mx <= sx and my <= sy and mx + mw >= sx + sw and my + mh >= sy + sh, (cid, got)  # the whole sign
         assert sx - mx <= slack and sy - my <= slack, (cid, got)  # and little else
         assert mx + mw - (sx + sw) <= slack and my + mh - (sy + sh) <= slack, (cid, got)
+
+
+# T6 — a slow or a removed logo (REQ-003, REQ-004; AC-006, AC-011)
+BOXES_JS = """() => [...document.querySelectorAll('#companies .badge')].map((b) => {
+  const r = b.getBoundingClientRect();
+  return [b.dataset.company, r.x, r.y, r.width, r.height];
+})"""
+
+
+def test_a_slow_logo_moves_nothing_in_the_row(page: Page, net: Net) -> None:
+    # REQ-003: the pictures have their size before their files come — the row is the same while they load and after
+    serve(net, FIVE)
+    net.held.update(f"logos/{name}" for name in ("socar.svg", "rompetrol.png", "lukoil.png", "wissol.svg",
+                                                  "connect.png"))
+    page.goto(net.base, wait_until="domcontentloaded")
+    expect(page.locator(BADGES)).to_have_count(len(FIVE))
+    page.wait_for_timeout(300)
+    assert page.locator("#companies img").evaluate_all("(i) => i.every((x) => !x.getAttribute('src'))")
+    waiting = page.evaluate(BOXES_JS)
+    net.held.clear()
+    page.goto(net.base)
+    page.wait_for_function(DRAWN, arg="#companies img")
+    loaded = page.evaluate(BOXES_JS)
+    assert [b[0] for b in loaded] == [b[0] for b in waiting]
+    assert all(abs(a - b) <= 0.5 for w, ld in zip(waiting, loaded, strict=True) for a, b in zip(w[1:], ld[1:], strict=True)), \
+        (waiting, loaded)
+
+
+def test_a_removed_logo_leaves_the_name_badge_and_the_letter_circle(page_at: Callable[[float, float], Page],
+                                                                    net: Net) -> None:
+    # AC-011: the file and its line taken out together (REQ-004) — the page no longer asks for the file
+    net.files["js/logos.js"] = (200, "text/javascript", logos_without("lukoil"))
+    net.files["logos/lukoil.png"] = (404, "text/plain", "")
+    page = open_near(page_at, net, FIVE)
+    expect(page.locator('#companies [data-company="lukoil"]')).to_have_text("Lukoil")
+    expect(page.locator('.station[data-company="lukoil"] span')).to_have_text("L")
+    expect(page.locator("#companies img")).to_have_count(len(FIVE) - 1)
+    assert not [u for u in net.requests if "lukoil.png" in u]
