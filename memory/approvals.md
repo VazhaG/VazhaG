@@ -40,3 +40,4 @@ status: living
 | 2026-11-01 20:52 +0000 | SPEC-0001 | draft → approved | docs/specs/SPEC-0001-fuel-prices-map.md | — |
 | 2026-11-01 20:56 +0000 | SPEC-0002 | draft → approved | docs/specs/SPEC-0002-company-badges-and-filter.md | — |
 | 2026-11-01 20:58 +0000 | SPEC-0003 | draft → approved | docs/specs/SPEC-0003-connect-stations-and-prices.md | — |
+| 2026-11-01 21:02 +0000 | SPEC-0004 | draft → approved | docs/specs/SPEC-0004-logos-and-black-orange-look.md | — |
