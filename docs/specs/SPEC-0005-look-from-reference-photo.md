@@ -2,7 +2,7 @@
 id: SPEC-0005
 type: spec
 title: იერსახე ნიმუშის ფოტოთი — ერთი ზომის ლოგოები, ზემოთ ფილტრები, ფასების სია
-status: review
+status: approved
 created: 2026-11-01
 updated: 2026-11-02
 intent: "[[intent]]"
