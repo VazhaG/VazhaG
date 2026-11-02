@@ -19,8 +19,8 @@ related:
 - [x] პირველი ვერსია ([[PLAN-0001-fuel-prices-map]]), ნიშნები და ფილტრი ([[PLAN-0002-company-badges-and-filter]]), Connect ([[PLAN-0003-connect-stations-and-prices]]) — გამოქვეყნებულია
 - [x] ლოგოები და შავ-ნარინჯისფერი რეჟიმები — [[intent]] 0.26, [[SPEC-0004-logos-and-black-orange-look]], [[PLAN-0004-logos-and-black-orange-look]]; მფლობელის „კი“-თ გამოქვეყნდა (2026-11-01, abf4382)
 - [x] [[intent]] 0.32 — ინტერვიუ, რაუნდი 4 (QF1–QF4), დამტკიცდა; SPEC-0001–0004 და PLAN-0001–0004 ხელახლა დამტკიცდა (2026-11-01)
-- [x] [[SPEC-0005-look-from-reference-photo]] — მფლობელმა დაამტკიცა 2026-11-02
-- [ ] [[PLAN-0005-look-from-reference-photo]] — მფლობელის `/approve plan 0005`-ს ელოდება; მერე აშენება T1–T8 და გამოქვეყნება მისი „კი“-თ
+- [ ] [[SPEC-0005-look-from-reference-photo]] — დამტკიცდა 2026-11-02; მფლობელის ნათელი რეჟიმის თხოვნით ხელახლა გაიხსნა და გასწორდა — `/approve spec 0005`-ს ელოდება
+- [ ] [[PLAN-0005-look-from-reference-photo]] — T1–T7 აშენდა და მიმოხილულია; ხელახლა გაიხსნა (T8 — ნათელი რეჟიმი, T9 — შემოწმება და გამოქვეყნება) — `/approve plan 0005`-ს ელოდება, მერე T8, T9 და გამოქვეყნება მფლობელის „კი“-თ
 - [ ] საიტის შემოწმება ტელეფონზე (D-009) — ამით იხურება PLAN-0001–PLAN-0004
 <!-- auto: current-phase:end -->
 
