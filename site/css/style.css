@@ -1,24 +1,18 @@
 /* Layout chosen by the owner (intent §5): layout 1 "map on top", in the app style of 2026-10-30 — the map fills the
-   first screen, the fuel choice floats on it and the sheet with the ★ card rises over its lower edge. Colours:
-   black and orange, a light and a dark look (SPEC-0004 REQ-005; the codes are Claude's choice — a hypothesis the
-   owner saw in a picture on 2026-11-01). */
+   first screen, the fuel choice floats on it and the sheet with the ★ card rises over its lower edge. Colours: the
+   owner's reference photo, a light and a dark look (SPEC-0005 REQ-006; the codes are a hypothesis read from the photo
+   — the owner saw them in a picture on 2026-11-02). */
 :root {
   --white: #ffffff;
-  --black: #111111;
-  --orange: #f97316;
-  --page: var(--white);
-  --sheet: var(--white);
-  --raised: #f3f4f6;
-  --text: var(--black);
-  --muted: #4b5563;
-  --line: #e5e7eb;
-  --accent: var(--orange); /* the main and the chosen buttons, the ★ */
-  --on-accent: var(--black);
-  --link: #c2410c;
-  --bar: var(--black); /* the header bar, the same in both looks */
-  --on-bar: var(--white);
-  --frame: #6b7280; /* a neutral frame: 3 : 1 on the white and on the black */
-  --disc-frame: #8e8e93; /* a company circle's frame, in both looks (SPEC-0005 REQ-001) */
+  --page: #f2f2f7; /* the page and the header bar */
+  --surface: #ffffff; /* the sheet, the cards, the filters and the fuel chips */
+  --raised: #e5e5ea; /* the map's ground before its pictures come */
+  --text: #111111;
+  --muted: #5f5f64;
+  --line: #e5e5ea;
+  --accent: #ffc529; /* the chosen fuel and language, Google Maps and Waze, the ★ — the same in both looks */
+  --on-accent: #111111;
+  --disc-frame: #8e8e93; /* a company circle's frame, in both looks: 3 : 1 on the surface (SPEC-0005 REQ-001) */
   --shadow: rgb(17 17 17 / 0.16);
   --header-h: 52px;
   --overlap: 24px; /* how far the sheet rises over the map */
@@ -28,13 +22,12 @@
 /* SPEC-0004 REQ-006: the dark look is the site's own — js/theme.js sets it before the first drawing, from the
    visitor's choice or else the phone's setting; the switch in the header changes it */
 :root[data-theme="dark"] {
-  --page: #000000;
-  --sheet: var(--black);
-  --raised: #1c1c1c;
-  --text: #f5f5f5;
-  --muted: #a3a3a3;
-  --line: #2a2a2a;
-  --link: #fb923c;
+  --page: #1c1c1e;
+  --surface: #2c2c2e;
+  --raised: #2c2c2e;
+  --text: #ffffff;
+  --muted: #a1a1a6;
+  --line: #3a3a3c;
   --shadow: rgb(0 0 0 / 0.6);
   color-scheme: dark;
 }
@@ -64,7 +57,7 @@ body {
   gap: 8px;
   height: var(--header-h);
   padding: 0 16px;
-  background: var(--bar);
+  background: var(--page); /* SPEC-0005 REQ-006: the header bar is the page's colour */
   border-bottom: 1px solid var(--line);
 }
 
@@ -75,7 +68,7 @@ h1 {
 }
 
 .top h1 {
-  color: var(--on-bar);
+  color: var(--text);
 }
 
 .tools {
@@ -92,10 +85,10 @@ h1 {
   width: 36px;
   height: 36px;
   padding: 0;
-  border: 1px solid var(--frame);
+  border: 1px solid var(--line);
   border-radius: 50%;
-  background: var(--bar);
-  color: var(--on-bar);
+  background: var(--surface);
+  color: var(--text);
   font: inherit;
   font-size: 1.05rem;
   line-height: 1;
@@ -113,14 +106,14 @@ h1 {
 
 .theme:focus-visible,
 .lang button:focus-visible {
-  outline: 2px solid var(--on-bar);
+  outline: 2px solid var(--text);
   outline-offset: 2px;
 }
 
 .lang {
   display: flex;
   flex: none;
-  border: 1px solid var(--frame);
+  border: 1px solid var(--line);
   border-radius: 999px;
   overflow: hidden;
 }
@@ -128,14 +121,14 @@ h1 {
 .lang button {
   padding: 6px 12px;
   border: 0;
-  background: var(--bar);
-  color: var(--on-bar);
+  background: var(--surface);
+  color: var(--text);
   font: inherit;
   font-size: 0.85rem;
   cursor: pointer;
 }
 
-/* REQ-005: the chosen language — orange, and in bold letters, so it shows without colour too */
+/* SPEC-0005 REQ-006: the chosen language — yellow, and in bold letters, so it shows without colour too */
 .lang button[aria-pressed="true"] {
   background: var(--accent);
   color: var(--on-accent);
@@ -195,9 +188,9 @@ h1 {
 .chip span {
   display: inline-block;
   padding: 7px 14px;
-  border: 1px solid var(--frame);
+  border: 1px solid var(--line);
   border-radius: 999px;
-  background: var(--sheet);
+  background: var(--surface);
   color: var(--text);
   box-shadow: 0 1px 6px var(--shadow);
   font-size: 0.95rem;
@@ -205,7 +198,7 @@ h1 {
   white-space: nowrap;
 }
 
-/* REQ-005: the chosen fuel — orange with black letters, and in bold letters, so it shows without colour too */
+/* SPEC-0005 REQ-006: the chosen fuel — yellow with black letters, and in bold, so it shows without colour too */
 .chip input:checked + span {
   border-color: var(--accent);
   background: var(--accent);
@@ -278,7 +271,7 @@ h1 {
   margin-top: calc(-1 * var(--overlap));
   padding: 10px 16px 8px;
   border-radius: 20px 20px 0 0;
-  background: var(--sheet);
+  background: var(--surface);
   box-shadow: 0 -4px 18px var(--shadow);
 }
 
@@ -395,6 +388,14 @@ h1 {
   outline-offset: 2px;
 }
 
+/* SPEC-0005 REQ-006: the ★ card on the surface colour, set off from the sheet by a line */
+.best {
+  padding: 4px 14px 0;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: var(--surface);
+}
+
 .best[hidden] {
   display: none;
 }
@@ -449,10 +450,10 @@ h1 {
   display: block;
   margin-top: 8px;
   padding: 6px;
-  color: var(--link);
+  color: var(--text); /* SPEC-0005 REQ-006: a link is the text's colour, and shows by its line */
   font-weight: 600;
   text-align: center;
-  text-decoration: underline; /* REQ-005: a link shows by its line, not only by its colour */
+  text-decoration: underline;
 }
 
 .to-prices::before {
@@ -470,7 +471,7 @@ h1 {
   padding: 10px;
   border: 1px solid var(--line);
   border-radius: 10px;
-  background: var(--sheet);
+  background: var(--surface);
   color: var(--text);
   font: inherit;
 }
@@ -489,7 +490,7 @@ h1 {
 /* The station window on the map */
 .leaflet-popup-content-wrapper,
 .leaflet-popup-tip {
-  background: var(--sheet);
+  background: var(--surface);
   color: var(--text);
 }
 
@@ -597,7 +598,7 @@ tr.stale .price {
 }
 
 .foot a {
-  color: var(--link);
+  color: var(--text);
 }
 
 .visually-hidden {
@@ -638,5 +639,5 @@ tr.stale .price {
 
 :root[data-theme="dark"] .leaflet-container .leaflet-control-attribution a,
 :root[data-theme="dark"] .leaflet-container a.leaflet-popup-close-button {
-  color: var(--link);
+  color: var(--text);
 }

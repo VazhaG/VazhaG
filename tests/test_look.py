@@ -1,4 +1,10 @@
-"""SPEC-0004 — the black-and-orange look (PLAN-0004).
+"""SPEC-0004 — the black-and-orange look (PLAN-0004); SPEC-0005 — the reference photo's colours (PLAN-0005 T2).
+
+SPEC-0005 REQ-006 (PLAN-0005 T2) replaces T4's colours: the page and the header bar in the page colour (#F2F2F7 by
+day, #1C1C1E at night); the sheet, the cards and the fuel chips on the surface colour (#FFFFFF, #2C2C2E) — so a
+company circle's #8E8E93 frame keeps its 3 : 1 on the sheet (REQ-001); the text #111111 / #FFFFFF, the muted text
+#5F5F64 / #A1A1A6, the lines #E5E5EA / #3A3A3C; in both looks the yellow accent #FFC529 with #111111 letters for the
+chosen fuel and language (in bold too), Google Maps and Waze and the ★; a link in the text's colour, underlined.
 
 T4: the colour roles of REQ-005 in both looks — the black header bar with a white title, orange main and chosen
 buttons with black letters, the unchosen fuels on the sheet's colour in a neutral frame, the underlined links, the
@@ -27,7 +33,7 @@ ROLES_JS = """() => {
   const on = '.lang button[aria-pressed="true"]', off = '.lang button[aria-pressed="false"]';
   return {
     page: css('body', 'backgroundColor'), text: css('body', 'color'), sheet: css('.sheet', 'backgroundColor'),
-    header: css('.top', 'backgroundColor'), title: css('.top h1', 'color'),
+    card: css('#best', 'backgroundColor'), header: css('.top', 'backgroundColor'), title: css('.top h1', 'color'),
     muted: css('.foot', 'color'), line: css('.prices', 'borderTopColor'),
     go: [css('.go a', 'backgroundColor'), css('.go a', 'color')],
     chosen: [css(chosen, 'backgroundColor'), css(chosen, 'color'), Number(css(chosen, 'fontWeight')) >= 700],
@@ -39,16 +45,16 @@ ROLES_JS = """() => {
     star: [css('.best-pin', 'backgroundColor'), css('.best-pin', 'color'), document.querySelector('.best-pin')?.textContent],
   };
 }"""
-WHITE, BLACK, ORANGE = "rgb(255, 255, 255)", "rgb(17, 17, 17)", "rgb(249, 115, 22)"
-BOTH = {"header": BLACK, "title": WHITE, "go": [ORANGE, BLACK], "chosen": [ORANGE, BLACK, True],
-        "langOn": [ORANGE, BLACK, True], "langOff": [WHITE, True], "star": [ORANGE, BLACK, "★"]}
+WHITE, INK, YELLOW = "rgb(255, 255, 255)", "rgb(17, 17, 17)", "rgb(255, 197, 41)"  # #FFFFFF, #111111, #FFC529
+DAY_PAGE, NIGHT_PAGE, NIGHT_SURFACE = "rgb(242, 242, 247)", "rgb(28, 28, 30)", "rgb(44, 44, 46)"
+BOTH = {"go": [YELLOW, INK], "chosen": [YELLOW, INK, True], "langOn": [YELLOW, INK, True], "star": [YELLOW, INK, "★"]}
 LOOKS = {
-    "light": BOTH | {"page": WHITE, "text": BLACK, "sheet": WHITE, "muted": "rgb(75, 85, 99)",
-                     "line": "rgb(229, 231, 235)", "other": [WHITE, BLACK, "solid", True],
-                     "link": ["rgb(194, 65, 12)", "underline"]},
-    "dark": BOTH | {"page": "rgb(0, 0, 0)", "text": "rgb(245, 245, 245)", "sheet": BLACK, "muted": "rgb(163, 163, 163)",
-                    "line": "rgb(42, 42, 42)", "other": [BLACK, "rgb(245, 245, 245)", "solid", True],
-                    "link": ["rgb(251, 146, 60)", "underline"]},
+    "light": BOTH | {"page": DAY_PAGE, "text": INK, "sheet": WHITE, "card": WHITE, "header": DAY_PAGE, "title": INK,
+                     "muted": "rgb(95, 95, 100)", "line": "rgb(229, 229, 234)", "other": [WHITE, INK, "solid", True],
+                     "langOff": [INK, True], "link": [INK, "underline"]},
+    "dark": BOTH | {"page": NIGHT_PAGE, "text": WHITE, "sheet": NIGHT_SURFACE, "card": NIGHT_SURFACE, "header": NIGHT_PAGE,
+                    "title": WHITE, "muted": "rgb(161, 161, 166)", "line": "rgb(58, 58, 60)",
+                    "other": [NIGHT_SURFACE, WHITE, "solid", True], "langOff": [WHITE, True], "link": [WHITE, "underline"]},
 }
 
 
@@ -107,7 +113,7 @@ def test_on_a_first_visit_the_look_follows_the_phone(page: Page, net: Net, phone
     expect(switch).to_have_attribute("aria-pressed", "true" if phone == "dark" else "false")
     assert page.evaluate(SIGN) == ('"☀"' if phone == "dark" else '"☾"')  # where a press takes the page
     assert page.evaluate(LOOK) == phone
-    assert page.evaluate(BACKGROUND) == ("rgb(0, 0, 0)" if phone == "dark" else "rgb(255, 255, 255)")
+    assert page.evaluate(BACKGROUND) == (NIGHT_PAGE if phone == "dark" else DAY_PAGE)
 
 
 def test_the_switch_changes_the_look_and_keeps_its_name_in_both_languages(page: Page, net: Net) -> None:
@@ -118,14 +124,14 @@ def test_the_switch_changes_the_look_and_keeps_its_name_in_both_languages(page: 
     switch.click()
     expect(switch).to_have_attribute("aria-pressed", "true")
     assert page.evaluate(SIGN) == '"☀"'
-    assert page.evaluate(BACKGROUND) == "rgb(0, 0, 0)"
+    assert page.evaluate(BACKGROUND) == NIGHT_PAGE
     page.get_by_role("button", name="ENG").click()
     switch = page.get_by_role("button", name="Dark mode", exact=True)
     expect(switch).to_have_attribute("aria-pressed", "true")
     switch.click()
     expect(switch).to_have_attribute("aria-pressed", "false")
     assert page.evaluate(SIGN) == '"☾"'
-    assert page.evaluate(BACKGROUND) == "rgb(255, 255, 255)"
+    assert page.evaluate(BACKGROUND) == DAY_PAGE
 
 
 @pytest.mark.parametrize(("phone", "choice"), [("light", "dark"), ("dark", "light")])
@@ -189,7 +195,7 @@ def test_with_the_storage_blocked_the_switch_still_works_on_this_visit(page: Pag
     open_plain(page, net, "light")
     page.locator(THEME).click()
     expect(page.locator(THEME)).to_have_attribute("aria-pressed", "true")
-    assert page.evaluate(BACKGROUND) == "rgb(0, 0, 0)"
+    assert page.evaluate(BACKGROUND) == NIGHT_PAGE
 
 
 def test_a_kept_dark_look_is_there_before_the_main_script_runs(page: Page, net: Net) -> None:
@@ -200,7 +206,7 @@ def test_a_kept_dark_look_is_there_before_the_main_script_runs(page: Page, net: 
     page.goto(net.base, wait_until="commit")
     page.wait_for_timeout(3000)
     assert page.evaluate("document.querySelectorAll('#companies *').length") == 0  # the main script never ran
-    assert page.evaluate(BACKGROUND) == "rgb(0, 0, 0)"
+    assert page.evaluate(BACKGROUND) == NIGHT_PAGE
     assert page.evaluate(SIGN) == '"☀"'  # review C3: the switch already shows the dark look's sign
     # and before the first drawing: a plain script in <head>, ahead of the styles, so the browser waits for it
     head = (SITE / "index.html").read_text(encoding="utf-8").split("</head>")[0]

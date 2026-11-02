@@ -136,7 +136,7 @@ def test_every_text_has_wcag_aa_contrast(page_at: Callable[[float, float], Page]
     page.emulate_media(color_scheme=scheme)
     page.goto(net.base)
     expect(page.locator("#best a.go-google")).to_be_visible()
-    page.get_by_text("დიზელი", exact=True).first.click()  # a chosen chip: black on orange (SPEC-0004 REQ-005)
+    page.get_by_text("დიზელი", exact=True).first.click()  # a chosen chip: black on yellow (SPEC-0005 REQ-006)
     if logos:
         expect(page.locator(".station.near.logo").first).to_be_visible()  # the companies' marks on the map
     else:
