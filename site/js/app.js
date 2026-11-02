@@ -107,29 +107,14 @@ function stationWindow(s) {
   return box;
 }
 
-// SPEC-0002 REQ-002: from the city view on, a station is its company's colour with the company's first letter; from
-// farther away, a small dot, so the whole country's map stays readable. SPEC-0004 REQ-002: from the same view a
-// company with a logo shows its mark instead of the letter.
+// SPEC-0002 REQ-002: from the city view on, a station shows its company; from farther away it is a small dot in the
+// company's colour, so the whole country's map stays readable.
 const LETTERS_FROM = 11;
-// SPEC-0004 REQ-002: the mark is MARK pixels on its longer side, centred in a white round frame of FRAME pixels; it is
-// the logo's own file, scaled and moved so that only the mark shows through the frame.
-const MARK = 22;
-const FRAME = 30;
-
-function logoMark(logo, onFail) {
-  const frame = element('span');
-  const img = logoImage(logo, onFail);
-  const [x, y, w, h] = logo.mark;
-  const k = MARK / Math.max(w, h);
-  img.style.width = `${logo.size[0] * k}px`;
-  img.style.height = `${logo.size[1] * k}px`;
-  img.style.left = `${(FRAME - w * k) / 2 - x * k}px`;
-  img.style.top = `${(FRAME - h * k) / 2 - y * k}px`;
-  // only the mark shows — not the edge of the letters beside it (Lukoil's word under its square)
-  img.style.clipPath = `inset(${y * k}px ${(logo.size[0] - x - w) * k}px ${(logo.size[1] - y - h) * k}px ${x * k}px)`;
-  frame.append(img);
-  return L.divIcon({ className: 'station near logo', html: frame, iconSize: [FRAME, FRAME] });
-}
+// SPEC-0005 REQ-007: from the city view a station is a black pin with its company's circle (REQ-001) in its head — a
+// square of PIN pixels turned 45° with three round corners, its sharp corner turned down as the tip. The tip is half
+// the square's diagonal below its middle, and the marker's anchor is set there, so the tip stands on the station.
+const PIN = 36;
+const TIP = PIN / 2 + (PIN / 2) * Math.SQRT2;
 
 // SPEC-0003 REQ-003: a light colour (its letters are dark) gets a dark outline by day — the stylesheet uses --edge only
 // on the light page and map.
@@ -138,21 +123,22 @@ function setEdge(el, color) {
   if (ink !== '#ffffff') el.style.setProperty('--edge', ink);
 }
 
-function stationIcon(s, near, marker) {
-  const logo = near ? usableLogo(s.companyId) : null;
-  if (logo) return logoMark(logo, () => setStationIcon(marker)); // a file that fails: this marker's letter instead
-  const mark = element('span', '', near ? (s.company.trim()[0] ?? '?') || '?' : '');
-  mark.style.backgroundColor = s.color;
-  mark.style.color = inkOn(s.color);
-  setEdge(mark, s.color);
-  const size = near ? 24 : 12;
-  return L.divIcon({ className: near ? 'station near' : 'station', html: mark, iconSize: [size, size] });
+function stationIcon(s, near) {
+  if (near) {
+    const pin = element('span', 'pin');
+    pin.append(disc({ id: s.companyId, name: s.company, color: s.color })); // a file that fails: its letter, in place
+    return L.divIcon({ className: 'station near', html: pin, iconSize: [PIN, PIN], iconAnchor: [PIN / 2, TIP] });
+  }
+  const dot = element('span');
+  dot.style.backgroundColor = s.color;
+  setEdge(dot, s.color);
+  return L.divIcon({ className: 'station', html: dot, iconSize: [12, 12] });
 }
 
 // A marker's look, set again in place: Leaflet keeps the marker and its open window (review C1, C2).
 function setStationIcon(marker) {
   const s = marker.options.station;
-  marker.setIcon(stationIcon(s, state.near, marker));
+  marker.setIcon(stationIcon(s, state.near));
   marker.getElement()?.setAttribute('data-company', s.companyId);
 }
 
@@ -161,7 +147,7 @@ function renderStations(stations) {
   state.near = state.map.getZoom() >= LETTERS_FROM;
   for (const s of stationsFor(stations, state.fuel)) {
     const marker = L.marker([s.lat, s.lng], { keyboard: false, station: s });
-    marker.setIcon(stationIcon(s, state.near, marker)); // before it is on the map: no element is drawn twice
+    marker.setIcon(stationIcon(s, state.near)); // before it is on the map: no element is drawn twice
     marker.bindPopup(() => stationWindow(s), POPUP).addTo(state.markers);
     marker.getElement().dataset.company = s.companyId;
   }

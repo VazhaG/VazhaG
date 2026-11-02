@@ -11,7 +11,7 @@ from datetime import UTC, datetime, timedelta
 
 from playwright.sync_api import Page, expect
 
-from support import Net
+from support import POINT_JS, Net
 
 NOW = datetime(2026, 10, 30, 12, 0, tzinfo=UTC)
 HERE = (41.70, 44.80)
@@ -157,7 +157,8 @@ def test_the_cheapest_station_is_marked_with_a_star_on_the_map(page_at: Callable
         assert box
         return box["x"] + box["width"] / 2, box["y"] + box["height"] / 2
 
-    (px, py), (sx, sy) = centre(pin.bounding_box()), centre(page.locator(".station").nth(1).bounding_box())
+    # the ★ over the second station's place: its dot's middle, or its pin's tip (SPEC-0005 REQ-007)
+    (px, py), (sx, sy) = centre(pin.bounding_box()), page.locator(".station").nth(1).evaluate(POINT_JS)
     assert abs(px - sx) < 3 and abs(py - sy) < 3
     pin.dispatch_event("click")
     expect(page.locator(".leaflet-popup-content")).to_contain_text("ვაკე")

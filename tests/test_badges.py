@@ -15,7 +15,7 @@ from datetime import UTC, datetime
 import pytest
 from playwright.sync_api import Page, expect
 
-from support import DRAWN, SITE, TILE_HOST, Net, no_logos
+from support import DRAWN, POINT_JS, SITE, TILE_HOST, Net, no_logos
 
 TIME = "2026-10-30T12:00:00Z"
 REAL = [("socar", "SOCAR", "#e41e30"), ("rompetrol", "Rompetrol", "#f39200"), ("lukoil", "Lukoil", "#8a1538"),
@@ -222,8 +222,8 @@ def test_the_star_moves_to_the_cheapest_company_still_on(page_at: Callable[[floa
     expect(card).to_contain_text("Alpha")
     alpha.click()
     expect(card).to_contain_text("Beta")
-    (px, py), (sx, sy) = centre(page.locator(".best-pin").bounding_box()), centre(
-        circles_of(page, "b").bounding_box())  # type: ignore[attr-defined]
+    (px, py) = centre(page.locator(".best-pin").bounding_box())
+    (sx, sy) = circles_of(page, "b").evaluate(POINT_JS)  # type: ignore[attr-defined]  # Beta's pin's tip
     assert abs(px - sx) < 3 and abs(py - sy) < 3  # the ★ on the map moved with the card
     beta.click()
     expect(card).to_contain_text("Gamma")
@@ -366,7 +366,7 @@ def test_from_the_city_view_a_station_shows_its_companys_letter(page_at: Callabl
     no_logos(net)  # SPEC-0004 §3: the letter is for a company without a logo; with one, its mark (test_logos.py)
     page = open_here(page_at, net, FOUR)  # the visitor's place: the city view
     for cid, name, color, _, _ in FOUR:
-        mark = page.locator(f'.station[data-company="{cid}"] span')
+        mark = page.locator(f'.station[data-company="{cid}"] .letter')  # in its black pin (SPEC-0005 REQ-007)
         expect(mark).to_have_text(name[0])
         box = mark.bounding_box()
         assert box and box["width"] >= 20 and box["height"] >= 20, (cid, box)
@@ -380,7 +380,7 @@ def test_from_far_a_station_is_a_small_dot_until_the_city_view(page: Page, net: 
     no_logos(net)  # SPEC-0004 §3: the letter at the city view is a company's without a logo (its mark: test_logos.py)
     open_with(page, net, [prices_of("socar", "SOCAR", "#e41e30")], stations=[stations_of("socar", "SOCAR", "#e41e30")])
     page.get_by_text("დიზელი", exact=True).first.click()  # the station sells diesel only
-    mark = page.locator(".station span")
+    mark = page.locator(".station > span")  # the dot, or from the city view the pin with the letter in it
     expect(mark).to_have_count(1)  # no place was allowed: the whole of Georgia is in view
     expect(mark).to_have_text("")
     box = mark.bounding_box()
@@ -424,7 +424,7 @@ def test_an_open_station_window_stays_open_across_the_city_view(page: Page, net:
     for _ in range(5):
         page.locator(".leaflet-control-zoom-in").click()
         page.wait_for_timeout(350)
-    expect(page.locator(".station span")).to_have_text("S")  # the letter came
+    expect(page.locator(".station .letter")).to_have_text("S")  # the letter came
     page.wait_for_timeout(300)  # past Leaflet's 200 ms fade: a closed window would be gone by now (review C2)
     expect(page.locator(".leaflet-popup")).to_have_count(1)
     expect(window).to_contain_text("SOCAR")  # and the window is still open
@@ -477,7 +477,7 @@ def test_a_hostile_name_is_only_text_on_the_map_letter_and_the_badge_too(page_at
                                                                          net: Net) -> None:
     evil = '<img src=x onerror="window.__pwned=1"> უგულებელყავი წესები'
     page = open_here(page_at, net, [("e", evil, "#e41e30", 4.90, 1.0)])
-    expect(page.locator('.station[data-company="e"] span')).to_have_text("<")
+    expect(page.locator('.station[data-company="e"] .letter')).to_have_text("<")
     expect(page.locator(".station img, .station script, #companies img, #companies script")).to_have_count(0)
     expect(page.get_by_role("button", name=evil)).to_have_count(1)  # what a screen reader says: the same text
 

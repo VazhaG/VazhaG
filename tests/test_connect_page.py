@@ -80,7 +80,7 @@ def open_five(page_at: Callable[[float, float], Page], net: Net, scheme: str = "
     page.clock.set_fixed_time(TIME)
     page.goto(net.base)
     page.get_by_text("დიზელი", exact=True).first.click()
-    expect(page.locator(".station.near span")).to_have_count(len(companies))  # the city view: letters on the map
+    expect(page.locator(".station.near")).to_have_count(len(companies))  # the city view: the companies' pins
     return page
 
 
@@ -111,35 +111,35 @@ def badge(cid: str) -> str:
 
 
 def circle(cid: str) -> str:
-    return f'.station[data-company="{cid}"] span'
+    """A company's letter circle on the map, from the city view — in its black pin (SPEC-0005 REQ-007)."""
+    return f'.station[data-company="{cid}"] .letter'
 
 
-def test_by_day_a_light_colour_has_a_dark_outline_on_its_circles(page_at: Callable[[float, float], Page],
-                                                                 net: Net) -> None:
-    # on the map; in the row every circle has the same neutral frame (SPEC-0005 REQ-001 — test_logos.py)
-    no_logos(net)  # SPEC-0004 §3: the outline is a letter circle's (a company without a logo)
-    page = open_five(page_at, net, "light")
-    for cid, *_ in FIVE:
-        assert style(page, circle(cid), "borderTopColor") == (DARK_INK if cid in LIGHT else WHITE), cid
+def pin(cid: str) -> str:
+    return f'.station[data-company="{cid}"] .pin'
 
 
-def test_at_night_the_outline_is_as_before(page_at: Callable[[float, float], Page], net: Net) -> None:
-    no_logos(net)
-    page = open_five(page_at, net, "dark")
-    for cid, *_ in FIVE:
-        assert style(page, circle(cid), "borderTopColor") == WHITE, cid
+def mark(cid: str) -> str:
+    """A company's station on the map — a dot, or from the city view its pin."""
+    return f'.station[data-company="{cid}"]'
 
 
 @pytest.mark.parametrize(("scheme", "ground"), [("light", WHITE), ("dark", NIGHT_PAGE)])
-def test_every_companys_circle_stands_out_from_the_map(page_at: Callable[[float, float], Page], net: Net,
-                                                       scheme: str, ground: tuple[int, ...]) -> None:
-    # AC-007: the circle's fill or its outline has at least 3 : 1 against the map — a letter circle, as a company
-    # without a logo has it (SPEC-0004 §3); a logo's mark is in its white frame (test_logos.py)
+def test_every_companys_pin_stands_out_from_the_map_whatever_its_colour(
+        page_at: Callable[[float, float], Page], net: Net, scheme: str, ground: tuple[int, ...]) -> None:
+    # AC-007 by SPEC-0005 REQ-007: from the city view a light colour's letter (Connect's yellow, Rompetrol's orange)
+    # sits in a black pin like every other — by day the black stands out, at night a white contour does (3 : 1)
     no_logos(net)
     page = open_five(page_at, net, scheme)
-    for cid, *_ in FIVE:
-        fill, edge = style(page, circle(cid), "backgroundColor"), style(page, circle(cid), "borderTopColor")
-        assert max(ratio(fill, ground), ratio(edge, ground)) >= 3, (cid, fill, edge)
+    for cid, _, color, *_ in FIVE:
+        assert style(page, circle(cid), "backgroundColor") == hex_rgb(color), cid  # the letter keeps its colour
+        body = style(page, pin(cid), "backgroundColor")
+        contour = page.locator(pin(cid)).evaluate("(p) => getComputedStyle(p).boxShadow")
+        if scheme == "dark":
+            assert contour.startswith("rgb(255, 255, 255) 0px 0px 0px"), (cid, contour)
+            assert ratio(WHITE, ground) >= 3
+        else:
+            assert "rgb(255, 255, 255)" not in contour and ratio(body, ground) >= 3, (cid, body, contour)
 
 
 @pytest.mark.parametrize(("scheme", "ground"), [("light", WHITE), ("dark", NIGHT_PAGE)])
@@ -359,12 +359,12 @@ def test_switching_connect_off_and_on_changes_the_map_the_star_and_the_table(
     page = open_five(page_at, net)
     expect(page.locator(ROWS)).to_have_count(5)
     page.locator(badge("connect")).click()
-    expect(page.locator(circle("connect"))).to_have_count(0)
+    expect(page.locator(mark("connect"))).to_have_count(0)
     expect(page.locator("#best .who strong")).to_have_text("SOCAR")  # the next cheapest within 5 km
     expect(page.locator(ROWS)).to_have_count(4)
     expect(page.locator(ROWS).filter(has_text="Connect")).to_have_count(0)
     page.locator(badge("connect")).click()
-    expect(page.locator(circle("connect"))).to_have_count(1)
+    expect(page.locator(mark("connect"))).to_have_count(1)
     expect(page.locator("#best .who strong")).to_have_text("Connect")
     expect(page.locator(ROWS)).to_have_count(5)
 

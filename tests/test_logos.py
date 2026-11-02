@@ -9,7 +9,9 @@ asked for again on this visit (REQ-001, REQ-004; AC-002, AC-005, AC-006).
 SPEC-0005 (PLAN-0005) changes the row: T1 — every company is one 48 px black circle in a #8E8E93 frame, a logo's mark
 its longer side 60 % of the circle, a company without a logo the same circle in its colour with its first letter; a
 switched-off circle only fades — grey, 0.35–0.5 — with no line and no crossed-out name (REQ-001, REQ-002; AC-001's
-row, AC-002, AC-006's row).
+row, AC-002, AC-006's row). T3 — on the map, from the city view, a station is a black teardrop pin with its company's
+30 px circle in its head and its tip on the station's point, a white contour at night; the ★ round and yellow in a
+#111111 frame (REQ-007; AC-001's map, AC-009, AC-010).
 """
 
 from __future__ import annotations
@@ -329,33 +331,23 @@ def test_a_logo_that_does_not_load_leaves_a_letter_circle_and_is_not_asked_again
     assert [u for u in net.requests if u.endswith("/logos/lukoil.png")] == [f"{net.base}logos/lukoil.png"]
 
 
-# T3 — the companies' marks on the map (REQ-002, REQ-003, REQ-004; AC-003, AC-004, AC-005)
-MARKS_JS = """async () => {
-  const { LOGOS } = await import('./js/logos.js');
-  const byId = new Map(LOGOS.map((l) => [l.id, l]));
-  return [...document.querySelectorAll('.station')].map((m) => {
-    const logo = byId.get(m.dataset.company), frame = m.querySelector('span'), img = m.querySelector('img');
-    const f = frame.getBoundingClientRect(), s = getComputedStyle(frame);
-    const out = { id: m.dataset.company, near: m.classList.contains('near'), frame: [f.width, f.height],
-                  ground: s.backgroundColor, round: s.borderRadius, text: frame.textContent,
-                  imgs: m.querySelectorAll('img').length };
-    if (img && logo) {
-      const r = img.getBoundingClientRect(), k = r.width / logo.size[0], [x, y, w, h] = logo.mark;
-      const left = r.left + x * k, top = r.top + y * k;
-      const v = (getComputedStyle(img).clipPath.match(/[\\d.]+/g) || []).map(Number);
-      // inset() is written like a margin: one, two, three or four values — top, right, bottom, left
-      const [t, rt, b, lt] = [v[0], v[1] ?? v[0], v[2] ?? v[0], v[3] ?? v[1] ?? v[0]];
-      const shown = v.length ? [r.left + lt, r.top + t, r.width - rt - lt, r.height - t - b] : null;
-      Object.assign(out, { src: img.getAttribute('src'), alt: img.getAttribute('alt'), mark: [w * k, h * k],
-                           clip: getComputedStyle(img).clipPath, shown, at: [left, top, w * k, h * k],
-                           off: [left + w * k / 2 - (f.left + f.width / 2), top + h * k / 2 - (f.top + f.height / 2)],
-                           loaded: img.complete && img.naturalWidth > 0,
-                           inside: left >= f.left - 0.5 && top >= f.top - 0.5 && left + w * k <= f.right + 0.5
-                                   && top + h * k <= f.bottom + 0.5 });
-    }
-    return out;
-  });
-}"""
+# T3 — the companies' marks on the map (REQ-002, REQ-003, REQ-004; AC-003, AC-004, AC-005). SPEC-0005 (PLAN-0005 T3):
+# from the city view a station is a black teardrop pin with the company's 30 px circle in its head and its tip on the
+# station's point, with a white contour at night; the ★ is round and yellow in a #111111 frame (REQ-007; AC-001's map,
+# AC-009, AC-010)
+FAR_JS = """() => [...document.querySelectorAll('.station')].map((m) => ({
+  id: m.dataset.company, near: m.classList.contains('near'), text: m.textContent,
+  imgs: m.querySelectorAll('img').length, ground: getComputedStyle(m.firstElementChild).backgroundColor,
+}))"""
+PINS_JS = """() => [...document.querySelectorAll('.station.near')].map((m) => {
+  const pin = m.querySelector('.pin'), disc = m.querySelector('.disc');
+  const p = pin.getBoundingClientRect(), d = disc.getBoundingClientRect(), s = getComputedStyle(pin);
+  return { id: m.dataset.company, pins: m.querySelectorAll('.pin').length, discs: m.querySelectorAll('.disc').length,
+           body: s.backgroundColor, contour: s.boxShadow, size: [p.width, p.height],
+           tip: [p.left + p.width / 2, p.bottom], disc: [d.left, d.top, d.width, d.height] };
+})"""
+PIN_DISC = 30  # px — a company circle in a map pin (SPEC-0005 REQ-001)
+WHITE_CONTOUR = re.compile(r"rgb\(255, 255, 255\) 0px 0px 0px (\d+(?:\.\d+)?)px")
 
 
 def open_near(page_at: Callable[[float, float], Page], net: Net, companies: list[tuple[str, str, str]],
@@ -379,23 +371,85 @@ def zoom(page: Page, button: str, times: int) -> None:
 
 
 @pytest.mark.parametrize("scheme", ["light", "dark"])
-def test_from_the_city_view_each_station_is_its_companys_mark_in_a_white_round_frame(
+def test_from_the_city_view_each_station_is_a_black_pin_with_its_companys_circle(
         page_at: Callable[[float, float], Page], net: Net, scheme: str) -> None:
-    # AC-003: the mark is cut from the logo's own file; frame 28 px at least, the mark 22; a decoration (alt="")
-    page = open_near(page_at, net, FIVE, scheme)
+    # SPEC-0005 REQ-007, AC-001's map, AC-010: a black teardrop pin, every one the same size, with its company's 30 px
+    # circle in its head — a logo's mark cut from our file, or the colour and letter of a company without a logo
+    # (Nova) — and its tip straight under the circle
+    page = open_near(page_at, net, SIX, scheme)
     logos = dict(page.evaluate(LIST_JS))
     page.wait_for_function(DRAWN, arg=".station img")
-    marks = {m["id"]: m for m in page.evaluate(MARKS_JS)}
-    for cid, *_ in FIVE:
-        m = marks[cid]
-        assert m["near"] and m["imgs"] == 1 and (m["src"], m["alt"], m["loaded"]) == (logos[cid], "", True), m
-        assert min(m["frame"]) >= 28 and max(m["mark"]) >= 21.5 and m["inside"], m
-        assert m["clip"].startswith("inset("), m  # only the mark shows through the frame
-        assert max(abs(v) for v in m["off"]) <= 0.5, m  # in the middle of its frame
-        assert m["shown"] and all(abs(a - b) <= 0.6 for a, b in zip(m["shown"], m["at"], strict=True)), m
-        assert (m["ground"], m["round"], m["text"]) == ("rgb(255, 255, 255)", "50%", ""), m
+    pins = {p["id"]: p for p in page.evaluate(PINS_JS)}
+    discs = {d["id"]: d for d in page.evaluate(DISCS_JS, ".station .disc")}
+    assert sorted(pins) == sorted(discs) == sorted(cid for cid, *_ in SIX), (pins, discs)
+    assert len({tuple(round(v, 1) for v in p["size"]) for p in pins.values()}) == 1, pins  # all one size
+    for cid, name, color in SIX:
+        p, d = pins[cid], discs[cid]
+        assert (p["pins"], p["discs"], p["body"]) == (1, 1, "rgb(0, 0, 0)"), p
+        assert_disc(d, PIN_DISC)
+        if cid in logos:
+            assert_mark(d, logos[cid], PIN_DISC)
+        else:
+            assert_letter(d, PIN_DISC, name[0], rgb_of(color))
+        x, y, w, h = p["disc"]
+        assert abs(p["tip"][0] - (x + w / 2)) <= 0.5 and p["tip"][1] >= y + h + 4, p  # the tip under the circle
     page.locator('.station[data-company="lukoil"]').dispatch_event("click")
     expect(page.locator(".leaflet-popup-content")).to_contain_text("Lukoil")  # the window names the company
+
+
+def test_a_pins_tip_stands_on_its_stations_point(page_at: Callable[[float, float], Page], net: Net) -> None:
+    # SPEC-0005 AC-010: the tip on the station's place (±1 px) — here the visitor's own place, as the map draws it
+    serve(net, [("socar", "SOCAR", "#e41e30")])
+    net.data["stations.json"]["companies"][0]["stations"][0].update(lat=HERE[0], lng=HERE[1])  # type: ignore[index]
+    page = page_at(*HERE)
+    page.clock.set_fixed_time(TIME)
+    page.goto(net.base)
+    page.get_by_text("დიზელი", exact=True).first.click()
+    expect(page.locator(".station.near")).to_have_count(1)
+    you = page.locator("path.you").bounding_box()
+    (pin,) = page.evaluate(PINS_JS)
+    assert you, you
+    centre = (you["x"] + you["width"] / 2, you["y"] + you["height"] / 2)
+    assert abs(pin["tip"][0] - centre[0]) <= 1 and abs(pin["tip"][1] - centre[1]) <= 1, (pin, centre)
+
+
+@pytest.mark.parametrize(("scheme", "ground"), [("light", (255, 255, 255)), ("dark", (28, 28, 30))])
+def test_a_pin_stands_out_from_the_map_with_a_white_contour_only_at_night(
+        page_at: Callable[[float, float], Page], net: Net, scheme: str, ground: tuple[int, ...]) -> None:
+    # SPEC-0005 REQ-007, AC-009: black on the light map with no contour; at night a white contour, 2 px at least —
+    # whichever shows the pin has 3 : 1 against the map (its ground at night: the page's #1C1C1E)
+    page = open_near(page_at, net, FIVE, scheme)
+    for p in page.evaluate(PINS_JS):
+        white = WHITE_CONTOUR.search(p["contour"])
+        if scheme == "dark":
+            assert white and float(white.group(1)) >= 2 and ratio((255, 255, 255), ground) >= 3, p
+        else:
+            assert not white and ratio(rgb(p["body"]), ground) >= 3, p
+
+
+STAR_JS = """(s) => {
+  const c = getComputedStyle(s), r = s.getBoundingClientRect();
+  return { round: c.borderRadius, ground: c.backgroundColor, ink: c.color, text: s.textContent,
+           frame: [c.borderTopStyle, parseFloat(c.borderTopWidth), c.borderTopColor],
+           size: [r.width, r.height], centre: [r.left + r.width / 2, r.top + r.height / 2] };
+}"""
+
+
+@pytest.mark.parametrize("scheme", ["light", "dark"])
+def test_the_star_is_round_and_yellow_in_a_dark_frame_over_its_stations_point(
+        page_at: Callable[[float, float], Page], net: Net, scheme: str) -> None:
+    # SPEC-0005 REQ-007, AC-010: the ★ in the middle of the cheapest station's place — SOCAR's here, over its pin's tip
+    page = open_near(page_at, net, FIVE, scheme)
+    expect(page.locator("#best")).to_contain_text("SOCAR")
+    star = page.locator(".best-pin")
+    expect(star).to_have_count(1)
+    got = star.evaluate(STAR_JS)
+    assert (got["round"], got["ground"], got["ink"], got["text"]) == ("50%", "rgb(255, 197, 41)", "rgb(17, 17, 17)",
+                                                                     "★"), got
+    assert got["frame"][0] == "solid" and got["frame"][1] >= 1.5 and got["frame"][2] == "rgb(17, 17, 17)", got
+    assert abs(got["size"][0] - got["size"][1]) <= 0.5, got
+    tip = {p["id"]: p["tip"] for p in page.evaluate(PINS_JS)}["socar"]
+    assert abs(got["centre"][0] - tip[0]) <= 1 and abs(got["centre"][1] - tip[1]) <= 1, (got, tip)
 
 
 def test_from_far_a_station_is_still_its_companys_small_dot(page: Page, net: Net) -> None:
@@ -405,23 +459,24 @@ def test_from_far_a_station_is_still_its_companys_small_dot(page: Page, net: Net
     page.goto(net.base)  # no place allowed: the first view shows all of Georgia
     page.get_by_text("დიზელი", exact=True).first.click()  # the fuel the stations sell
     expect(page.locator(".station:not(.near)")).to_have_count(len(FIVE))
-    marks = page.evaluate(MARKS_JS)
+    marks = page.evaluate(FAR_JS)
     assert all(not m["near"] and m["imgs"] == 0 and m["text"] == "" for m in marks), marks
     assert {m["id"]: m["ground"] for m in marks}["socar"] == "rgb(228, 30, 48)"  # SOCAR's colour, #e41e30
+    expect(page.locator(".station .pin")).to_have_count(0)
 
 
 def test_each_logo_file_is_asked_once_whatever_the_row_and_the_map_do(page_at: Callable[[float, float], Page],
                                                                       net: Net) -> None:
     # AC-004: opening, switching a company off and on, leaving the city view and coming back
     page = open_near(page_at, net, FIVE)
-    expect(page.locator(".station.near.logo")).to_have_count(len(FIVE))
+    expect(page.locator(".station.near .disc img")).to_have_count(len(FIVE))
     wissol = page.locator('#companies [data-company="wissol"]')
     wissol.click()
     wissol.click()
     zoom(page, "out", 3)
     expect(page.locator(".station.near")).to_have_count(0)
     zoom(page, "in", 3)
-    expect(page.locator(".station.near.logo")).to_have_count(len(FIVE))
+    expect(page.locator(".station.near .disc img")).to_have_count(len(FIVE))
     page.wait_for_load_state("networkidle")
     asked = sorted(u[len(net.base):] for u in net.requests if u.startswith(f"{net.base}logos/"))
     assert asked == sorted(dict(page.evaluate(LIST_JS)).values()), asked
@@ -434,7 +489,7 @@ def test_on_the_map_only_an_exact_code_gets_a_mark(page_at: Callable[[float, flo
     page.wait_for_function(DRAWN, arg=".station img")
     srcs = page.locator(".station img").evaluate_all("(i) => i.map((x) => x.getAttribute('src'))")
     assert srcs == ["logos/socar.svg"]
-    expect(page.locator(".station.near:not(.logo) span")).to_have_text(["C"] * (len(companies) - 1))
+    expect(page.locator(".station.near .letter")).to_have_text(["C"] * (len(companies) - 1))
 
 
 def test_a_logo_that_fails_on_the_map_leaves_letter_circles_and_is_not_asked_again(
@@ -442,12 +497,12 @@ def test_a_logo_that_fails_on_the_map_leaves_letter_circles_and_is_not_asked_aga
     # REQ-004, AC-006 on the map
     net.files["logos/wissol.svg"] = (404, "text/plain", "")
     page = open_near(page_at, net, FIVE)
-    expect(page.locator('.station[data-company="wissol"] span')).to_have_text("W")
+    expect(page.locator('.station[data-company="wissol"] .letter')).to_have_text("W")
     expect(page.locator('.station[data-company="wissol"] img')).to_have_count(0)
-    expect(page.locator(".station.near.logo")).to_have_count(len(FIVE) - 1)
+    expect(page.locator(".station.near .disc img")).to_have_count(len(FIVE) - 1)
     zoom(page, "out", 3)
     zoom(page, "in", 3)
-    expect(page.locator('.station[data-company="wissol"] span')).to_have_text("W")
+    expect(page.locator('.station[data-company="wissol"] .letter')).to_have_text("W")
     assert [u for u in net.requests if u.endswith("/logos/wissol.svg")] == [f"{net.base}logos/wissol.svg"]
 
 
@@ -523,7 +578,7 @@ def test_a_removed_logo_leaves_the_letter_circles(page_at: Callable[[float, floa
     net.files["logos/lukoil.png"] = (404, "text/plain", "")
     page = open_near(page_at, net, FIVE)
     expect(page.locator('#companies [data-company="lukoil"]')).to_have_text("L")
-    expect(page.locator('.station[data-company="lukoil"] span')).to_have_text("L")
+    expect(page.locator('.station[data-company="lukoil"] .letter')).to_have_text("L")
     expect(page.locator("#companies img")).to_have_count(len(FIVE) - 1)
     assert not [u for u in net.requests if "lukoil.png" in u]
 
@@ -539,7 +594,7 @@ def test_a_logo_that_fails_late_leaves_the_open_window_and_the_focus_alone(page_
     page.locator('#companies [data-company="rompetrol"]').focus()
     net.pending["logos/wissol.svg"].fulfill(status=404, body="")
     expect(page.locator('#companies [data-company="wissol"]')).to_have_text("W")
-    expect(page.locator('.station[data-company="wissol"] span')).to_have_text("W")
+    expect(page.locator('.station[data-company="wissol"] .letter')).to_have_text("W")
     page.wait_for_timeout(300)  # past Leaflet's 200 ms fade: a closed window would be gone by now
     expect(page.locator(".leaflet-popup")).to_have_count(1)
     expect(page.locator(".leaflet-popup-content")).to_contain_text("SOCAR")

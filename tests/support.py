@@ -20,6 +20,12 @@ LOGO_IDS = ("socar", "rompetrol", "lukoil", "wissol", "connect")  # the companie
 # every picture the selector finds has its address and is drawn — a logo gets its address once its file has arrived
 DRAWN = "(sel) => [...document.querySelectorAll(sel)].every((i) => i.getAttribute('src') && i.naturalWidth > 0)"
 FRAME_GREY = "rgb(142, 142, 147)"  # #8E8E93 — a company circle's frame, in both looks (SPEC-0005 REQ-001)
+# where a station's mark stands on the map: a pin's tip from the city view on (SPEC-0005 REQ-007 — the lowest point of
+# its turned square), else the middle of its dot
+POINT_JS = """(m) => {
+  const pin = m.querySelector('.pin'), r = (pin || m).getBoundingClientRect();
+  return [r.left + r.width / 2, pin ? r.bottom : r.top + r.height / 2];
+}"""
 # SPEC-0005 REQ-001: every company circle the selector finds, measured as drawn — its size, fill, frame and what is
 # behind it; a logo's picture and the part of it that shows (its mark, cut by clip-path from the file's own pixels);
 # a letter circle's fill and ink. The frame is the circle's border or, drawn inside it, its outline.
