@@ -17,7 +17,7 @@ NOW = datetime(2026, 10, 30, 12, 0, tzinfo=UTC)
 HERE = (41.70, 44.80)
 KM_PER_DEGREE = 111.195  # one degree of latitude, so a station `north(k)` lies k km from HERE
 PETROL = ["regular", "premium", "super", "diesel"]
-GAS_UNKNOWN = "რომელ სადგურს აქვს აირი, ჯერ ცნობილი არ არის — ფასები ქვემოთ, ცხრილშია"
+GAS_UNKNOWN = "რომელ სადგურს აქვს აირი, ჯერ ცნობილი არ არის — ფასები ქვემოთ, სიაშია"
 NONE_IN_50 = "50 კმ-ში ამ საწვავის ახალი ფასით სადგური ვერ მოიძებნა"
 
 

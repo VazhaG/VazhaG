@@ -203,10 +203,26 @@ def test_the_filters_work_from_the_keyboard(page_at: Callable[[float, float], Pa
     page.keyboard.press("ArrowDown")
     page.keyboard.press("ArrowDown")
     expect(page.locator(FUEL)).to_have_text("საწვავი · დიზელი")
-    page.keyboard.press("Escape")
+    page.keyboard.press("Space")  # review C1: Space on the fuel reached by the arrows ends the choice
     expect(page.locator(FUEL_PANEL)).to_be_hidden()
     assert page.evaluate(FOCUSED) == "filter-fuel"
     expect(page.locator('#fuels input[value="diesel"]')).to_be_checked()
+    page.keyboard.press("Enter")  # and Esc, the other way out, closes it too
+    page.keyboard.press("Tab")
+    page.keyboard.press("Escape")
+    expect(page.locator(FUEL_PANEL)).to_be_hidden()
+    assert page.evaluate(FOCUSED) == "filter-fuel"
+
+
+def test_a_tap_on_the_fuel_already_chosen_closes_the_panel(page_at: Callable[[float, float], Page],
+                                                          net: Net) -> None:
+    # review C1: the chosen fuel tapped again ends the choice as any other fuel does, and keeps it
+    page = open_page(page_at, net)
+    page.locator(FUEL).click()
+    page.locator(FUEL_PANEL).get_by_role("radio", name="რეგულარი", exact=True).click()
+    expect(page.locator(FUEL_PANEL)).to_be_hidden()
+    expect(page.locator(FUEL)).to_have_text("საწვავი · რეგულარი")
+    assert page.evaluate(FOCUSED) == "filter-fuel"
 
 
 def test_a_tap_outside_closes_the_panel_and_the_focus_returns(page_at: Callable[[float, float], Page],
@@ -229,6 +245,24 @@ def test_a_tap_outside_closes_the_panel_and_the_focus_returns(page_at: Callable[
     expect(page.locator(FUEL)).to_have_attribute("aria-expanded", "true")
     page.locator(FUEL).click()  # its own button closes it too
     expect(page.locator(FUEL_PANEL)).to_be_hidden()
+
+
+def test_a_tap_far_down_the_page_closes_the_panel_without_scrolling_back(page_at: Callable[[float, float], Page],
+                                                                         net: Net) -> None:
+    # review C2: the company panel left open, the visitor reads the list further down and taps a line — the panel
+    # closes, and the page stays where it is instead of jumping back up to the filter's button
+    page = open_page(page_at, net)
+    page.locator(COMPANY).click()
+    expect(page.locator(COMPANY_PANEL)).to_be_visible()
+    page.evaluate("document.querySelector('#price-list li:last-child')"
+                  ".scrollIntoView({ block: 'center', behavior: 'instant' })")  # the page's own scrolling is smooth
+    page.wait_for_timeout(300)
+    before = page.evaluate("window.scrollY")
+    assert before > 100, before
+    page.locator("#price-list li").last.click()
+    expect(page.locator(COMPANY_PANEL)).to_be_hidden()
+    page.wait_for_timeout(300)
+    assert abs(page.evaluate("window.scrollY") - before) <= 1, (before, page.evaluate("window.scrollY"))
 
 
 def test_the_companies_come_into_an_open_panel_when_the_data_arrives(page_at: Callable[[float, float], Page],
@@ -277,15 +311,22 @@ EVIL = '<img src=x onerror="window.__pwned=1"> უგულებელყავ
 
 
 def test_a_hostile_name_or_code_is_only_text_in_the_filter(page_at: Callable[[float, float], Page], net: Net) -> None:
-    # SPEC-0005 AC-007 in the filter: a name with HTML is text; a code like a path or an object's field has no picture
-    serve(net, [("__proto__", EVIL, "#e41e30", 4.9), ("../x", "Co1", "#00843d", 4.95), ("socar", "SOCAR", "#e41e30", 5)])
+    # SPEC-0005 AC-007 in the filter: a name with HTML is text; a code like a path or an object's field has no picture;
+    # a code with quotes and brackets is read back exactly from its box (security review S1)
+    odd = 'x"><img src=y>\\]'
+    serve(net, [("__proto__", EVIL, "#e41e30", 4.9), ("../x", "Co1", "#00843d", 4.95), (odd, "Co2", "#8a1538", 4.97),
+                ("socar", "SOCAR", "#e41e30", 5)])
     page = page_at(*HERE)
     page.clock.set_fixed_time(TIME)
     page.goto(net.base)
     page.locator(COMPANY).click()
     panel = page.locator(COMPANY_PANEL)
-    expect(panel.get_by_role("checkbox")).to_have_count(3)
+    expect(panel.get_by_role("checkbox")).to_have_count(4)
+    assert panel.get_by_role("checkbox").evaluate_all("(b) => b.map((x) => x.value)") == ["__proto__", "../x", odd,
+                                                                                         "socar"]
     expect(panel.get_by_role("checkbox", name=EVIL, exact=True)).to_have_count(1)
+    panel.get_by_role("checkbox", name="Co2", exact=True).uncheck()  # its company off, by its odd code
+    expect(page.locator("#companies .badge").nth(2)).to_have_attribute("aria-pressed", "false")
     page.wait_for_function(DRAWN, arg=f"{COMPANY_PANEL} img")
     srcs = panel.locator("img").evaluate_all("(i) => i.map((x) => x.getAttribute('src'))")
     assert srcs == ["logos/socar.svg"], srcs

@@ -512,9 +512,15 @@ function fuelOptions() {
     input.name = 'fuel-filter';
     input.value = key;
     input.checked = key === state.fuel;
+    // a tap ends the choice — on the fuel already chosen too, which changes nothing (review C1); the arrows go
+    // through the fuels and choose each, and the panel stays open
+    input.addEventListener('click', () => {
+      if (arrowing) return;
+      if (state.fuel !== key) chooseFuel(key);
+      closePanel();
+    });
     input.addEventListener('change', () => {
-      chooseFuel(key);
-      if (!arrowing) closePanel(); // chosen: the panel closes
+      if (arrowing) chooseFuel(key);
     });
     set.append(option(input, element('span', 'option-name', t(`fuel.${key}`))));
   }
@@ -540,7 +546,8 @@ function closePanel(focus = true) {
   filterPanel(kind).hidden = true;
   filterPanel(kind).replaceChildren();
   filterButton(kind).setAttribute('aria-expanded', 'false');
-  if (focus) filterButton(kind).focus();
+  // the page stays where it is, even if the button is out of view (review C2)
+  if (focus) filterButton(kind).focus({ preventScroll: true });
 }
 
 // The filter's name small above, what is chosen under it — one height in both languages (SPEC-0005 AC-008). The
@@ -589,6 +596,11 @@ function watchFilters() {
   const fuels = filterPanel('fuel');
   fuels.addEventListener('keydown', (event) => {
     arrowing = event.key.startsWith('Arrow');
+    // Space or Enter on the fuel the arrows reached ends the choice: a checked radio fires no click of its own
+    if ((event.key === ' ' || event.key === 'Enter') && event.target.matches('input')) {
+      event.preventDefault();
+      closePanel();
+    }
   });
   fuels.addEventListener('keyup', () => {
     arrowing = false;
@@ -718,8 +730,7 @@ function setLanguage(code) {
   state.map.closePopup();
   applyStatic();
   renderFuels();
-  if (openFilter) fillPanel(openFilter); // an open panel in the new language
-  render();
+  render(); // an open panel closed already: the language button's tap was a tap outside it
 }
 
 // SPEC-0004 REQ-006: the visitor's look — 'light' or 'dark' once chosen (kept on the phone; with a blocked storage, for

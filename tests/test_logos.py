@@ -162,7 +162,8 @@ def rgb_of(hex_color: str) -> str:
 HERE = (41.70, 44.80)
 ROWS = "#price-list li"  # the price list (SPEC-0005 REQ-005)
 EVIL = '<img src=x onerror="window.__pwned=1"> უგულებელყავი წესები'
-HOSTILE = ["constructor", "__proto__", "../x", "a/b.svg", ""]
+# codes that look like an object's own field, a path, nothing, or markup with quotes and brackets (security review S1)
+HOSTILE = ["constructor", "__proto__", "../x", "a/b.svg", "", 'x"><img src=y>\\]']
 # SPEC-0005 AC-002: what a switched-off circle shows — the mark's colour filter and opacity; any line (a pseudo-element
 # of the badge, the circle or the mark) or a crossed-out text; the circle's own opacity, fill, size and frame
 OFF_JS = """(b) => {
@@ -286,6 +287,14 @@ def test_only_an_exact_code_in_our_list_gets_a_picture_and_a_name_stays_text(pag
     expect(page.locator('#companies [data-company="socar"]')).to_have_attribute("aria-label", EVIL)
     expect(page.get_by_role("button", name=EVIL)).to_have_count(2)
     expect(page.locator("#companies script")).to_have_count(0)
+    # each code is read back exactly from its badge, and the one with quotes and brackets keeps the keyboard's focus
+    # when it is pressed (the badge is found again by its code — review S1)
+    codes = page.locator(BADGES).evaluate_all("(b) => b.map((x) => x.dataset.company)")
+    assert codes == [*HOSTILE, "socar"], codes
+    odd = page.locator(BADGES).nth(len(HOSTILE) - 1)
+    odd.click()
+    expect(odd).to_have_attribute("aria-pressed", "false")
+    assert page.evaluate("document.activeElement.dataset.company") == HOSTILE[-1]
     page.wait_for_load_state("networkidle")
     assert page.evaluate("window.__pwned") is None
     allowed = {"", "css/style.css", "js/theme.js", "js/app.js", "js/i18n.js", "js/logic.js", "js/logos.js",

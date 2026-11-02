@@ -253,7 +253,7 @@ def test_with_every_company_off_the_page_says_to_turn_one_on(page_at: Callable[[
 # PLAN-0002 T4: when the filter took the fuel away, the card and the table say so (REQ-006; AC-007)
 FILTERED_KA = "ჩართულ კომპანიებში ამ საწვავის ფასი არ მოიძებნა — ჩართე სხვა კომპანიაც"
 FILTERED_EN = "No price for this fuel among the companies switched on — turn on another company"
-GAS_UNKNOWN_KA = "ფასები ქვემოთ, ცხრილშია"
+GAS_UNKNOWN_KA = "ფასები ქვემოთ, სიაშია"  # the list since SPEC-0005 REQ-005 (review C3)
 
 
 def test_when_only_a_switched_off_company_has_the_fuel_the_page_says_so(page_at: Callable[[float, float], Page],
