@@ -45,3 +45,4 @@ status: living
 | 2026-11-01 22:30 +0000 | PLAN-0002 | draft → approved | docs/plans/PLAN-0002-company-badges-and-filter.md | — |
 | 2026-11-01 22:34 +0000 | PLAN-0003 | draft → approved | docs/plans/PLAN-0003-connect-stations-and-prices.md | — |
 | 2026-11-01 22:39 +0000 | PLAN-0004 | draft → approved | docs/plans/PLAN-0004-logos-and-black-orange-look.md | — |
+| 2026-11-02 03:57 +0000 | SPEC-0005 | review → approved | docs/specs/SPEC-0005-look-from-reference-photo.md | — |
