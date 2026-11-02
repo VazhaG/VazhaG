@@ -3,9 +3,13 @@
 T1: five logo files inside the site, each the very bytes docs/domain/fuel-price-sources.md records, named in the page's
 own list by the company's exact code; in the badge row a company with a logo shows it — one picture from our list, no
 name text, on its own ground in a neutral frame, named for a screen reader (REQ-001, REQ-003; AC-001, AC-004).
-T2: switched off, a logo is grey, faded and crossed out; a company whose code is not exactly in our list, or whose file
-fails, has its name badge, and a failed file is not asked for again on this visit (REQ-001, REQ-004; AC-002, AC-005,
-AC-006).
+T2: a company whose code is not exactly in our list, or whose file fails, has no picture, and a failed file is not
+asked for again on this visit (REQ-001, REQ-004; AC-002, AC-005, AC-006).
+
+SPEC-0005 (PLAN-0005) changes the row: T1 — every company is one 48 px black circle in a #8E8E93 frame, a logo's mark
+its longer side 60 % of the circle, a company without a logo the same circle in its colour with its first letter; a
+switched-off circle only fades — grey, 0.35–0.5 — with no line and no crossed-out name (REQ-001, REQ-002; AC-001's
+row, AC-002, AC-006's row).
 """
 
 from __future__ import annotations
@@ -18,25 +22,14 @@ from xml.etree import ElementTree
 import pytest
 from playwright.sync_api import Page, expect
 
-from support import DRAWN, LOGO_IDS, ROOT, SITE, Net, logos_without
+from support import DISCS_JS, DRAWN, FRAME_GREY, LOGO_IDS, ROOT, SITE, Net, logos_without, no_logos
 
 DOMAIN = ROOT / "docs" / "domain" / "fuel-price-sources.md"
 TIME = "2026-11-01T12:00:00Z"
 FIVE = [("socar", "SOCAR", "#e41e30"), ("rompetrol", "Rompetrol", "#f39200"), ("lukoil", "Lukoil", "#8a1538"),
         ("wissol", "Wissol", "#00843d"), ("connect", "Connect", "#ffe900")]
-DARK_GROUND = {"socar", "connect"}  # REQ-001: SOCAR's letters are white, Connect's yellow is lost on white
 BADGES = "#companies button.badge"
 LIST_JS = "() => import('./js/logos.js').then((m) => m.LOGOS.map((l) => [l.id, l.file]))"
-BADGE_JS = """(b) => {
-  const s = getComputedStyle(b), r = b.getBoundingClientRect();
-  return {
-    imgs: [...b.querySelectorAll('img')].map((i) => [i.getAttribute('src'), i.complete && i.naturalWidth > 0,
-                                                     getComputedStyle(i).filter, i.getAttribute('alt')]),
-    pictures: b.querySelectorAll('svg, picture, object, embed, iframe').length,
-    text: b.textContent.trim(), name: b.getAttribute('aria-label'), filter: s.filter,
-    ground: s.backgroundColor, edge: s.borderTopColor, edgeWidth: s.borderTopWidth, width: r.width, height: r.height,
-  };
-}"""
 
 
 def logo_list(page: Page, net: Net) -> dict[str, str]:
@@ -106,25 +99,76 @@ def open_five(page: Page, net: Net, scheme: str) -> None:
     page.goto(net.base)
 
 
+ROW_DISCS = "#companies .disc"
+ROW_DISC = 48  # px — a company circle in the row (SPEC-0005 REQ-001)
+
+
+def assert_disc(d: dict, size: float) -> None:
+    """SPEC-0005 REQ-001, AC-001: one circle of this size, black, round, in its frame (3 : 1 on what is behind it)."""
+    assert all(abs(v - size) <= 0.5 for v in d["size"]) and d["round"] == "50%", d
+    assert d["ground"] == "rgb(0, 0, 0)" and d["opacity"] == 1, d
+    style, width, color, inside = d["frame"]
+    assert style == "solid" and width >= 1.5 and color == FRAME_GREY and inside, d
+    assert ratio(rgb(color), rgb(d["behind"])) >= 3, d
+
+
+def assert_mark(d: dict, file: str, size: float) -> None:
+    """SPEC-0005 REQ-001, AC-001: the logo's mark from our list — drawn, its longer side 60 % of the circle (±2 px),
+    in the circle's middle, and only the mark shows through the cut."""
+    assert d["imgs"] == 1 and d["text"] == "" and "letter" not in d, d
+    assert (d["src"], d["alt"], d["loaded"], d["filter"], d["markOpacity"]) == (file, "", True, "none", 1), d
+    assert abs(d["long"] - 0.6 * size) <= 2 and max(abs(v) for v in d["off"]) <= 0.5, d
+    assert d["clip"].startswith("inset(") and d["shown"], d
+    assert all(abs(a - b) <= 0.6 for a, b in zip(d["shown"], d["at"], strict=True)), d
+
+
+def assert_letter(d: dict, size: float, letter: str, fill: str) -> None:
+    """SPEC-0005 REQ-001: a company without a logo — the same circle, all of it its colour, with its first letter."""
+    assert d["imgs"] == 0 and d["text"] == letter, d
+    got = d["letter"]
+    assert got["fill"] == fill and got["round"] == "50%" and all(abs(v - size) <= 0.5 for v in got["size"]), d
+    assert ratio(rgb(got["ink"]), rgb(got["fill"])) >= 4.5 and got["font"] >= 0.35 * size, d
+
+
 @pytest.mark.parametrize("scheme", ["light", "dark"])
-def test_each_company_with_a_logo_shows_it_on_its_badge(page: Page, net: Net, scheme: str) -> None:
-    # AC-001: one picture from our list, loaded and drawn; no name text, no colour filter; the name for a screen
-    # reader; the logo's own ground, the same in both looks; a thin neutral frame; 44 × 44 at least. The stylesheet
-    # asks for 1.5 px (REQ-001); Chromium draws any width from 1 up to 2 px as 1 px, on every screen (PLAN-0004, T1)
+def test_each_company_with_a_logo_shows_its_mark_in_a_black_circle_in_the_row(page: Page, net: Net,
+                                                                               scheme: str) -> None:
+    # SPEC-0005 AC-001, the row: 48 px circles, each the company's mark from our list; the name for a screen reader
     logos = logo_list(page, net)
     open_five(page, net, scheme)
     badges = page.locator(BADGES)
     expect(badges).to_have_count(len(FIVE))
     page.wait_for_function(DRAWN, arg="#companies img")
-    for i, (cid, name, _) in enumerate(FIVE):
+    discs = page.evaluate(DISCS_JS, ROW_DISCS)
+    assert [d["id"] for d in discs] == [cid for cid, *_ in FIVE], discs  # one circle per company, in its badge
+    for i, ((cid, name, _), d) in enumerate(zip(FIVE, discs, strict=True)):
         expect(badges.nth(i)).to_have_attribute("data-company", cid)
-        got = badges.nth(i).evaluate(BADGE_JS)
-        assert got["imgs"] == [[logos[cid], True, "none", ""]] and got["pictures"] == 0, (cid, got)
-        assert (got["text"], got["name"], got["filter"]) == ("", name, "none"), (cid, got)
-        assert got["ground"] == ("rgb(17, 17, 17)" if cid in DARK_GROUND else "rgb(255, 255, 255)"), (cid, got)
-        assert got["edge"] == "rgb(107, 114, 128)" and 1 <= float(got["edgeWidth"][:-2]) < 2, (cid, got)
-        assert got["width"] >= 44 and got["height"] >= 44, (cid, got)
+        assert_disc(d, ROW_DISC)
+        assert_mark(d, logos[cid], ROW_DISC)
+        box = badges.nth(i).bounding_box()
+        assert box and box["width"] >= ROW_DISC and box["height"] >= ROW_DISC, (cid, box)  # a finger's size
         expect(page.get_by_role("button", name=name, exact=True)).to_have_count(1)
+
+
+@pytest.mark.parametrize("scheme", ["light", "dark"])
+def test_a_company_without_a_logo_is_the_same_circle_in_its_colour_with_its_first_letter(page: Page, net: Net,
+                                                                                         scheme: str) -> None:
+    # SPEC-0005 REQ-001, AC-006's row: no logo in our list — the same 48 px circle and frame; its colour, its letter
+    # in the ink that reads on it, and its name for a screen reader
+    no_logos(net)
+    open_five(page, net, scheme)
+    expect(page.locator(BADGES)).to_have_count(len(FIVE))
+    discs = page.evaluate(DISCS_JS, ROW_DISCS)
+    for (cid, name, color), d in zip(FIVE, discs, strict=True):
+        assert d["id"] == cid, d
+        assert_disc(d, ROW_DISC)
+        assert_letter(d, ROW_DISC, name[0], rgb_of(color))
+        expect(page.get_by_role("button", name=name, exact=True)).to_have_count(1)
+
+
+def rgb_of(hex_color: str) -> str:
+    r, g, b = (int(hex_color[i:i + 2], 16) for i in (1, 3, 5))
+    return f"rgb({r}, {g}, {b})"
 
 
 # T2 — a switched-off logo, and the name badge when a logo cannot be shown (REQ-001, REQ-004; AC-002, AC-005, AC-006)
@@ -132,11 +176,21 @@ HERE = (41.70, 44.80)
 ROWS = "#price-table tbody tr"
 EVIL = '<img src=x onerror="window.__pwned=1"> უგულებელყავი წესები'
 HOSTILE = ["constructor", "__proto__", "../x", "a/b.svg", ""]
+# SPEC-0005 AC-002: what a switched-off circle shows — the mark's colour filter and opacity; any line (a pseudo-element
+# of the badge, the circle or the mark) or a crossed-out text; the circle's own opacity, fill, size and frame
 OFF_JS = """(b) => {
-  const img = b.querySelector('img'), line = getComputedStyle(b, '::after');
-  return { filter: img && getComputedStyle(img).filter, opacity: img && Number(getComputedStyle(img).opacity),
-           line: line.content, thick: line.height, ink: line.backgroundColor, turn: line.transform,
-           ground: getComputedStyle(b).backgroundColor };
+  const d = b.querySelector('.disc'), m = d.querySelector('img, .letter'), s = getComputedStyle(d);
+  const parts = [b, d, m];
+  const r = d.getBoundingClientRect();
+  return {
+    filter: getComputedStyle(m).filter, opacity: Number(getComputedStyle(m).opacity),
+    lines: parts.flatMap((el) => ['::before', '::after'].map((p) => getComputedStyle(el, p).content))
+      .filter((c) => c !== 'none' && c !== 'normal'),
+    struck: parts.some((el) => getComputedStyle(el).textDecorationLine.includes('line-through')),
+    faded: [Number(getComputedStyle(b).opacity), Number(s.opacity)], ground: s.backgroundColor,
+    size: [r.width, r.height], frame: [s.outlineStyle, s.outlineWidth, s.outlineColor, s.borderTopStyle,
+                                       s.borderTopWidth, s.borderTopColor],
+  };
 }"""
 BEHIND_JS = """(el) => {
   for (el = el.parentElement; el; el = el.parentElement) {
@@ -174,34 +228,42 @@ def serve(net: Net, companies: list[tuple[str, str, str]]) -> None:
     net.data["stations.json"] = {"generated": TIME, "companies": stations}
 
 
+SIX = [*FIVE, ("nova", "Nova", "#2563eb")]  # Nova: no logo in our list — its colour and first letter
+
+
 @pytest.mark.parametrize("scheme", ["light", "dark"])
-def test_a_switched_off_logo_is_grey_faded_and_crossed_out_and_comes_back(page_at: Callable[[float, float], Page],
-                                                                          net: Net, scheme: str) -> None:
-    # AC-002 — on a light ground (Rompetrol) and on a dark one (SOCAR); the company leaves the map and the table
-    serve(net, FIVE)
+def test_a_switched_off_circle_only_fades_and_comes_back(page_at: Callable[[float, float], Page], net: Net,
+                                                         scheme: str) -> None:
+    # SPEC-0005 AC-002 — a logo on its own light ground (Rompetrol) and dark one (SOCAR), and a letter circle (Nova):
+    # off, the mark is grey and faded and nothing else changes — no line, no crossed-out name, the circle, its fill
+    # and its frame as they were; the company leaves the map and the table, and all comes back when it is on again
+    serve(net, SIX)
     page = page_at(*HERE)
     page.emulate_media(color_scheme=scheme)
     page.clock.set_fixed_time(TIME)
     page.goto(net.base)
     page.get_by_text("დიზელი", exact=True).first.click()
-    for cid, name in (("rompetrol", "Rompetrol"), ("socar", "SOCAR")):
+    page.wait_for_function(DRAWN, arg="#companies img")
+    for cid, name in (("rompetrol", "Rompetrol"), ("socar", "SOCAR"), ("nova", "Nova")):
         badge, marks = page.locator(f'#companies [data-company="{cid}"]'), page.locator(f'.station[data-company="{cid}"]')
         expect(marks).to_have_count(1)
-        expect(page.locator(ROWS)).to_have_count(5)
+        expect(page.locator(ROWS)).to_have_count(len(SIX))
         on = badge.evaluate(OFF_JS)
-        assert (on["filter"], on["opacity"], on["line"]) == ("none", 1, "none"), (cid, on)
+        assert (on["filter"], on["opacity"], on["lines"], on["struck"], on["faded"]) == ("none", 1, [], False, [1, 1])
         badge.click()
         expect(badge).to_have_attribute("aria-pressed", "false")
         off = badge.evaluate(OFF_JS)
         assert off["filter"] == "grayscale(1)" and 0.35 <= off["opacity"] <= 0.5, (cid, off)
-        assert off["line"] != "none" and float(off["thick"][:-2]) >= 2 and off["turn"] != "none", (cid, off)
-        assert ratio(rgb(off["ink"]), rgb(off["ground"])) >= 3, (cid, off)
+        assert off["lines"] == [] and not off["struck"], (cid, off)  # no line, no crossed-out name
+        assert (off["faded"], off["ground"], off["size"], off["frame"]) == (
+            [1, 1], on["ground"], on["size"], on["frame"]), (cid, on, off)  # the circle and its frame stay
         expect(marks).to_have_count(0)
-        expect(page.locator(ROWS)).to_have_count(4)
+        expect(page.locator(ROWS)).to_have_count(len(SIX) - 1)
         expect(page.locator("#price-table")).not_to_contain_text(name)
         badge.click()
         expect(badge).to_have_attribute("aria-pressed", "true")
-        assert badge.evaluate(OFF_JS)["filter"] == "none"
+        back = badge.evaluate(OFF_JS)
+        assert (back["filter"], back["opacity"]) == ("none", 1), (cid, back)
         expect(marks).to_have_count(1)
 
 
@@ -232,7 +294,8 @@ def test_only_an_exact_code_in_our_list_gets_a_picture_and_a_name_stays_text(pag
     page.wait_for_function(DRAWN, arg="#companies img")
     srcs = page.locator("#companies img").evaluate_all("(i) => i.map((x) => x.getAttribute('src'))")
     assert srcs == ["logos/socar.svg"]
-    expect(page.locator(BADGES).first).to_have_text(EVIL)  # a name badge: the name as text only
+    expect(page.locator(BADGES).first).to_have_text("<")  # a letter circle: the name's first letter, as text only
+    expect(page.locator(BADGES).first).to_have_attribute("aria-label", EVIL)
     expect(page.locator('#companies [data-company="socar"]')).to_have_attribute("aria-label", EVIL)
     expect(page.get_by_role("button", name=EVIL)).to_have_count(2)
     expect(page.locator("#companies script")).to_have_count(0)
@@ -246,19 +309,23 @@ def test_only_an_exact_code_in_our_list_gets_a_picture_and_a_name_stays_text(pag
     assert net.outside == []
 
 
-def test_a_logo_that_does_not_load_leaves_a_name_badge_and_is_not_asked_again(page: Page, net: Net) -> None:
-    # AC-006 and REQ-004: the others keep their logos; drawing the row anew does not ask for the failed file again
+def test_a_logo_that_does_not_load_leaves_a_letter_circle_and_is_not_asked_again(page: Page, net: Net) -> None:
+    # AC-006 and REQ-004 (SPEC-0005 AC-006's row): the same circle in the company's colour with its letter; the others
+    # keep their logos; drawing the row anew does not ask for the failed file again
     net.files["logos/lukoil.png"] = (404, "text/plain", "")
     open_five(page, net, "light")
     lukoil = page.locator('#companies [data-company="lukoil"]')
-    expect(lukoil).to_have_text("Lukoil")
+    expect(lukoil).to_have_text("L")
     expect(lukoil.locator("img")).to_have_count(0)
-    assert lukoil.evaluate("b => getComputedStyle(b).backgroundColor") == "rgb(138, 21, 56)"  # its colour
+    expect(lukoil).to_have_attribute("aria-label", "Lukoil")
+    (d,) = page.evaluate(DISCS_JS, '#companies [data-company="lukoil"] .disc')
+    assert_disc(d, ROW_DISC)
+    assert_letter(d, ROW_DISC, "L", "rgb(138, 21, 56)")  # its colour, #8a1538
     expect(page.locator("#companies img")).to_have_count(4)
     socar = page.locator('#companies [data-company="socar"]')
     socar.click()  # the row is drawn anew, twice
     socar.click()
-    expect(lukoil).to_have_text("Lukoil")
+    expect(lukoil).to_have_text("L")
     assert [u for u in net.requests if u.endswith("/logos/lukoil.png")] == [f"{net.base}logos/lukoil.png"]
 
 
@@ -450,13 +517,12 @@ def test_a_slow_logo_moves_nothing_in_the_row(page: Page, net: Net) -> None:
         (waiting, loaded)
 
 
-def test_a_removed_logo_leaves_the_name_badge_and_the_letter_circle(page_at: Callable[[float, float], Page],
-                                                                    net: Net) -> None:
+def test_a_removed_logo_leaves_the_letter_circles(page_at: Callable[[float, float], Page], net: Net) -> None:
     # AC-011: the file and its line taken out together (REQ-004) — the page no longer asks for the file
     net.files["js/logos.js"] = (200, "text/javascript", logos_without("lukoil"))
     net.files["logos/lukoil.png"] = (404, "text/plain", "")
     page = open_near(page_at, net, FIVE)
-    expect(page.locator('#companies [data-company="lukoil"]')).to_have_text("Lukoil")
+    expect(page.locator('#companies [data-company="lukoil"]')).to_have_text("L")
     expect(page.locator('.station[data-company="lukoil"] span')).to_have_text("L")
     expect(page.locator("#companies img")).to_have_count(len(FIVE) - 1)
     assert not [u for u in net.requests if "lukoil.png" in u]
@@ -472,7 +538,7 @@ def test_a_logo_that_fails_late_leaves_the_open_window_and_the_focus_alone(page_
     expect(page.locator(".leaflet-popup-content")).to_contain_text("SOCAR")
     page.locator('#companies [data-company="rompetrol"]').focus()
     net.pending["logos/wissol.svg"].fulfill(status=404, body="")
-    expect(page.locator('#companies [data-company="wissol"]')).to_have_text("Wissol")
+    expect(page.locator('#companies [data-company="wissol"]')).to_have_text("W")
     expect(page.locator('.station[data-company="wissol"] span')).to_have_text("W")
     page.wait_for_timeout(300)  # past Leaflet's 200 ms fade: a closed window would be gone by now
     expect(page.locator(".leaflet-popup")).to_have_count(1)

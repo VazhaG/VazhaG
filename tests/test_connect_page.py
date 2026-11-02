@@ -3,8 +3,10 @@
 T4: a company whose colour is light (its letters are dark: today Rompetrol and Connect) has a dark outline by day, on
 its badge and on its map circles, so they stand out on the white page and the light map; at night the outline is as
 before (REQ-003; AC-007).
-T5: five badges do not fit a phone's width — the row scrolls in its place, never the page, and the edge with more
+T5: badges that do not fit a phone's width — the row scrolls in its place, never the page, and the edge with more
 badges beyond it fades in a 24 px strip; a badge reached from the keyboard stops clear of the strip (REQ-005; AC-006).
+SPEC-0005 (PLAN-0005 T1): a badge is a 48 px circle in a neutral frame, so five fit a phone and the row scrolls only
+from the sixth or seventh on; the outline rule of T4 stays the map circles' own.
 T6: Connect works on the page as every other company — its badge and letter, the switch, the ★ with both route links,
 the gas fuels, a returning visitor's stored choice (REQ-003; AC-005).
 """
@@ -43,9 +45,14 @@ def north(km: float) -> float:
     return round(HERE[0] + km / KM_PER_DEGREE, 6)
 
 
-def serve_five(net: Net) -> None:
+# three more companies, without a logo: eight 48 px circles do not fit a phone's row (SPEC-0005 REQ-001)
+EIGHT = [*FIVE, ("nova", "Nova", "#2563eb", 4.85, 1.5), ("orbit", "Orbit", "#7c3aed", 4.86, 2.5),
+         ("terra", "Terra", "#0d9488", 4.87, 3.5)]
+
+
+def serve_five(net: Net, companies: list[tuple[str, str, str, float, float]] = FIVE) -> None:
     prices, stations = [], []
-    for cid, name, color, price, km in FIVE:
+    for cid, name, color, price, km in companies:
         head = {"id": cid, "name": name, "color": color, "source": f"https://{cid}.example/", "time": TIME,
                 "basis": "read"}
         prices.append(head | {"prices": [{"grade": f"{name} დიზელი", "fuel": "diesel", "price": price}]})
@@ -65,14 +72,15 @@ def open_five_far(page: Page, net: Net, scheme: str) -> Page:
     return page
 
 
-def open_five(page_at: Callable[[float, float], Page], net: Net, scheme: str = "light") -> Page:
-    serve_five(net)
+def open_five(page_at: Callable[[float, float], Page], net: Net, scheme: str = "light",
+              companies: list[tuple[str, str, str, float, float]] = FIVE) -> Page:
+    serve_five(net, companies)
     page = page_at(*HERE)
     page.emulate_media(color_scheme=scheme)
     page.clock.set_fixed_time(TIME)
     page.goto(net.base)
     page.get_by_text("დიზელი", exact=True).first.click()
-    expect(page.locator(".station.near span")).to_have_count(len(FIVE))  # the city view: letters on the map
+    expect(page.locator(".station.near span")).to_have_count(len(companies))  # the city view: letters on the map
     return page
 
 
@@ -106,24 +114,19 @@ def circle(cid: str) -> str:
     return f'.station[data-company="{cid}"] span'
 
 
-def test_by_day_a_light_colour_has_a_dark_outline_on_its_badge_and_its_circles(
-        page_at: Callable[[float, float], Page], net: Net) -> None:
-    no_logos(net)  # SPEC-0004 §3: the outline is a name badge's and a letter circle's (a company without a logo)
+def test_by_day_a_light_colour_has_a_dark_outline_on_its_circles(page_at: Callable[[float, float], Page],
+                                                                 net: Net) -> None:
+    # on the map; in the row every circle has the same neutral frame (SPEC-0005 REQ-001 — test_logos.py)
+    no_logos(net)  # SPEC-0004 §3: the outline is a letter circle's (a company without a logo)
     page = open_five(page_at, net, "light")
-    for cid, _, color, _, _ in FIVE:
-        light = cid in LIGHT
-        assert style(page, badge(cid), "borderTopColor") == (DARK_INK if light else hex_rgb(color)), cid
-        assert style(page, circle(cid), "borderTopColor") == (DARK_INK if light else WHITE), cid
-    page.locator(badge("connect")).click()  # switched off: only the frame stays — still dark
-    expect(page.locator(badge("connect"))).to_have_attribute("aria-pressed", "false")
-    assert style(page, badge("connect"), "borderTopColor") == DARK_INK
+    for cid, *_ in FIVE:
+        assert style(page, circle(cid), "borderTopColor") == (DARK_INK if cid in LIGHT else WHITE), cid
 
 
 def test_at_night_the_outline_is_as_before(page_at: Callable[[float, float], Page], net: Net) -> None:
     no_logos(net)
     page = open_five(page_at, net, "dark")
-    for cid, _, color, _, _ in FIVE:
-        assert style(page, badge(cid), "borderTopColor") == hex_rgb(color), cid
+    for cid, *_ in FIVE:
         assert style(page, circle(cid), "borderTopColor") == WHITE, cid
 
 
@@ -155,16 +158,21 @@ def test_from_far_the_small_dots_keep_the_same_outline(page: Page, net: Net, sch
 @pytest.mark.parametrize("scheme", ["light", "dark"])
 def test_connects_name_and_letter_read_well_on_and_off(page_at: Callable[[float, float], Page], net: Net,
                                                        scheme: str) -> None:
-    no_logos(net)  # SPEC-0004 §3: the name and the letter "C" — Connect without its logo
+    no_logos(net)  # SPEC-0004 §3: the letter "C" — Connect without its logo
     page = open_five(page_at, net, scheme)
     letter = page.locator(circle("connect"))
     expect(letter).to_have_text("C")
     assert ratio(style(page, circle("connect"), "color"), style(page, circle("connect"), "backgroundColor")) >= 4.5
-    on = page.locator(badge("connect"))
-    assert ratio(rgb(on.evaluate("b => getComputedStyle(b).color")), rgb(on.evaluate(BACKGROUND_JS))) >= 4.5
+    # the row (SPEC-0005 REQ-001, REQ-002): its letter reads on its yellow; off, the letter fades on purpose (its
+    # name is the button's), and the circle's frame still stands out from the sheet
+    on, row_letter = page.locator(badge("connect")), page.locator(f"{badge('connect')} .letter")
+    expect(row_letter).to_have_text("C")
+    assert ratio(style(page, f"{badge('connect')} .letter", "color"),
+                 style(page, f"{badge('connect')} .letter", "backgroundColor")) >= 4.5
     on.click()
     expect(on).to_have_attribute("aria-pressed", "false")
-    assert ratio(rgb(on.evaluate("b => getComputedStyle(b).color")), rgb(on.evaluate(BACKGROUND_JS))) >= 4.5
+    disc = page.locator(f"{badge('connect')} .disc")
+    assert ratio(rgb(disc.evaluate("d => getComputedStyle(d).outlineColor")), rgb(disc.evaluate(BACKGROUND_JS))) >= 3
 
 
 # T5 — the row of five (REQ-005; AC-006)
@@ -204,9 +212,26 @@ def scroll_row(page: Page, to: str) -> None:
 
 @pytest.mark.parametrize("scheme", ["light", "dark"])
 @pytest.mark.parametrize("language", ["ka", "en"])
-def test_five_badges_scroll_in_their_row_never_the_page_and_the_edge_beyond_fades(
+def test_five_circles_fit_a_phones_row_with_no_scroll_and_no_faded_edge(
         page_at: Callable[[float, float], Page], net: Net, scheme: str, language: str) -> None:
+    # SPEC-0005 (it changes SPEC-0003 REQ-005 for five): the five companies' circles fit 375 px in one line
     page = open_five(page_at, net, scheme)
+    if language == "en":
+        page.get_by_role("button", name="ENG").click()
+        expect(page.locator(ROW)).to_have_attribute("aria-label", "Companies")
+    expect(page.locator(f"{ROW} .badge")).to_have_count(len(FIVE))
+    state = edges(page)
+    assert not state["more"] and not state["start"] and not state["end"] and state["mask"] == "none", state
+    tops = {round(b["y"]) for b in (x.bounding_box() for x in page.locator(f"{ROW} .badge").all()) if b}
+    assert len(tops) == 1, tops  # one line
+    assert page.evaluate("document.documentElement.scrollWidth <= window.innerWidth")
+
+
+@pytest.mark.parametrize("scheme", ["light", "dark"])
+@pytest.mark.parametrize("language", ["ka", "en"])
+def test_badges_that_do_not_fit_scroll_in_their_row_never_the_page_and_the_edge_beyond_fades(
+        page_at: Callable[[float, float], Page], net: Net, scheme: str, language: str) -> None:
+    page = open_five(page_at, net, scheme, EIGHT)
     if language == "en":
         page.get_by_role("button", name="ENG").click()
         expect(page.locator(ROW)).to_have_attribute("aria-label", "Companies")
@@ -242,7 +267,7 @@ def test_a_row_that_fits_has_no_faded_edge(page_at: Callable[[float, float], Pag
 
 def test_a_wider_screen_that_fits_the_row_loses_the_faded_edge(page_at: Callable[[float, float], Page],
                                                                 net: Net) -> None:
-    page = open_five(page_at, net)
+    page = open_five(page_at, net, companies=EIGHT)
     assert edges(page)["end"]
     page.set_viewport_size({"width": 1024, "height": 812})  # a phone turned sideways, a tablet
     page.wait_for_timeout(200)
@@ -253,12 +278,12 @@ def test_a_wider_screen_that_fits_the_row_loses_the_faded_edge(page_at: Callable
 def test_a_tap_on_the_faded_part_of_a_badge_still_presses_it(page_at: Callable[[float, float], Page],
                                                               net: Net) -> None:
     # critic C3: the row must not scroll between the finger going down and coming up — the tap would land elsewhere
-    page = open_five(page_at, net)
+    page = open_five(page_at, net, companies=EIGHT)
     assert edges(page)["end"]
     row = page.locator(ROW).bounding_box()
     assert row
     strip = (row["x"] + row["width"] - STRIP, row["x"] + row["width"])
-    for cid, *_ in FIVE:  # the badge that reaches into the faded strip (which one depends on the badges' widths)
+    for cid, *_ in EIGHT:  # the badge that reaches into the faded strip (which one depends on the badges' widths)
         box = page.locator(badge(cid)).bounding_box()
         assert box
         left, right = max(box["x"], strip[0]), min(box["x"] + box["width"], strip[1])
@@ -272,9 +297,9 @@ def test_a_tap_on_the_faded_part_of_a_badge_still_presses_it(page_at: Callable[[
 
 def test_every_badge_is_reached_and_pressed_from_the_keyboard_clear_of_the_strip(
         page_at: Callable[[float, float], Page], net: Net) -> None:
-    page = open_five(page_at, net)
+    page = open_five(page_at, net, companies=EIGHT)
     page.locator(f"{ROW} .badge").first.focus()
-    for i, (cid, *_) in enumerate(FIVE):
+    for i, (cid, *_) in enumerate(EIGHT):
         if i:
             page.keyboard.press("Tab")
         assert page.evaluate("document.activeElement.dataset.company") == cid
@@ -307,11 +332,12 @@ STORED_OFF = "localStorage.getItem('fuel-map.off')"
 
 def test_connects_badge_and_map_letter_in_its_colour_with_dark_letters(page_at: Callable[[float, float], Page],
                                                                        net: Net) -> None:
-    no_logos(net)  # SPEC-0004 §3: Connect's name badge and letter, as a company without a logo shows them
+    no_logos(net)  # SPEC-0004 §3: Connect's letter circles, as a company without a logo shows them (SPEC-0005)
     page = open_five(page_at, net)
-    expect(page.locator(f"{ROW} .badge")).to_have_text([name for _, name, *_ in FIVE])
-    assert style(page, badge("connect"), "backgroundColor") == hex_rgb("#ffe900")
-    assert style(page, badge("connect"), "color") == DARK_INK
+    expect(page.locator(f"{ROW} .badge")).to_have_text([name[0] for _, name, *_ in FIVE])
+    assert [b.get_attribute("aria-label") for b in page.locator(f"{ROW} .badge").all()] == [n for _, n, *_ in FIVE]
+    assert style(page, f"{badge('connect')} .letter", "backgroundColor") == hex_rgb("#ffe900")
+    assert style(page, f"{badge('connect')} .letter", "color") == DARK_INK
     expect(page.locator(circle("connect"))).to_have_text("C")
     assert style(page, circle("connect"), "backgroundColor") == hex_rgb("#ffe900")
     assert style(page, circle("connect"), "color") == DARK_INK

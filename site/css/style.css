@@ -18,6 +18,7 @@
   --bar: var(--black); /* the header bar, the same in both looks */
   --on-bar: var(--white);
   --frame: #6b7280; /* a neutral frame: 3 : 1 on the white and on the black */
+  --disc-frame: #8e8e93; /* a company circle's frame, in both looks (SPEC-0005 REQ-001) */
   --shadow: rgb(17 17 17 / 0.16);
   --header-h: 52px;
   --overlap: 24px; /* how far the sheet rises over the map */
@@ -297,7 +298,7 @@ h1 {
   margin-left: auto;
 }
 
-/* SPEC-0002: the company badges — text on the company's colour, never a picture */
+/* SPEC-0002: the company badges — since SPEC-0005 each a circle with the company's mark or letter */
 .companies {
   display: flex;
   flex-wrap: nowrap;
@@ -309,7 +310,7 @@ h1 {
   scroll-padding-inline: 24px; /* a badge reached from the keyboard stops clear of the faded strip */
 }
 
-/* SPEC-0003 REQ-005: five or more badges scroll in the row; an edge with more badges beyond it fades in 24 px */
+/* SPEC-0003 REQ-005: badges that do not fit scroll in the row; an edge with more badges beyond it fades in 24 px */
 .companies.more-end {
   -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 24px), transparent);
   mask-image: linear-gradient(to right, #000 calc(100% - 24px), transparent);
@@ -329,72 +330,69 @@ h1 {
   display: none;
 }
 
-.badge {
+/* SPEC-0005 REQ-001: a company's sign — one black circle in a neutral frame (3 : 1 on the sheet in both looks), the
+   same wherever the company shows; each place gives it its size (--d). The frame is drawn inside the circle, so the
+   circle is its whole size; the logo's mark is set in shares of it (js/app.js). */
+.disc {
+  position: relative;
+  display: grid;
   flex: none;
-  min-width: 44px;
-  min-height: 44px;
-  padding: 8px 10px; /* four companies fit a phone's width in one line; five scroll in the row */
-  border: 2px solid var(--edge, var(--company)); /* SPEC-0003 REQ-003: dark for a light colour, by day */
-  border-radius: 999px;
-  background: var(--company);
-  color: var(--ink);
+  place-items: center;
+  width: var(--d, 48px);
+  height: var(--d, 48px);
+  overflow: hidden;
+  border-radius: 50%;
+  background: #000000;
+  outline: 2px solid var(--disc-frame);
+  outline-offset: -2px;
+}
+
+.disc img {
+  position: absolute;
+  max-width: none;
+}
+
+/* a company without a logo: the whole circle its colour, with its first letter in the ink that reads on it */
+.disc .letter {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  font-size: calc(var(--d, 48px) * 0.42);
+  font-weight: 800;
+  line-height: 1;
+}
+
+/* the row: five 48 px circles fit a phone's width in one line (SPEC-0005 REQ-001); more scroll in the row */
+.badge {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
   font: inherit;
-  font-size: 0.9rem;
-  font-weight: 700;
   cursor: pointer;
 }
 
-.badge[aria-pressed="false"] {
-  background: transparent; /* switched off: only the company's frame stays, and the name is crossed out */
-  color: var(--text);
-  text-decoration: line-through;
+.companies .disc {
+  --d: 48px;
+}
+
+/* SPEC-0005 REQ-002: switched off, the mark only loses its colour and fades — no line, no crossed-out name; the
+   circle and its frame stay as they are */
+.badge[aria-pressed="false"] .disc > * {
+  filter: grayscale(1);
+  opacity: 0.45;
 }
 
 .badge:focus-visible {
   outline: 2px solid var(--text);
   outline-offset: 2px;
-}
-
-/* SPEC-0004 REQ-001: a company's logo on its own ground in a neutral frame (3 : 1 on the page in both looks) — the
-   same in both looks; the name is the button's label */
-.badge.logo {
-  position: relative;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 6px 14px;
-  border: 1.5px solid #6b7280;
-  background: var(--ground);
-}
-
-.badge.logo img {
-  display: block;
-}
-
-/* SPEC-0004 REQ-001: switched off, the logo loses its colour and fades, and a line crosses it — off shows without
-   colour too; the line is the ink that reads on the logo's ground (3 : 1 at least) */
-.badge.logo[aria-pressed="false"] {
-  background: var(--ground);
-  text-decoration: none;
-}
-
-.badge.logo[aria-pressed="false"] img {
-  filter: grayscale(1);
-  opacity: 0.45;
-}
-
-.badge.logo[aria-pressed="false"]::after {
-  content: "";
-  position: absolute;
-  top: 50%;
-  right: 10px;
-  left: 10px;
-  height: 3px;
-  margin-top: -1.5px;
-  border-radius: 2px;
-  background: var(--strike);
-  transform: rotate(-14deg);
-  pointer-events: none;
 }
 
 .best[hidden] {
@@ -616,10 +614,6 @@ tr.stale .price {
    (SPEC-0004 REQ-005). */
 :root[data-theme="dark"] .leaflet-container {
   background: var(--page);
-}
-
-:root[data-theme="dark"] .badge:not(.logo) {
-  border-color: var(--company);
 }
 
 :root[data-theme="dark"] .station span {

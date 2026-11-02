@@ -187,10 +187,6 @@ function markBest(b) {
     .addTo(state.map);
 }
 
-// SPEC-0004 REQ-001: a logo is drawn this many pixels high on its badge; its width keeps the file's proportions, and
-// both are set before the picture arrives, so a slow or failed file never moves the row (REQ-003).
-const LOGO_HEIGHT = 30;
-
 // SPEC-0004 REQ-003, REQ-004: each logo file is asked for once on a visit. One loader picture per file asks for it;
 // the page's own pictures get the address only once the file has arrived, so the browser gives it from what it
 // already holds — however often the row and the map are drawn meanwhile. A file that fails is remembered: its
@@ -233,34 +229,52 @@ function logoImage(logo, onFail) {
   return img;
 }
 
-// SPEC-0002: a company without a logo — its name on its colour.
-function nameBadge(badge, c) {
-  badge.classList.remove('logo');
-  badge.removeAttribute('aria-label');
-  badge.textContent = c.name || '?';
-  badge.style.setProperty('--company', c.color);
-  badge.style.setProperty('--ink', inkOn(c.color));
-  setEdge(badge, c.color);
+// SPEC-0005 REQ-001: a company's sign — one black circle, the same wherever the company shows; the stylesheet gives
+// each place its size. A logo shows its mark, the part that reads small, cut from its own file: the mark's longer side
+// is MARK_SHARE of the circle, set in shares of the circle, so the picture fits any size before its file arrives and a
+// slow file moves nothing. A company without a logo, or whose file fails, has its colour and first letter instead —
+// changed in place, so an open station window and the keyboard's focus stay where they are (review C1).
+const MARK_SHARE = 0.6;
+
+function share(v) {
+  return `${v * 100}%`;
 }
 
-// SPEC-0004 REQ-001: a company with a logo in our list shows it on its own ground; its name is what a screen reader
-// says. Switched off, the stylesheet greys it and crosses it out with a line in --strike, the ink that reads on the
-// ground. A file that fails leaves the name badge (REQ-004).
-function logoBadge(badge, logo, c) {
-  badge.classList.add('logo');
-  badge.setAttribute('aria-label', c.name || '?');
-  badge.style.setProperty('--ground', logo.ground);
-  badge.style.setProperty('--strike', inkOn(logo.ground));
-  const img = logoImage(logo, () => {
-    nameBadge(badge, c); // the same button: the keyboard's focus stays on it
-    markRowEdges();
-  });
-  img.width = Math.round((LOGO_HEIGHT * logo.size[0]) / logo.size[1]);
-  img.height = LOGO_HEIGHT;
-  badge.append(img);
+function markImage(logo, onFail) {
+  const img = logoImage(logo, onFail);
+  const [x, y, w, h] = logo.mark;
+  const [fw, fh] = logo.size;
+  const k = MARK_SHARE / Math.max(w, h); // the circle's width per pixel of the file
+  img.style.width = share(fw * k);
+  img.style.height = share(fh * k);
+  img.style.left = share((1 - w * k) / 2 - x * k);
+  img.style.top = share((1 - h * k) / 2 - y * k);
+  // only the mark shows — not the letters beside it (Lukoil's word under its square)
+  img.style.clipPath = `inset(${share(y / fh)} ${share((fw - x - w) / fw)} ${share((fh - y - h) / fh)} ${share(x / fw)})`;
+  return img;
 }
 
-// SPEC-0002: the badge row above the ★ card — one per company in the data.
+function firstLetter(name) {
+  return Array.from(name.trim())[0] ?? '?';
+}
+
+function letterDisc(circle, c) {
+  const letter = element('span', 'letter', firstLetter(c.name));
+  letter.style.backgroundColor = c.color;
+  letter.style.color = inkOn(c.color); // REQ-007 of SPEC-0002: the ink that reads best on the colour
+  circle.replaceChildren(letter);
+}
+
+function disc(c) {
+  const circle = element('span', 'disc');
+  const logo = usableLogo(c.id);
+  if (logo) circle.append(markImage(logo, () => letterDisc(circle, c)));
+  else letterDisc(circle, c);
+  return circle;
+}
+
+// SPEC-0002: the badge row above the ★ card — one per company in the data; its name is what a screen reader says
+// (SPEC-0005 REQ-001), its state is aria-pressed.
 function renderCompanies() {
   const box = document.getElementById('companies');
   box.setAttribute('aria-label', t('companies.label'));
@@ -269,17 +283,17 @@ function renderCompanies() {
     badge.type = 'button';
     badge.dataset.company = c.id;
     badge.setAttribute('aria-pressed', String(!state.off.has(c.id)));
-    const logo = usableLogo(c.id);
-    if (logo) logoBadge(badge, logo, c);
-    else nameBadge(badge, c);
+    badge.setAttribute('aria-label', c.name || '?');
+    badge.append(disc(c));
     badge.addEventListener('click', () => toggleCompany(c.id));
     return badge;
   }));
   markRowEdges();
 }
 
-// SPEC-0003 REQ-005: five or more badges scroll in their row; an edge with more badges beyond it fades (the
-// stylesheet's 24 px strip), and a badge reached from the keyboard is brought clear of the strip (the row's padding).
+// SPEC-0003 REQ-005: badges that do not fit scroll in their row (five circles fit a phone — SPEC-0005); an edge with
+// more badges beyond it fades (the stylesheet's 24 px strip), and a badge reached from the keyboard is brought clear
+// of the strip (the row's padding).
 function markRowEdges() {
   const row = document.getElementById('companies');
   row.classList.toggle('more-start', row.scrollLeft > 1);

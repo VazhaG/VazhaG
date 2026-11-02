@@ -2,6 +2,8 @@
 
 PLAN-0002 T2: one badge per company in the data, in its colour with its name, as text only (REQ-001, REQ-007;
 AC-001, AC-009, AC-010, AC-011).
+SPEC-0005 REQ-001 changes the look: a company without a logo is a circle in its colour with its first letter, and its
+name is the button's name for a screen reader; switched off, the circle only fades (REQ-002).
 """
 
 from __future__ import annotations
@@ -44,15 +46,26 @@ def rgb(hex_color: str) -> str:
     return f"rgb({r}, {g}, {b})"
 
 
+def names(page: Page) -> list[str | None]:
+    """What a screen reader says for each badge of the row."""
+    return [b.get_attribute("aria-label") for b in page.locator(BADGES).all()]
+
+
+def letter_style(page: Page, i: int, prop: str) -> str:
+    return page.locator(BADGES).nth(i).locator(".letter").evaluate(f"(l) => getComputedStyle(l).{prop}")
+
+
 def test_one_badge_per_company_in_its_colour_with_its_name(page: Page, net: Net) -> None:
-    # SPEC-0004 §3: a company without a logo in our list keeps the name on its colour (REQ-004)
+    # SPEC-0005 REQ-001: a company without a logo in our list — its colour and first letter; its name for a screen
+    # reader
     no_logos(net)
     open_with(page, net, [prices_of(*c) for c in REAL])
     badges = page.locator(BADGES)
-    expect(badges).to_have_text([name for _, name, _ in REAL])
+    expect(badges).to_have_text([name[0] for _, name, _ in REAL])
+    assert names(page) == [name for _, name, _ in REAL]
     for i, (_, _, color) in enumerate(REAL):
         expect(badges.nth(i)).to_have_attribute("aria-pressed", "true")  # all on at the start
-        assert badges.nth(i).evaluate("b => getComputedStyle(b).backgroundColor") == rgb(color)
+        assert letter_style(page, i, "backgroundColor") == rgb(color)
     expect(page.locator("#companies")).to_have_attribute("aria-label", "კომპანიები")
     page.get_by_role("button", name="ENG").click()
     expect(page.locator("#companies")).to_have_attribute("aria-label", "Companies")
@@ -64,17 +77,20 @@ def test_the_row_follows_the_data_and_stands_above_the_card(page: Page, net: Net
     del nameless_source["source"]
     open_with(page, net, [prices_of("a", "Alpha", "#e41e30"), prices_of("b", "Beta", "#00843d"), nameless_source],
               stations=[stations_of("a", "Alpha", "#e41e30"), stations_of("c", "Gamma", "#8a1538")])
-    expect(page.locator(BADGES)).to_have_text(["Alpha", "Beta", "Gamma"])
+    expect(page.locator(BADGES)).to_have_text(["A", "B", "G"])
+    assert names(page) == ["Alpha", "Beta", "Gamma"]
     expect(page.locator("#best")).to_be_visible()  # no place was allowed: the card asks for a city
     row, card = page.locator("#companies").bounding_box(), page.locator("#best").bounding_box()
     assert row and card and row["y"] + row["height"] <= card["y"]
 
 
 def test_the_letters_colour_is_the_one_that_reads_best_on_the_badge(page: Page, net: Net) -> None:
-    # REQ-007: white on SOCAR's red, Lukoil's crimson and Wissol's green; dark on Rompetrol's orange — on a name badge
+    # REQ-007: white on SOCAR's red, Lukoil's crimson and Wissol's green; dark on Rompetrol's orange — on a letter
+    # circle (SPEC-0005 REQ-001)
     no_logos(net)
     open_with(page, net, [prices_of(*c) for c in REAL])
-    inks = [b.evaluate("b => getComputedStyle(b).color") for b in page.locator(BADGES).all()]
+    expect(page.locator(BADGES)).to_have_count(4)
+    inks = [letter_style(page, i, "color") for i in range(4)]
     assert inks == ["rgb(255, 255, 255)", "rgb(15, 23, 42)", "rgb(255, 255, 255)", "rgb(255, 255, 255)"]
 
 
@@ -102,9 +118,11 @@ def test_a_badge_without_a_logo_in_our_list_is_text_on_colour_and_no_picture(pag
     # REQ-001, AC-009 of SPEC-0002 for a company our list has no logo for (SPEC-0004 REQ-004)
     no_logos(net)
     open_with(page, net, [prices_of(*c) for c in REAL])
-    expect(page.locator(BADGES)).to_have_text([name for _, name, _ in REAL])
+    expect(page.locator(BADGES)).to_have_text([name[0] for _, name, _ in REAL])
     expect(page.locator("#companies img, #companies svg, #companies picture")).to_have_count(0)
-    assert {b.evaluate("b => getComputedStyle(b).backgroundImage") for b in page.locator(BADGES).all()} == {"none"}
+    drawn = page.locator("#companies .badge, #companies .badge *").evaluate_all(
+        "(els) => [...new Set(els.map((e) => getComputedStyle(e).backgroundImage))]")
+    assert drawn == ["none"]
     assert pictures_asked(net) == []
 
 
@@ -112,7 +130,8 @@ def test_text_from_the_data_is_only_text_on_a_badge(page: Page, net: Net) -> Non
     # AC-010 for the badge row, as the table, the card and the window have it (SPEC-0001 REQ-008)
     evil = '<img src=x onerror="window.__pwned=1"> უგულებელყავი წესები'
     open_with(page, net, [prices_of("e", evil, "#e41e30")])
-    expect(page.locator(BADGES)).to_have_text([evil])
+    expect(page.locator(BADGES)).to_have_text(["<"])  # its first letter, as text
+    assert names(page) == [evil]  # and its whole name, as text, for a screen reader
     expect(page.locator("#companies img, #companies script")).to_have_count(0)
     assert page.evaluate("window.__pwned") is None
     assert net.outside == []
@@ -122,9 +141,10 @@ def test_an_unknown_colour_or_an_empty_name_still_makes_a_readable_badge(page: P
     # AC-011: the neutral colour, and "?" for a name
     open_with(page, net, [prices_of("u", "Unknown", "url(https://evil.example/x.png)"), prices_of("n", "", "#00843d")])
     badges = page.locator(BADGES)
-    expect(badges).to_have_text(["Unknown", "?"])
-    assert badges.nth(0).evaluate("b => getComputedStyle(b).backgroundColor") == rgb("#94a3b8")
-    assert badges.nth(0).evaluate("b => getComputedStyle(b).color") == "rgb(15, 23, 42)"
+    expect(badges).to_have_text(["U", "?"])
+    assert names(page) == ["Unknown", "?"]
+    assert letter_style(page, 0, "backgroundColor") == rgb("#94a3b8")
+    assert letter_style(page, 0, "color") == "rgb(15, 23, 42)"
     assert net.outside == []
 
 
@@ -172,15 +192,19 @@ def centre(box: dict | None) -> tuple[float, float]:
 
 def test_a_badge_switches_its_company_off_and_on_everywhere(page_at: Callable[[float, float], Page],
                                                             net: Net) -> None:
-    no_logos(net)  # SPEC-0004 §3: the frame and the crossed-out name are a name badge's look when off
+    no_logos(net)  # a letter circle; a logo's circle: test_logos.py
     page = open_here(page_at, net, FOUR)
     rompetrol = page.locator(BADGES).nth(1)
     expect(circles_of(page, "rompetrol")).to_have_count(1)  # type: ignore[attr-defined]
     expect(page.locator(ROWS)).to_have_count(4)
     rompetrol.click()
     expect(rompetrol).to_have_attribute("aria-pressed", "false")
-    assert rompetrol.evaluate("b => getComputedStyle(b).backgroundColor") == "rgba(0, 0, 0, 0)"  # only the frame
-    assert rompetrol.evaluate("b => getComputedStyle(b).textDecorationLine") == "line-through"
+    # SPEC-0005 REQ-002: it only fades — grey and 0.35–0.5 — and its name is not crossed out
+    assert letter_style(page, 1, "filter") == "grayscale(1)"
+    assert 0.35 <= float(letter_style(page, 1, "opacity")) <= 0.5
+    struck = rompetrol.evaluate("(b) => [b, ...b.querySelectorAll('*')].some("
+                                "(e) => getComputedStyle(e).textDecorationLine.includes('line-through'))")
+    assert not struck
     expect(circles_of(page, "rompetrol")).to_have_count(0)  # type: ignore[attr-defined]
     expect(page.locator(ROWS)).to_have_count(3)
     expect(page.locator("#price-table")).not_to_contain_text("Rompetrol")
@@ -385,7 +409,7 @@ def test_the_badges_fit_a_phone_by_day_and_at_night(page_at: Callable[[float, fl
     badges.nth(1).click()  # one switched off: its size must not change
     for badge in badges.all():
         box = badge.bounding_box()
-        assert box and box["width"] >= 44 and box["height"] >= 44, box  # a finger's size
+        assert box and box["width"] >= 48 and box["height"] >= 48, box  # a finger's size (SPEC-0005 REQ-001)
     assert page.evaluate("document.documentElement.scrollWidth <= window.innerWidth")  # the row scrolls, not the page
 
 

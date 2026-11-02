@@ -19,6 +19,57 @@ LOGOS_JS = SITE / "js" / "logos.js"
 LOGO_IDS = ("socar", "rompetrol", "lukoil", "wissol", "connect")  # the companies with a logo (SPEC-0004)
 # every picture the selector finds has its address and is drawn — a logo gets its address once its file has arrived
 DRAWN = "(sel) => [...document.querySelectorAll(sel)].every((i) => i.getAttribute('src') && i.naturalWidth > 0)"
+FRAME_GREY = "rgb(142, 142, 147)"  # #8E8E93 — a company circle's frame, in both looks (SPEC-0005 REQ-001)
+# SPEC-0005 REQ-001: every company circle the selector finds, measured as drawn — its size, fill, frame and what is
+# behind it; a logo's picture and the part of it that shows (its mark, cut by clip-path from the file's own pixels);
+# a letter circle's fill and ink. The frame is the circle's border or, drawn inside it, its outline.
+DISCS_JS = """async (sel) => {
+  const { LOGOS } = await import('./js/logos.js');
+  const byId = new Map(LOGOS.map((l) => [l.id, l]));
+  const behind = (el) => {
+    for (el = el.parentElement; el; el = el.parentElement) {
+      const c = getComputedStyle(el).backgroundColor.match(/[\\d.]+/g).map(Number);
+      if (c.length < 4 || c[3] > 0) return 'rgb(' + c.slice(0, 3).join(', ') + ')';
+    }
+    return 'rgb(255, 255, 255)';
+  };
+  const px = (v, total) => (v.endsWith('%') ? (parseFloat(v) / 100) * total : parseFloat(v));
+  return [...document.querySelectorAll(sel)].map((d) => {
+    const r = d.getBoundingClientRect(), s = getComputedStyle(d);
+    const border = parseFloat(s.borderTopWidth), outline = s.outlineStyle === 'none' ? 0 : parseFloat(s.outlineWidth);
+    const id = d.closest('[data-company]')?.dataset.company;  // the badge, the line or the marker it is drawn in
+    const out = {
+      id, size: [r.width, r.height], ground: s.backgroundColor, round: s.borderRadius,
+      opacity: Number(s.opacity), behind: behind(d), imgs: d.querySelectorAll('img').length, text: d.textContent,
+      frame: border > 0 ? [s.borderTopStyle, border, s.borderTopColor, true]
+        : [s.outlineStyle, outline, s.outlineColor, parseFloat(s.outlineOffset) <= -outline + 0.01],
+    };
+    const letter = d.querySelector('.letter');
+    if (letter) {
+      const ls = getComputedStyle(letter), lr = letter.getBoundingClientRect();
+      out.letter = { fill: ls.backgroundColor, ink: ls.color, size: [lr.width, lr.height], round: ls.borderRadius,
+                     font: parseFloat(ls.fontSize), filter: ls.filter, opacity: Number(ls.opacity) };
+    }
+    const img = d.querySelector('img'), logo = byId.get(id);
+    if (img && logo) {
+      const ir = img.getBoundingClientRect(), k = ir.width / logo.size[0], [x, y, w, h] = logo.mark;
+      const at = [ir.left + x * k, ir.top + y * k, w * k, h * k];
+      const v = getComputedStyle(img).clipPath.match(/-?[\\d.]+(?:px|%)?/g) || [];
+      // inset() is written like a margin: one, two, three or four values — top, right, bottom, left
+      const [t, rt, b, lt] = [v[0], v[1] ?? v[0], v[2] ?? v[0], v[3] ?? v[1] ?? v[0]];
+      const shown = v.length ? [ir.left + px(lt, ir.width), ir.top + px(t, ir.height),
+                                ir.width - px(lt, ir.width) - px(rt, ir.width),
+                                ir.height - px(t, ir.height) - px(b, ir.height)] : null;
+      Object.assign(out, {
+        src: img.getAttribute('src'), alt: img.getAttribute('alt'), loaded: img.complete && img.naturalWidth > 0,
+        filter: getComputedStyle(img).filter, markOpacity: Number(getComputedStyle(img).opacity),
+        clip: getComputedStyle(img).clipPath, at, shown, long: Math.max(w * k, h * k),
+        off: [at[0] + at[2] / 2 - (r.left + r.width / 2), at[1] + at[3] / 2 - (r.top + r.height / 2)],
+      });
+    }
+    return out;
+  });
+}"""
 TILE_HOST = "https://tile.openstreetmap.org/"
 BLANK_PNG = base64.b64decode(
     "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII="
@@ -80,5 +131,21 @@ def logos_without(*ids: str) -> str:
 
 
 def no_logos(net: Net) -> None:
-    """Serve a logo list without any company: every badge is a name on its colour, as for a company without a logo."""
+    """Serve a logo list without any company: every company is its colour and first letter, as one without a logo."""
     net.files["js/logos.js"] = (200, "text/javascript", logos_without(*LOGO_IDS))
+
+
+def rgb(text: str) -> tuple[int, ...]:
+    """'rgb(1, 2, 3)' or 'rgba(1, 2, 3, 0.5)' -> (1, 2, 3)."""
+    return tuple(int(float(v)) for v in text[text.index("(") + 1:text.index(")")].split(",")[:3])
+
+
+def ratio(a: tuple[int, ...], b: tuple[int, ...]) -> float:
+    """WCAG contrast ratio of two colours."""
+    def lum(c: tuple[int, ...]) -> float:
+        parts = [v / 255 for v in c]
+        parts = [v / 12.92 if v <= 0.03928 else ((v + 0.055) / 1.055) ** 2.4 for v in parts]
+        return 0.2126 * parts[0] + 0.7152 * parts[1] + 0.0722 * parts[2]
+
+    hi, lo = sorted((lum(a), lum(b)), reverse=True)
+    return (hi + 0.05) / (lo + 0.05)

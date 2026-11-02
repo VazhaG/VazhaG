@@ -18,7 +18,7 @@ from datetime import datetime
 import pytest
 from playwright.sync_api import Page, expect
 
-from support import SITE, Net, no_logos
+from support import SITE, Net
 
 TBILISI = (41.7151, 44.8271)
 ROLES_JS = """() => {
@@ -144,18 +144,22 @@ def test_the_choice_is_kept_on_the_phone_and_wins_over_its_setting(page: Page, n
 
 
 @pytest.mark.parametrize(("phone", "choice", "edge"), [("dark", "light", "rgb(15, 23, 42)"),
-                                                       ("light", "dark", "rgb(255, 233, 0)")])
+                                                       ("light", "dark", "rgb(255, 255, 255)")])
 def test_a_light_colours_outline_follows_the_sites_look(page: Page, net: Net, phone: str, choice: str,
                                                        edge: str) -> None:
-    # SPEC-0003 REQ-003 by the site's look: a dark outline on a light colour in the light look only
-    no_logos(net)
+    # SPEC-0003 REQ-003 by the site's look: a dark outline on a light colour's dot on the map in the light look only
+    # (the row's circles have one neutral frame since SPEC-0005 REQ-001)
     connect = {"id": "connect", "name": "Connect", "color": "#ffe900", "source": "https://c.example/", "time": TIME,
-               "basis": "read", "prices": [{"grade": "დიზელი", "fuel": "diesel", "price": 4.9}]}
+               "basis": "read", "prices": [{"grade": "რეგულარი", "fuel": "regular", "price": 4.9}]}
     open_plain(page, net, phone, [connect])
+    net.data["stations.json"] = {"generated": TIME, "companies": [connect | {"stations": [
+        {"name": "", "address": "a", "lat": 41.7, "lng": 44.8, "fuels": ["regular"]}]}]}
+    page.reload()  # no place allowed: the whole country's view, where a station is its colour's small dot
     page.locator(THEME).click()
     assert page.evaluate(LOOK) == choice
-    badge = page.locator('#companies [data-company="connect"]')
-    assert badge.evaluate("(b) => getComputedStyle(b).borderTopColor") == edge
+    dot = page.locator('.station[data-company="connect"]:not(.near) span')
+    expect(dot).to_have_count(1)
+    assert dot.evaluate("(s) => getComputedStyle(s).borderTopColor") == edge
 
 
 def first_look(page: Page, net: Net, phone: str) -> str:
@@ -219,8 +223,9 @@ LOGO_FILES = ["logos/socar.svg", "logos/rompetrol.png", "logos/lukoil.png", "log
 @pytest.mark.parametrize("language", ["ka", "en"])
 def test_on_a_phone_the_card_the_row_and_both_switches_fit(page_at: Callable[[float, float], Page], net: Net,
                                                            scheme: str, language: str) -> None:
-    # AC-009: 375 × 812 — the ★ card and "all prices" on the first screen, no sideways page, the logos scroll in
-    # their row, and the look switch and the language switch both inside the header bar, clear of the title
+    # AC-009: 375 × 812 — the ★ card and "all prices" on the first screen, no sideways page, the five companies'
+    # circles in one row that does not scroll (SPEC-0005 REQ-001), and the look switch and the language switch both
+    # inside the header bar, clear of the title
     page = open_look(page_at, net, scheme)
     if language == "en":
         page.get_by_role("button", name="ENG").click()
@@ -229,7 +234,8 @@ def test_on_a_phone_the_card_the_row_and_both_switches_fit(page_at: Callable[[fl
         box = page.locator(target).bounding_box()
         assert box and box["y"] + box["height"] <= 812, (target, box)
     assert page.evaluate("document.documentElement.scrollWidth <= window.innerWidth")
-    assert page.locator("#companies").evaluate("(r) => r.scrollWidth > r.clientWidth")
+    expect(page.locator("#companies .badge")).to_have_count(5)
+    assert page.locator("#companies").evaluate("(r) => r.scrollWidth <= r.clientWidth")
     bar, title = page.locator(".top").bounding_box(), page.locator(".top h1").bounding_box()
     assert bar and title and page.locator(".top h1").evaluate("(h) => h.scrollWidth <= h.clientWidth + 1")
     lines = page.locator(".top h1").evaluate("""(h) => { const r = document.createRange(); r.selectNodeContents(h);
@@ -256,6 +262,6 @@ def test_without_any_logo_the_card_comes_within_10_seconds_and_the_row_stays(
     if how == "missing":
         for file in LOGO_FILES:
             net.pending[file].fulfill(status=404, body="")
-        expect(page.locator("#companies img")).to_have_count(0)  # every badge is its name now
+        expect(page.locator("#companies img")).to_have_count(0)  # every company is its letter circle now
     page.wait_for_timeout(1500)
     assert page.locator("#companies").bounding_box() == row  # the row stays where it is

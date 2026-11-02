@@ -114,7 +114,8 @@ CONTRAST_JS = """() => {
   const out = [];
   for (const el of document.querySelectorAll(
       'h1, h2, .chip span, .lang button, #best p, #best label, .go a, .to-prices, #price-table th, #price-table td, '
-      + '.foot p, .foot a, .leaflet-control-attribution, .leaflet-control-zoom a, .badge, .station span')) {
+      + '.foot p, .foot a, .leaflet-control-attribution, .leaflet-control-zoom a, .badge[aria-pressed="true"] .letter, '
+      + '.station span')) {
     if (!el.textContent.trim() || !el.getClientRects().length) continue;
     const fg = rgb(getComputedStyle(el).color).slice(0, 3);
     const [a, b] = [lum(fg), lum(background(el))].sort((x, y) => y - x);
@@ -141,8 +142,9 @@ def test_every_text_has_wcag_aa_contrast(page_at: Callable[[float, float], Page]
     else:
         expect(page.locator(".station.near span").first).to_have_text(re.compile(r"\S"))  # letters on the map
     page.evaluate("document.querySelector('#price-table tbody tr')?.classList.add('stale')")  # a greyed-out row
-    checked = page.evaluate(CONTRAST_JS)  # every company on: each colour as a badge and as letters on the map
-    page.locator("#companies .badge").first.click()  # a switched-off badge: its frame and crossed-out name (SPEC-0002)
+    checked = page.evaluate(CONTRAST_JS)  # every company on: each colour as a letter circle and as letters on the map
+    # a switched-off circle: its mark fades on purpose (SPEC-0005 REQ-002) — not text; its frame: test_logos.py
+    page.locator("#companies .badge").first.click()
     expect(page.locator("#companies .badge").first).to_have_attribute("aria-pressed", "false")
     checked += page.evaluate(CONTRAST_JS)
     assert len(checked) > 40
