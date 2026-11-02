@@ -2,7 +2,7 @@
 id: PLAN-0005
 type: plan
 title: იერსახე ნიმუშის ფოტოთი — აშენება
-status: in-progress
+status: draft
 created: 2026-11-02
 updated: 2026-11-02
 spec: "[[SPEC-0005-look-from-reference-photo]]"

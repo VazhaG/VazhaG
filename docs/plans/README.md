@@ -18,4 +18,4 @@ title: ფუნქციების გეგმები — ინდექ�
 | [[PLAN-0002-company-badges-and-filter]] | კომპანიების ნიშნები და კომპანიით ფილტრი — აშენება | [[SPEC-0002-company-badges-and-filter]] | in-progress |
 | [[PLAN-0003-connect-stations-and-prices]] | Connect-ის სადგურები და ფასები — აშენება | [[SPEC-0003-connect-stations-and-prices]] | in-progress |
 | [[PLAN-0004-logos-and-black-orange-look]] | კომპანიების ლოგოები და შავ-ნარინჯისფერი რეჟიმები — აშენება | [[SPEC-0004-logos-and-black-orange-look]] | in-progress |
-| [[PLAN-0005-look-from-reference-photo]] | იერსახე ნიმუშის ფოტოთი — აშენება | [[SPEC-0005-look-from-reference-photo]] | in-progress |
+| [[PLAN-0005-look-from-reference-photo]] | იერსახე ნიმუშის ფოტოთი — აშენება | [[SPEC-0005-look-from-reference-photo]] | draft |
