@@ -154,8 +154,8 @@ def test_a_company_without_a_logo_is_the_same_circle_in_its_colour_with_its_firs
         expect(page.get_by_role("button", name=name, exact=True)).to_have_count(1)
 
 
-# SPEC-0005 REQ-001, AC-001: each mark's opaque pixels (alpha >= 128, the file at its own size, on white), measured
-# against white and against black — the most contrasting one of each
+# SPEC-0005 REQ-001, AC-001: each mark's opaque pixels (alpha >= 128, the file at its own size), drawn on white and
+# measured against white, drawn on black and measured against black — the most contrasting one of each
 MARK_CONTRAST_JS = """async () => {
   const { LOGOS } = await import('./js/logos.js');
   const lum = (c) => {
@@ -180,9 +180,10 @@ MARK_CONTRAST_JS = """async () => {
       const a = px[i + 3] / 255;
       if (a < 128 / 255) continue;
       opaque += 1;
-      const l = lum([0, 1, 2].map((k) => a * px[i + k] + (1 - a) * 255));
-      onWhite = Math.max(onWhite, ratio(l, 1));
-      onBlack = Math.max(onBlack, ratio(l, 0));
+      // each pixel drawn on the circle it is measured against (review C1): on white for white, on black for black
+      const on = (ground) => lum([0, 1, 2].map((k) => a * px[i + k] + (1 - a) * ground));
+      onWhite = Math.max(onWhite, ratio(on(255), 1));
+      onBlack = Math.max(onBlack, ratio(on(0), 0));
     }
     out.push({ id: logo.id, black: logo.black, onWhite, onBlack, opaque });
   }
