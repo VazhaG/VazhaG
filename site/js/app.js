@@ -253,6 +253,7 @@ function letterDisc(circle, c) {
 
 function disc(c) {
   const circle = element('span', 'disc');
+  circle.setAttribute('aria-hidden', 'true'); // a picture of the name — its place says the name in words
   const logo = usableLogo(c.id);
   if (logo) circle.append(markImage(logo, () => letterDisc(circle, c)));
   else letterDisc(circle, c);
@@ -397,11 +398,13 @@ function renderBest(prices, stations, allOff, pricesHidden) {
     parts.push(element('p', 'note', t('companies.allOff')));
   } else if (result.best) {
     const b = result.best;
+    // SPEC-0005 REQ-004: compact — the company's circle beside who and where, the price and the distance under them
     const who = element('p', 'who');
-    const dot = element('span', 'dot');
-    dot.style.backgroundColor = b.color;
-    who.append(dot, element('strong', '', b.company), ` · ${b.grade}`);
-    if (b.name) who.append(` · ${b.name}`);
+    who.dataset.company = b.companyId;
+    const text = element('span', 'who-text');
+    text.append(element('strong', '', b.company), ` · ${b.grade}`);
+    if (b.name) text.append(` · ${b.name}`);
+    who.append(disc({ id: b.companyId, name: b.company, color: b.color }), text);
     const line = element('p', 'best-line');
     line.append(element('span', 'price', priceText(b.price)), ` · ${b.distanceKm.toFixed(1)} ${t('unit.km')}`);
     parts.push(who, line);

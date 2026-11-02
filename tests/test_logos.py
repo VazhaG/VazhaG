@@ -24,7 +24,19 @@ from xml.etree import ElementTree
 import pytest
 from playwright.sync_api import Page, expect
 
-from support import DISCS_JS, DRAWN, FRAME_GREY, LOGO_IDS, ROOT, SITE, Net, logos_without, no_logos
+from support import (
+    DISCS_JS,
+    DRAWN,
+    LOGO_IDS,
+    ROOT,
+    SITE,
+    Net,
+    assert_disc,
+    assert_letter,
+    assert_mark,
+    logos_without,
+    no_logos,
+)
 
 DOMAIN = ROOT / "docs" / "domain" / "fuel-price-sources.md"
 TIME = "2026-11-01T12:00:00Z"
@@ -103,33 +115,6 @@ def open_five(page: Page, net: Net, scheme: str) -> None:
 
 ROW_DISCS = "#companies .disc"
 ROW_DISC = 48  # px — a company circle in the row (SPEC-0005 REQ-001)
-
-
-def assert_disc(d: dict, size: float) -> None:
-    """SPEC-0005 REQ-001, AC-001: one circle of this size, black, round, in its frame (3 : 1 on what is behind it)."""
-    assert all(abs(v - size) <= 0.5 for v in d["size"]) and d["round"] == "50%", d
-    assert d["ground"] == "rgb(0, 0, 0)" and d["opacity"] == 1, d
-    style, width, color, inside = d["frame"]
-    assert style == "solid" and width >= 1.5 and color == FRAME_GREY and inside, d
-    assert ratio(rgb(color), rgb(d["behind"])) >= 3, d
-
-
-def assert_mark(d: dict, file: str, size: float) -> None:
-    """SPEC-0005 REQ-001, AC-001: the logo's mark from our list — drawn, its longer side 60 % of the circle (±2 px),
-    in the circle's middle, and only the mark shows through the cut."""
-    assert d["imgs"] == 1 and d["text"] == "" and "letter" not in d, d
-    assert (d["src"], d["alt"], d["loaded"], d["filter"], d["markOpacity"]) == (file, "", True, "none", 1), d
-    assert abs(d["long"] - 0.6 * size) <= 2 and max(abs(v) for v in d["off"]) <= 0.5, d
-    assert d["clip"].startswith("inset(") and d["shown"], d
-    assert all(abs(a - b) <= 0.6 for a, b in zip(d["shown"], d["at"], strict=True)), d
-
-
-def assert_letter(d: dict, size: float, letter: str, fill: str) -> None:
-    """SPEC-0005 REQ-001: a company without a logo — the same circle, all of it its colour, with its first letter."""
-    assert d["imgs"] == 0 and d["text"] == letter, d
-    got = d["letter"]
-    assert got["fill"] == fill and got["round"] == "50%" and all(abs(v - size) <= 0.5 for v in got["size"]), d
-    assert ratio(rgb(got["ink"]), rgb(got["fill"])) >= 4.5 and got["font"] >= 0.35 * size, d
 
 
 @pytest.mark.parametrize("scheme", ["light", "dark"])

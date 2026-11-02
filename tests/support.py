@@ -155,3 +155,31 @@ def ratio(a: tuple[int, ...], b: tuple[int, ...]) -> float:
 
     hi, lo = sorted((lum(a), lum(b)), reverse=True)
     return (hi + 0.05) / (lo + 0.05)
+
+
+# SPEC-0005 REQ-001, AC-001 — a company circle as DISCS_JS measured it, wherever it is drawn
+def assert_disc(d: dict, size: float) -> None:
+    """One circle of this size, black, round, in its frame (3 : 1 on what is behind it)."""
+    assert all(abs(v - size) <= 0.5 for v in d["size"]) and d["round"] == "50%", d
+    assert d["ground"] == "rgb(0, 0, 0)" and d["opacity"] == 1, d
+    style, width, color, inside = d["frame"]
+    assert style == "solid" and width >= 1.5 and color == FRAME_GREY and inside, d
+    assert ratio(rgb(color), rgb(d["behind"])) >= 3, d
+
+
+def assert_mark(d: dict, file: str, size: float) -> None:
+    """The logo's mark from our list — drawn, its longer side 60 % of the circle (±2 px), in the circle's middle, and
+    only the mark shows through the cut."""
+    assert d["imgs"] == 1 and d["text"] == "" and "letter" not in d, d
+    assert (d["src"], d["alt"], d["loaded"], d["filter"], d["markOpacity"]) == (file, "", True, "none", 1), d
+    assert abs(d["long"] - 0.6 * size) <= 2 and max(abs(v) for v in d["off"]) <= 0.5, d
+    assert d["clip"].startswith("inset(") and d["shown"], d
+    assert all(abs(a - b) <= 0.6 for a, b in zip(d["shown"], d["at"], strict=True)), d
+
+
+def assert_letter(d: dict, size: float, letter: str, fill: str) -> None:
+    """A company without a logo — the same circle, all of it its colour, with its first letter."""
+    assert d["imgs"] == 0 and d["text"] == letter, d
+    got = d["letter"]
+    assert got["fill"] == fill and got["round"] == "50%" and all(abs(v - size) <= 0.5 for v in got["size"]), d
+    assert ratio(rgb(got["ink"]), rgb(got["fill"])) >= 4.5 and got["font"] >= 0.35 * size, d

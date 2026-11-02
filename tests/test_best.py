@@ -11,7 +11,7 @@ from datetime import UTC, datetime, timedelta
 
 from playwright.sync_api import Page, expect
 
-from support import POINT_JS, Net
+from support import DISCS_JS, POINT_JS, Net, assert_disc, assert_letter
 
 NOW = datetime(2026, 10, 30, 12, 0, tzinfo=UTC)
 HERE = (41.70, 44.80)
@@ -179,6 +179,35 @@ def test_all_prices_takes_the_card_down_to_the_table(page_at: Callable[[float, f
     link.click()
     expect(page.locator("#prices-title")).to_be_in_viewport()
     assert page.evaluate("window.scrollY") > 0  # the page scrolled down to the table, as far as it goes
+
+
+CARD_JS = """(card) => ({
+  height: card.getBoundingClientRect().height, title: card.querySelector('h2')?.textContent,
+  who: card.querySelector('.who')?.textContent, discs: card.querySelectorAll('.disc').length,
+  price: card.querySelector('.price')?.textContent, links: [...card.querySelectorAll('.go a')].map((a) => a.textContent),
+  tall: [...card.querySelectorAll('.go a')].map((a) => a.getBoundingClientRect().height),
+  all: card.querySelector('a.to-prices')?.textContent,
+})"""
+
+
+def test_the_card_is_compact_with_the_companys_circle(page_at: Callable[[float, float], Page], net: Net) -> None:
+    # SPEC-0005 REQ-004, AC-001's card: the company's 32 px circle — here a company without a logo, so its colour and
+    # letter — the company, the fuel, the station, the price, the distance, both buttons and "all prices"; 240 px high
+    # at most on a 375 × 812 phone, with names as long as the real ones
+    page = open_here(page_at, net, [prices_of("a", [("ნანო ევრო 5 დიზელი", "diesel", 4.97)])],
+                     [stations_of("a", [at_km(1.2, name="თბილისის ზღვის ტერიტორია")])], "დიზელი")
+    card = page.locator("#best")
+    expect(card.locator("a.go-google")).to_be_visible()
+    got = card.evaluate(CARD_JS)
+    assert got["height"] <= 240, got
+    assert got["title"] == "★ ყველაზე იაფი ახლოს" and got["discs"] == 1, got
+    assert got["who"].endswith("A · ნანო ევრო 5 დიზელი · თბილისის ზღვის ტერიტორია"), got
+    assert (got["price"], got["links"], got["all"]) == ("4.97 ₾", ["Google Maps", "Waze"], "ყველა ფასი"), got
+    assert all(h >= 44 for h in got["tall"]), got  # compact, but still a finger's size (SPEC-0005 §6)
+    expect(card).to_contain_text("1.2 კმ")
+    (d,) = page.evaluate(DISCS_JS, "#best .disc")
+    assert_disc(d, 32)
+    assert_letter(d, 32, "A", "rgb(18, 52, 86)")  # the company's colour, #123456
 
 
 def test_the_card_says_when_nothing_is_within_50_km_or_gas_is_unknown(page_at: Callable[[float, float], Page],

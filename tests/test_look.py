@@ -24,7 +24,7 @@ from datetime import datetime
 import pytest
 from playwright.sync_api import Page, expect
 
-from support import SITE, Net
+from support import DISCS_JS, DRAWN, SITE, Net, assert_disc, assert_mark
 
 TBILISI = (41.7151, 44.8271)
 ROLES_JS = """() => {
@@ -76,6 +76,21 @@ def test_each_colour_role_is_the_one_recorded(page_at: Callable[[float, float], 
     # AC-008: every role of REQ-005, measured on the drawn page
     page = open_look(page_at, net, scheme)
     assert page.evaluate(ROLES_JS) == LOOKS[scheme]
+
+
+@pytest.mark.parametrize("scheme", ["light", "dark"])
+def test_the_star_card_shows_the_cheapest_companys_mark_in_its_circle(page_at: Callable[[float, float], Page],
+                                                                      net: Net, scheme: str) -> None:
+    # SPEC-0005 REQ-004, AC-001's card: on the real data, the cheapest company's mark in a 32 px circle; the compact
+    # card 240 px high at most
+    page = open_look(page_at, net, scheme)
+    logos = dict(page.evaluate("() => import('./js/logos.js').then((m) => m.LOGOS.map((l) => [l.id, l.file]))"))
+    page.wait_for_function(DRAWN, arg="#best .disc img")
+    (d,) = page.evaluate(DISCS_JS, "#best .disc")
+    assert_disc(d, 32)
+    assert_mark(d, logos[d["id"]], 32)
+    box = page.locator("#best").bounding_box()
+    assert box and box["height"] <= 240, box
 
 
 @pytest.mark.parametrize("scheme", ["light", "dark"])
