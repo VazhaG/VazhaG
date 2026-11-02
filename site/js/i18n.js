@@ -46,6 +46,8 @@ export const TEXT = {
     'note.cities': 'ქალაქების კოორდინატები:',
     'lang.group': 'ენა',
     'theme.label': 'მუქი რეჟიმი',
+    'filter.company': 'კომპანია',
+    'filter.fuel': 'საწვავი',
   },
   en: {
     'title.page': 'Fuel prices in Georgia',
@@ -86,6 +88,8 @@ export const TEXT = {
     'note.cities': 'City coordinates:',
     'lang.group': 'Language',
     'theme.label': 'Dark mode',
+    'filter.company': 'Company',
+    'filter.fuel': 'Fuel',
   },
 };
 

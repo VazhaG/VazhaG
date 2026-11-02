@@ -11,8 +11,9 @@ const TILES = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
 const OSM_CREDIT = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors';
 const LOCATE = { enableHighAccuracy: false, timeout: 10000, maximumAge: 300000 }; // REQ-001: 10 seconds at most
 const NEAR_ZOOM = 12;
-// a station's window opens clear of the fuel choice on the map's top and of the sheet over its lower edge
-const POPUP = { autoPanPaddingTopLeft: [12, 72], autoPanPaddingBottomRight: [12, 48] };
+// a station's window opens clear of the filters and the fuel choice on the map's top (SPEC-0005 REQ-003) and of the
+// sheet over its lower edge
+const POPUP = { autoPanPaddingTopLeft: [12, 128], autoPanPaddingBottomRight: [12, 48] };
 // What stays on this phone, and nothing else: the chosen language, the companies switched off (SPEC-0002 REQ-004)
 // and the chosen look (SPEC-0004 REQ-006)
 const LANG_KEY = 'fuel-map.lang';
@@ -297,12 +298,17 @@ function watchRow() {
   window.addEventListener('resize', markRowEdges);
 }
 
-// REQ-003: a badge switches its company off or on — the map, the ★ and the table follow at once.
-function toggleCompany(id) {
-  if (state.off.has(id)) state.off.delete(id);
+// SPEC-0002 REQ-003, SPEC-0005 REQ-003: a company switched off or on, from the badge row or the company filter — the
+// map, the ★, the list, the row and the filter follow at once.
+function setCompany(id, on) {
+  if (on) state.off.delete(id);
   else state.off.add(id);
   saveOff();
   render();
+}
+
+function toggleCompany(id) {
+  setCompany(id, state.off.has(id));
   // the row was drawn anew: the pressed badge keeps the focus, for the keyboard and the screen reader
   document.querySelector(`#companies [data-company="${CSS.escape(id)}"]`)?.focus();
 }
@@ -439,15 +445,142 @@ function renderFuels() {
     input.name = 'fuel';
     input.value = key;
     input.checked = key === state.fuel;
-    input.addEventListener('change', () => {
-      state.fuel = key;
-      showChosen(box);
-      render();
-    });
+    input.addEventListener('change', () => chooseFuel(key));
     label.append(input, element('span', '', t(`fuel.${key}`)));
     box.append(label);
   }
   showChosen(box);
+}
+
+// The fuel chosen, from the chips or the fuel filter: both show it, and the page follows.
+function chooseFuel(key) {
+  state.fuel = key;
+  const box = document.getElementById('fuels');
+  for (const input of box.querySelectorAll('input')) input.checked = input.value === key;
+  showChosen(box);
+  render();
+}
+
+// SPEC-0005 REQ-003: the two filters on the map's top. Each button says what is chosen and opens its panel over the
+// map: the companies with a checkbox each — its circle and its name — or the six fuels, to choose one. A panel is
+// drawn when it opens and emptied when it closes; while it is open, the page's changes are set on its boxes in place,
+// so the keyboard's focus stays where it is.
+const FILTERS = ['company', 'fuel'];
+let openFilter = null;
+let arrowing = false; // the arrows go through the fuels and choose them; only Space, a tap or Esc closes the panel
+
+function filterButton(kind) {
+  return document.getElementById(`filter-${kind}`);
+}
+
+function filterPanel(kind) {
+  return document.getElementById(`panel-${kind}`);
+}
+
+function option(input, ...content) {
+  const line = element('label', 'option');
+  line.append(input, ...content);
+  return line;
+}
+
+function companyOptions() {
+  const set = element('fieldset');
+  set.append(element('legend', 'visually-hidden', t('companies.label')));
+  for (const c of companiesOf(state.prices, state.stations)) {
+    const input = document.createElement('input');
+    input.type = 'checkbox';
+    input.value = c.id;
+    input.checked = !state.off.has(c.id);
+    input.addEventListener('change', () => setCompany(c.id, input.checked)); // the panel stays open
+    const line = option(input, disc(c), element('span', 'option-name', c.name || '?'));
+    line.dataset.company = c.id;
+    set.append(line);
+  }
+  return set;
+}
+
+function fuelOptions() {
+  const set = element('fieldset');
+  set.append(element('legend', 'visually-hidden', t('fuel.legend')));
+  for (const key of FUELS) {
+    const input = document.createElement('input');
+    input.type = 'radio';
+    input.name = 'fuel-filter';
+    input.value = key;
+    input.checked = key === state.fuel;
+    input.addEventListener('change', () => {
+      chooseFuel(key);
+      if (!arrowing) closePanel(); // chosen: the panel closes
+    });
+    set.append(option(input, element('span', 'option-name', t(`fuel.${key}`))));
+  }
+  return set;
+}
+
+function fillPanel(kind) {
+  filterPanel(kind).replaceChildren(kind === 'company' ? companyOptions() : fuelOptions());
+}
+
+function openPanel(kind) {
+  closePanel(false);
+  fillPanel(kind);
+  filterPanel(kind).hidden = false;
+  filterButton(kind).setAttribute('aria-expanded', 'true');
+  openFilter = kind;
+}
+
+function closePanel(focus = true) {
+  if (!openFilter) return;
+  const kind = openFilter;
+  openFilter = null;
+  filterPanel(kind).hidden = true;
+  filterPanel(kind).replaceChildren();
+  filterButton(kind).setAttribute('aria-expanded', 'false');
+  if (focus) filterButton(kind).focus();
+}
+
+// One run of text, so a long one wraps after the dot ("საწვავი ·" / "ბუნებრივი აირი"), never in the middle of a word.
+function filterLabel(kind, name, value) {
+  filterButton(kind).replaceChildren(element('span', 'filter-text', value ? `${name} · ${value}` : name));
+}
+
+// The buttons say what is chosen. An open panel's boxes already show it: while a panel is open, the choice changes
+// only through its own boxes — a tap or a key anywhere else is a click outside, which closes it. Only the data can
+// arrive meanwhile: the company panel is then drawn anew with them.
+function syncFilters() {
+  const companies = companiesOf(state.prices, state.stations);
+  const on = companies.filter((c) => !state.off.has(c.id)).length;
+  filterLabel('company', t('filter.company'), companies.length ? `${on}/${companies.length}` : '');
+  filterLabel('fuel', t('filter.fuel'), t(`fuel.${state.fuel}`));
+  const shown = [...filterPanel('company').querySelectorAll('input')].map((box) => box.value);
+  if (openFilter === 'company' && shown.join('\n') !== companies.map((c) => c.id).join('\n')) fillPanel('company');
+}
+
+const CONTROLS = 'button, a[href], input, select, textarea, label';
+
+function watchFilters() {
+  for (const kind of FILTERS) {
+    filterButton(kind).addEventListener('click', () => (openFilter === kind ? closePanel() : openPanel(kind)));
+  }
+  // Esc closes the open panel, and the focus goes back to its button
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape' && openFilter) closePanel();
+  });
+  // a tap outside the open panel and its button closes it — caught on its way down, before the map's own handlers;
+  // the focus goes back to the button, unless the tap was on another control, which then has it
+  document.addEventListener('click', (event) => {
+    if (!openFilter) return;
+    const target = event.target;
+    if (filterPanel(openFilter).contains(target) || filterButton(openFilter).contains(target)) return;
+    closePanel(!target.closest?.(CONTROLS));
+  }, true);
+  const fuels = filterPanel('fuel');
+  fuels.addEventListener('keydown', (event) => {
+    arrowing = event.key.startsWith('Arrow');
+  });
+  fuels.addEventListener('keyup', () => {
+    arrowing = false;
+  });
 }
 
 async function loadJson(name) {
@@ -489,6 +622,7 @@ function render() {
   const rows = priceRows(prices, state.fuel, Date.now());
   const pricesHidden = !rows.length && state.off.size > 0 && priceRows(state.prices, state.fuel, Date.now()).length > 0;
   renderCompanies();
+  syncFilters();
   renderStations(stations);
   renderBest(prices, stations, allOff, pricesHidden);
   // SPEC-0005 REQ-005: the list of the chosen fuel; a message stands in its place, under its title
@@ -572,6 +706,7 @@ function setLanguage(code) {
   state.map.closePopup();
   applyStatic();
   renderFuels();
+  if (openFilter) fillPanel(openFilter); // an open panel in the new language
   render();
 }
 
@@ -636,8 +771,10 @@ async function main() {
     button.addEventListener('click', () => setLanguage(button.dataset.lang));
   }
   watchRow();
+  watchFilters();
   initMap();
   renderFuels();
+  syncFilters();
   setStatus(t('status.loading'));
   let cities;
   [state.prices, state.stations, cities] = await Promise.all(

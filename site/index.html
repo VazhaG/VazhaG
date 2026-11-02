@@ -25,9 +25,23 @@
         </header>
         <main>
             <div class="stage">
-                <fieldset class="fuels" id="fuels">
-                    <legend class="visually-hidden" id="fuels-legend" data-i18n="fuel.legend">საწვავის ტიპი</legend>
-                </fieldset>
+                <div class="over-map">
+                    <div class="filters">
+                        <div class="filter">
+                            <button type="button" id="filter-company" class="filter-button" aria-expanded="false"
+                                    aria-controls="panel-company">კომპანია</button>
+                            <div id="panel-company" class="panel" hidden></div>
+                        </div>
+                        <div class="filter">
+                            <button type="button" id="filter-fuel" class="filter-button" aria-expanded="false"
+                                    aria-controls="panel-fuel">საწვავი</button>
+                            <div id="panel-fuel" class="panel" hidden></div>
+                        </div>
+                    </div>
+                    <fieldset class="fuels" id="fuels">
+                        <legend class="visually-hidden" id="fuels-legend" data-i18n="fuel.legend">საწვავის ტიპი</legend>
+                    </fieldset>
+                </div>
                 <div id="map" class="map"></div>
             </div>
             <div class="sheet">
