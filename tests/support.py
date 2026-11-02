@@ -46,7 +46,8 @@ DISCS_JS = """async (sel) => {
     const id = d.closest('[data-company]')?.dataset.company;  // the badge, the line or the marker it is drawn in
     const out = {
       id, size: [r.width, r.height], ground: s.backgroundColor, round: s.borderRadius,
-      opacity: Number(s.opacity), behind: behind(d), imgs: d.querySelectorAll('img').length, text: d.textContent,
+      opacity: Number(s.opacity), behind: behind(d), sheet: getComputedStyle(document.querySelector('.sheet')).backgroundColor,
+      imgs: d.querySelectorAll('img').length, text: d.textContent,
       frame: border > 0 ? [s.borderTopStyle, border, s.borderTopColor, true]
         : [s.outlineStyle, outline, s.outlineColor, parseFloat(s.outlineOffset) <= -outline + 0.01],
     };
@@ -159,12 +160,14 @@ def ratio(a: tuple[int, ...], b: tuple[int, ...]) -> float:
 
 # SPEC-0005 REQ-001, AC-001 — a company circle as DISCS_JS measured it, wherever it is drawn
 def assert_disc(d: dict, size: float) -> None:
-    """One circle of this size, black, round, in its frame (3 : 1 on what is behind it)."""
+    """One circle of this size, black, round, in its frame: the frame 3 : 1 on the sheet (REQ-001), and the circle —
+    its frame or its black — 3 : 1 on whatever is behind it (the cheapest line's yellow, a black pin)."""
     assert all(abs(v - size) <= 0.5 for v in d["size"]) and d["round"] == "50%", d
     assert d["ground"] == "rgb(0, 0, 0)" and d["opacity"] == 1, d
     style, width, color, inside = d["frame"]
     assert style == "solid" and width >= 1.5 and color == FRAME_GREY and inside, d
-    assert ratio(rgb(color), rgb(d["behind"])) >= 3, d
+    assert ratio(rgb(color), rgb(d["sheet"])) >= 3, d
+    assert max(ratio(rgb(color), rgb(d["behind"])), ratio(rgb(d["ground"]), rgb(d["behind"]))) >= 3, d
 
 
 def assert_mark(d: dict, file: str, size: float) -> None:

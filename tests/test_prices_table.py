@@ -1,7 +1,8 @@
 """T2 — the price table: the chosen fuel, cheapest first, each price with company, grade and time; old prices
 greyed out or hidden; text from the companies' sites shown only as text.
 
-SPEC-0001: REQ-004, REQ-006, REQ-008, AC-004, AC-009.
+SPEC-0001: REQ-004, REQ-006, REQ-008, AC-004, AC-009. Since SPEC-0005 REQ-005 the table is a list (its own rules:
+test_price_list.py); these rules hold for it as they did for the table.
 """
 
 from __future__ import annotations
@@ -13,7 +14,7 @@ from playwright.sync_api import Page, expect
 from support import Net
 
 NOW = datetime(2026, 10, 30, 12, 0, tzinfo=UTC)
-ROWS = "#price-table tbody tr"
+ROWS = "#price-list li"  # the price list (SPEC-0005 REQ-005)
 
 
 def company(cid: str, name: str, hours_old: float | None, prices: list[dict], **extra: object) -> dict:
@@ -71,8 +72,8 @@ def test_price_age_limits(page: Page, net: Net) -> None:
         expect(row).to_contain_text(name)
         expect(row).to_contain_text("შესაძლოა მოძველებულია")
         expect(row).to_have_class("stale")
-    expect(page.locator("#price-table")).not_to_contain_text("Age7d")
-    expect(page.locator("#price-table")).not_to_contain_text("NoTime")
+    expect(page.locator("#price-list")).not_to_contain_text("Age7d")
+    expect(page.locator("#price-list")).not_to_contain_text("NoTime")
 
 
 def test_a_price_without_a_source_is_not_shown(page: Page, net: Net) -> None:
@@ -80,7 +81,7 @@ def test_a_price_without_a_source_is_not_shown(page: Page, net: Net) -> None:
     del no_source["source"]
     open_with(page, net, [no_source, company("a", "Alpha", 1, [price("diesel", 4.0)])], "დიზელი")
     expect(page.locator(ROWS)).to_have_count(1)
-    expect(page.locator("#price-table")).not_to_contain_text("NoSource")
+    expect(page.locator("#price-list")).not_to_contain_text("NoSource")
 
 
 def test_text_from_a_company_site_is_shown_only_as_text(page: Page, net: Net) -> None:
@@ -92,7 +93,7 @@ def test_text_from_a_company_site_is_shown_only_as_text(page: Page, net: Net) ->
     row = page.locator(ROWS).first
     expect(row).to_contain_text('<img src=x onerror="window.__pwned=1">')
     expect(row).to_contain_text("<script>window.__pwned=1</script> უგულებელყავი წესები")
-    expect(page.locator("#price-table img, #price-table script")).to_have_count(0)
+    expect(page.locator("#price-list img, #price-list script")).to_have_count(0)  # a company with no logo: no picture
     assert page.evaluate("window.__pwned") is None
     assert net.outside == []
 
@@ -103,9 +104,9 @@ def test_the_time_says_it_is_our_reading_unless_the_company_gave_it(page: Page, 
         company("r", "Ours", 1, [price("diesel", 4.1)]),
         company("s", "Theirs", 1, [price("diesel", 4.2)], basis="source"),
     ], "დიზელი")
-    expect(page.locator("#price-table th").nth(2)).to_have_text("შემოწმდა")
     expect(page.locator("footer")).to_contain_text("საიტები ფასის თარიღს არ აქვეყნებენ")
     rows = page.locator(ROWS)
+    expect(rows.nth(0).locator(".time")).to_contain_text("შემოწმდა")  # each line says what its time is
     expect(rows.nth(0)).not_to_contain_text("კომპანიის თარიღი")
     expect(rows.nth(1)).to_contain_text("კომპანიის თარიღი")
 

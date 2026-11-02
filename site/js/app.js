@@ -2,7 +2,7 @@
 // (textContent, never innerHTML) — REQ-008. The visitor's place stays in this page: it is never sent (REQ-010).
 import { FUELS, lang, LANGS, setLang, t } from './i18n.js';
 import {
-  cheapestNearby, companiesOf, inkOn, placed, priceRows, routeLinks, stationPrices, stationsFor,
+  cheapestNearby, companiesOf, inkOn, lowestFresh, placed, priceRows, routeLinks, stationPrices, stationsFor,
 } from './logic.js';
 import { logoOf } from './logos.js';
 
@@ -463,17 +463,23 @@ function setStatus(text) {
   document.getElementById('status').textContent = text;
 }
 
-function rowElement(row) {
-  const tr = element('tr', row.stale ? 'stale' : '');
-  const dot = element('span', 'dot');
-  dot.style.backgroundColor = row.color;
-  const who = element('td', 'who');
-  who.append(dot, element('strong', '', row.company), element('span', 'grade', row.grade));
-  const when = element('td', 'time', formatTime(row.time));
-  if (row.basis === 'source') when.append(element('span', 'note', t('time.source')));
-  if (row.stale) when.append(element('span', 'note', t('price.stale')));
-  tr.append(who, element('td', 'price', priceText(row.price)), when);
-  return tr;
+// SPEC-0005 REQ-005: one line of the price list — the company's circle; its name, with "cheapest" beside it on the
+// list's lowest fresh price; the grade; when the price was read, whose time that is and whether it is old; the price.
+function priceLine(row, low) {
+  const cheap = !row.stale && row.price === low;
+  const li = element('li', [row.stale && 'stale', cheap && 'cheap'].filter(Boolean).join(' '));
+  li.dataset.company = row.companyId;
+  const name = element('p', 'price-name');
+  name.append(element('strong', '', row.company));
+  if (cheap) name.append(' ', element('span', 'tag', t('list.cheapest')));
+  const when = [`${t('table.time')} ${formatTime(row.time)}`];
+  if (row.basis === 'source') when.push(t('time.source'));
+  if (row.stale) when.push(t('price.stale'));
+  const who = element('div', 'price-who');
+  who.append(name, element('p', 'grade', row.grade), element('p', 'time', when.join(' · ')));
+  li.append(disc({ id: row.companyId, name: row.company, color: row.color }), who,
+    element('span', 'price', priceText(row.price)));
+  return li;
 }
 
 function render() {
@@ -485,18 +491,20 @@ function render() {
   renderCompanies();
   renderStations(stations);
   renderBest(prices, stations, allOff, pricesHidden);
-  const body = document.querySelector('#price-table tbody');
+  // SPEC-0005 REQ-005: the list of the chosen fuel; a message stands in its place, under its title
+  const list = document.getElementById('price-list');
   if (!state.prices) {
-    body.replaceChildren();
+    list.replaceChildren();
     setStatus(t('status.noPrices'));
     return;
   }
   if (allOff) {
-    body.replaceChildren();
+    list.replaceChildren();
     setStatus(t('companies.allOff'));
     return;
   }
-  body.replaceChildren(...rows.map(rowElement));
+  const low = lowestFresh(rows);
+  list.replaceChildren(...rows.map((row) => priceLine(row, low)));
   setStatus(rows.length ? '' : t(pricesHidden ? 'companies.filtered' : 'status.noFuelPrice'));
 }
 

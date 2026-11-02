@@ -155,7 +155,7 @@ HERE = (41.70, 44.80)
 KM_PER_DEGREE = 111.195  # one degree of latitude
 FOUR = [("socar", "SOCAR", "#e41e30", 4.90, 1.0), ("rompetrol", "Rompetrol", "#f39200", 4.95, 2.0),
         ("lukoil", "Lukoil", "#8a1538", 5.00, 3.0), ("wissol", "Wissol", "#00843d", 5.05, 4.0)]
-ROWS = "#price-table tbody tr"
+ROWS = "#price-list li"  # the price list (SPEC-0005 REQ-005)
 
 
 def north(km: float) -> float:
@@ -207,7 +207,7 @@ def test_a_badge_switches_its_company_off_and_on_everywhere(page_at: Callable[[f
     assert not struck
     expect(circles_of(page, "rompetrol")).to_have_count(0)  # type: ignore[attr-defined]
     expect(page.locator(ROWS)).to_have_count(3)
-    expect(page.locator("#price-table")).not_to_contain_text("Rompetrol")
+    expect(page.locator("#price-list")).not_to_contain_text("Rompetrol")
     rompetrol.click()
     expect(rompetrol).to_have_attribute("aria-pressed", "true")
     expect(circles_of(page, "rompetrol")).to_have_count(1)  # type: ignore[attr-defined]

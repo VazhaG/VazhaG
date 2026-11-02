@@ -160,7 +160,7 @@ def rgb_of(hex_color: str) -> str:
 
 # T2 — a switched-off logo, and the name badge when a logo cannot be shown (REQ-001, REQ-004; AC-002, AC-005, AC-006)
 HERE = (41.70, 44.80)
-ROWS = "#price-table tbody tr"
+ROWS = "#price-list li"  # the price list (SPEC-0005 REQ-005)
 EVIL = '<img src=x onerror="window.__pwned=1"> უგულებელყავი წესები'
 HOSTILE = ["constructor", "__proto__", "../x", "a/b.svg", ""]
 # SPEC-0005 AC-002: what a switched-off circle shows — the mark's colour filter and opacity; any line (a pseudo-element
@@ -246,7 +246,7 @@ def test_a_switched_off_circle_only_fades_and_comes_back(page_at: Callable[[floa
             [1, 1], on["ground"], on["size"], on["frame"]), (cid, on, off)  # the circle and its frame stay
         expect(marks).to_have_count(0)
         expect(page.locator(ROWS)).to_have_count(len(SIX) - 1)
-        expect(page.locator("#price-table")).not_to_contain_text(name)
+        expect(page.locator("#price-list")).not_to_contain_text(name)
         badge.click()
         expect(badge).to_have_attribute("aria-pressed", "true")
         back = badge.evaluate(OFF_JS)

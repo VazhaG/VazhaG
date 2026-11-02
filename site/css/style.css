@@ -12,6 +12,7 @@
   --line: #e5e5ea;
   --accent: #ffc529; /* the chosen fuel and language, Google Maps and Waze, the ★ — the same in both looks */
   --on-accent: #111111;
+  --cheap: #fff3c4; /* the cheapest line's ground in the price list (SPEC-0005 REQ-005) */
   --disc-frame: #8e8e93; /* a company circle's frame, in both looks: 3 : 1 on the surface (SPEC-0005 REQ-001) */
   --shadow: rgb(17 17 17 / 0.16);
   --header-h: 52px;
@@ -28,6 +29,7 @@
   --text: #ffffff;
   --muted: #a1a1a6;
   --line: #3a3a3c;
+  --cheap: #3a3018;
   --shadow: rgb(0 0 0 / 0.6);
   color-scheme: dark;
 }
@@ -539,63 +541,79 @@ h2 {
   font-size: 1.05rem;
 }
 
-#price-table {
-  width: 100%;
-  border-collapse: collapse;
+/* SPEC-0005 REQ-005: every price of the chosen fuel as a list, as on the photo — one line per company's grade, a card
+   a finger's size at least: the company's circle (40 px), its name, the grade and when the price was read, the price */
+.price-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
 }
 
-#price-table th {
-  padding: 6px 4px;
-  border-bottom: 1px solid var(--line);
+.price-list > li {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 12px;
+  align-items: center;
+  min-height: 44px;
+  margin: 6px 0;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--surface);
+}
+
+.price-list .disc {
+  --d: 40px;
+}
+
+.price-list p {
+  margin: 0;
+}
+
+.price-list .grade,
+.price-list .time {
   color: var(--muted);
-  font-size: 0.8rem;
-  font-weight: 600;
-  text-align: left;
+  font-size: 0.85rem;
 }
 
-#price-table td {
-  padding: 12px 4px;
-  vertical-align: top;
-  border-bottom: 1px solid var(--line);
-}
-
-#price-table .price {
-  font-size: 1.05rem;
-  font-weight: 700;
+.price-list .price {
+  font-size: 1.1rem;
+  font-weight: 800;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
 
-#price-table .time {
-  color: var(--muted);
-  font-size: 0.85rem;
-  white-space: nowrap;
+/* REQ-005, REQ-006: the lowest fresh price — its line on the cheapest ground, and the word "cheapest" in the yellow,
+   so it shows without colour too */
+.price-list > li.cheap {
+  background: var(--cheap);
 }
 
-.dot {
+.price-list .tag {
   display: inline-block;
-  width: 10px;
-  height: 10px;
-  margin-right: 6px;
-  border-radius: 50%;
+  margin-left: 4px;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: var(--on-accent);
+  font-size: 0.8rem;
+  font-weight: 700;
 }
 
-.grade,
+/* SPEC-0001 REQ-006: an old price is grey, with its note */
+.price-list > li.stale,
+.price-list > li.stale .price {
+  color: var(--muted);
+}
+
+.price-list > li.stale .price {
+  font-weight: 400;
+}
+
 .note {
   display: block;
   font-size: 0.85rem;
-}
-
-.note {
   white-space: normal;
-}
-
-tr.stale {
-  color: var(--muted);
-}
-
-tr.stale .price {
-  font-weight: 400;
 }
 
 .foot {

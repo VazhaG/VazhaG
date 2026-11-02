@@ -326,7 +326,7 @@ def test_with_five_badges_the_card_and_its_all_prices_link_stay_on_the_first_scr
 
 # T6 — Connect on the page, as every other company (REQ-003; AC-005). The page already does this for any company,
 # so these pass at once; seeded defects prove they bite (PLAN-0003, deviations).
-ROWS = "#price-table tbody tr"
+ROWS = "#price-list li"  # the price list (SPEC-0005 REQ-005)
 STORED_OFF = "localStorage.getItem('fuel-map.off')"
 
 
