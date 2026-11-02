@@ -127,19 +127,18 @@ def mark(cid: str) -> str:
 @pytest.mark.parametrize(("scheme", "ground"), [("light", WHITE), ("dark", NIGHT_PAGE)])
 def test_every_companys_pin_stands_out_from_the_map_whatever_its_colour(
         page_at: Callable[[float, float], Page], net: Net, scheme: str, ground: tuple[int, ...]) -> None:
-    # AC-007 by SPEC-0005 REQ-007: from the city view a light colour's letter (Connect's yellow, Rompetrol's orange)
-    # sits in a black pin like every other — by day the black stands out, at night a white contour does (3 : 1)
+    # AC-007 by SPEC-0005 REQ-007 (PLAN-0005 T8): from the city view a light colour's letter (Connect's yellow,
+    # Rompetrol's orange) sits in a pin like every other — white with a #111111 contour by day, black with a white one
+    # at night; the contour stands out from the map (3 : 1)
     no_logos(net)
     page = open_five(page_at, net, scheme)
+    body_of, ink = (WHITE, (17, 17, 17)) if scheme == "light" else ((0, 0, 0), WHITE)
     for cid, _, color, *_ in FIVE:
         assert style(page, circle(cid), "backgroundColor") == hex_rgb(color), cid  # the letter keeps its colour
-        body = style(page, pin(cid), "backgroundColor")
+        assert style(page, pin(cid), "backgroundColor") == body_of, cid
         contour = page.locator(pin(cid)).evaluate("(p) => getComputedStyle(p).boxShadow")
-        if scheme == "dark":
-            assert contour.startswith("rgb(255, 255, 255) 0px 0px 0px"), (cid, contour)
-            assert ratio(WHITE, ground) >= 3
-        else:
-            assert "rgb(255, 255, 255)" not in contour and ratio(body, ground) >= 3, (cid, body, contour)
+        assert contour.startswith(f"rgb({ink[0]}, {ink[1]}, {ink[2]}) 0px 0px 0px 2px"), (cid, contour)
+        assert ratio(ink, ground) >= 3
 
 
 @pytest.mark.parametrize(("scheme", "ground"), [("light", WHITE), ("dark", NIGHT_PAGE)])

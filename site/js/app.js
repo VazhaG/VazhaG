@@ -255,6 +255,7 @@ function letterDisc(circle, c) {
 function disc(c) {
   const circle = element('span', 'disc');
   circle.setAttribute('aria-hidden', 'true'); // a picture of the name — its place says the name in words
+  if (logoOf(c.id)?.black) circle.classList.add('black'); // SPEC-0005 REQ-001: black in the light look too
   const logo = usableLogo(c.id);
   if (logo) circle.append(markImage(logo, () => letterDisc(circle, c)));
   else letterDisc(circle, c);

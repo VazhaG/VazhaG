@@ -19,7 +19,9 @@ LOGOS_JS = SITE / "js" / "logos.js"
 LOGO_IDS = ("socar", "rompetrol", "lukoil", "wissol", "connect")  # the companies with a logo (SPEC-0004)
 # every picture the selector finds has its address and is drawn — a logo gets its address once its file has arrived
 DRAWN = "(sel) => [...document.querySelectorAll(sel)].every((i) => i.getAttribute('src') && i.naturalWidth > 0)"
-FRAME_GREY = "rgb(142, 142, 147)"  # #8E8E93 — a company circle's frame, in both looks (SPEC-0005 REQ-001)
+# a company circle's frame (SPEC-0005 REQ-001): #7C7C80 in the light look, #8E8E93 in the dark one
+FRAME = {False: "rgb(124, 124, 128)", True: "rgb(142, 142, 147)"}
+BLACK, WHITE_FILL = "rgb(0, 0, 0)", "rgb(255, 255, 255)"
 # where a station's mark stands on the map: a pin's tip from the city view on (SPEC-0005 REQ-007 — the lowest point of
 # its turned square), else the middle of its dot
 POINT_JS = """(m) => {
@@ -40,13 +42,31 @@ DISCS_JS = """async (sel) => {
     return 'rgb(255, 255, 255)';
   };
   const px = (v, total) => (v.endsWith('%') ? (parseFloat(v) / 100) * total : parseFloat(v));
+  // what a circle's frame must stand out from (REQ-001): the page, the cheapest line and a map pin's body, as drawn
+  const probe = (html, pick) => {
+    const box = document.createElement('div');
+    box.innerHTML = html;
+    document.body.append(box);
+    const c = getComputedStyle(box.querySelector(pick)).backgroundColor;
+    box.remove();
+    return c;
+  };
+  const surfaces = {
+    page: getComputedStyle(document.body).backgroundColor,
+    sheet: getComputedStyle(document.querySelector('.sheet')).backgroundColor,
+    cheap: probe('<ul class="price-list"><li class="cheap"></li></ul>', 'li'),
+    pin: probe('<div class="station near"><span class="pin"></span></div>', '.pin'),
+  };
+  const dark = document.documentElement.dataset.theme === 'dark';
   return [...document.querySelectorAll(sel)].map((d) => {
     const r = d.getBoundingClientRect(), s = getComputedStyle(d);
     const border = parseFloat(s.borderTopWidth), outline = s.outlineStyle === 'none' ? 0 : parseFloat(s.outlineWidth);
-    const id = d.closest('[data-company]')?.dataset.company;  // the badge, the line or the marker it is drawn in
+    // the badge, the line or the marker it is drawn in
+    const id = d.closest('[data-company]')?.dataset.company;
     const out = {
-      id, size: [r.width, r.height], ground: s.backgroundColor, round: s.borderRadius,
-      opacity: Number(s.opacity), behind: behind(d), sheet: getComputedStyle(document.querySelector('.sheet')).backgroundColor,
+      id, size: [r.width, r.height], ground: s.backgroundColor, round: s.borderRadius, dark, surfaces,
+      black: byId.get(id)?.black === true,
+      opacity: Number(s.opacity), behind: behind(d), sheet: surfaces.sheet,
       imgs: d.querySelectorAll('img').length, text: d.textContent,
       frame: border > 0 ? [s.borderTopStyle, border, s.borderTopColor, true]
         : [s.outlineStyle, outline, s.outlineColor, parseFloat(s.outlineOffset) <= -outline + 0.01],
@@ -160,14 +180,17 @@ def ratio(a: tuple[int, ...], b: tuple[int, ...]) -> float:
 
 # SPEC-0005 REQ-001, AC-001 — a company circle as DISCS_JS measured it, wherever it is drawn
 def assert_disc(d: dict, size: float) -> None:
-    """One circle of this size, black, round, in its frame: the frame 3 : 1 on the sheet (REQ-001), and the circle —
-    its frame or its black — 3 : 1 on whatever is behind it (the cheapest line's yellow, a black pin)."""
+    """One circle of this size, round, in its frame. Its fill is the look's (REQ-001): black at night, white by day —
+    black by day too for a company our logo list marks so (Connect; test_logos checks that mark against the file). The
+    frame is the look's grey, and the frame itself is 3 : 1 on the page, the sheet, the cheapest line, a map pin's
+    body and whatever is behind this circle."""
     assert all(abs(v - size) <= 0.5 for v in d["size"]) and d["round"] == "50%", d
-    assert d["ground"] == "rgb(0, 0, 0)" and d["opacity"] == 1, d
+    fill = BLACK if d["dark"] or d["black"] else WHITE_FILL
+    assert d["ground"] == fill and d["opacity"] == 1, d
     style, width, color, inside = d["frame"]
-    assert style == "solid" and width >= 1.5 and color == FRAME_GREY and inside, d
-    assert ratio(rgb(color), rgb(d["sheet"])) >= 3, d
-    assert max(ratio(rgb(color), rgb(d["behind"])), ratio(rgb(d["ground"]), rgb(d["behind"]))) >= 3, d
+    assert style == "solid" and width >= 1.5 and color == FRAME[d["dark"]] and inside, d
+    for ground in (*d["surfaces"].values(), d["behind"]):
+        assert ratio(rgb(color), rgb(ground)) >= 3, (ground, d)
 
 
 def assert_mark(d: dict, file: str, size: float) -> None:

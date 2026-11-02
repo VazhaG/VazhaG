@@ -9,9 +9,10 @@ asked for again on this visit (REQ-001, REQ-004; AC-002, AC-005, AC-006).
 SPEC-0005 (PLAN-0005) changes the row: T1 — every company is one 48 px black circle in a #8E8E93 frame, a logo's mark
 its longer side 60 % of the circle, a company without a logo the same circle in its colour with its first letter; a
 switched-off circle only fades — grey, 0.35–0.5 — with no line and no crossed-out name (REQ-001, REQ-002; AC-001's
-row, AC-002, AC-006's row). T3 — on the map, from the city view, a station is a black teardrop pin with its company's
-30 px circle in its head and its tip on the station's point, a white contour at night; the ★ round and yellow in a
-#111111 frame (REQ-007; AC-001's map, AC-009, AC-010).
+row, AC-002, AC-006's row). T3 — on the map, from the city view, a station is a teardrop pin with its company's
+30 px circle in its head and its tip on the station's point; the ★ round and yellow in a #111111 frame (REQ-007;
+AC-001's map, AC-009, AC-010). T8 — the light look: white circles in a #7C7C80 frame, Connect's black in both looks
+(marked in our logo list and checked against its file), white pins in a 2 px #111111 contour; the dark look as it was.
 """
 
 from __future__ import annotations
@@ -153,6 +154,56 @@ def test_a_company_without_a_logo_is_the_same_circle_in_its_colour_with_its_firs
         expect(page.get_by_role("button", name=name, exact=True)).to_have_count(1)
 
 
+# SPEC-0005 REQ-001, AC-001: each mark's opaque pixels (alpha >= 128, the file at its own size, on white), measured
+# against white and against black — the most contrasting one of each
+MARK_CONTRAST_JS = """async () => {
+  const { LOGOS } = await import('./js/logos.js');
+  const lum = (c) => {
+    const p = c.map((v) => v / 255).map((v) => (v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4));
+    return 0.2126 * p[0] + 0.7152 * p[1] + 0.0722 * p[2];
+  };
+  const ratio = (a, b) => (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
+  const out = [];
+  for (const logo of LOGOS) {
+    const img = new Image();
+    img.src = logo.file;
+    await img.decode();
+    const [fw, fh] = logo.size, [x, y, w, h] = logo.mark;
+    const canvas = document.createElement('canvas');
+    canvas.width = fw;
+    canvas.height = fh;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(img, 0, 0, fw, fh);
+    const px = ctx.getImageData(x, y, w, h).data;
+    let onWhite = 0, onBlack = 0, opaque = 0;
+    for (let i = 0; i < px.length; i += 4) {
+      const a = px[i + 3] / 255;
+      if (a < 128 / 255) continue;
+      opaque += 1;
+      const l = lum([0, 1, 2].map((k) => a * px[i + k] + (1 - a) * 255));
+      onWhite = Math.max(onWhite, ratio(l, 1));
+      onBlack = Math.max(onBlack, ratio(l, 0));
+    }
+    out.push({ id: logo.id, black: logo.black, onWhite, onBlack, opaque });
+  }
+  return out;
+}"""
+
+
+def test_a_circle_is_black_by_day_exactly_when_no_pixel_of_its_mark_reads_on_white(page: Page, net: Net) -> None:
+    # SPEC-0005 REQ-001, AC-001: our logo list marks the black-circle exception beside the logo, and the files decide
+    # it — black by day exactly when no opaque pixel of the mark reaches 3 : 1 on white (today only Connect, the
+    # owner's choice); every mark's most contrasting pixel then has 3 : 1 on its own circle
+    page.goto(net.base)
+    got = {m["id"]: m for m in page.evaluate(MARK_CONTRAST_JS)}
+    assert sorted(got) == sorted(LOGO_IDS), got
+    for m in got.values():
+        assert m["opaque"] > 0 and isinstance(m["black"], bool), m
+        assert m["black"] == (m["onWhite"] < 3), m
+        assert (m["onBlack"] if m["black"] else m["onWhite"]) >= 3, m
+    assert [cid for cid, m in got.items() if m["black"]] == ["connect"], got
+
+
 def rgb_of(hex_color: str) -> str:
     r, g, b = (int(hex_color[i:i + 2], 16) for i in (1, 3, 5))
     return f"rgb({r}, {g}, {b})"
@@ -232,12 +283,14 @@ def test_a_switched_off_circle_only_fades_and_comes_back(page_at: Callable[[floa
     page.goto(net.base)
     page.get_by_text("დიზელი", exact=True).first.click()
     page.wait_for_function(DRAWN, arg="#companies img")
-    for cid, name in (("rompetrol", "Rompetrol"), ("socar", "SOCAR"), ("nova", "Nova")):
+    for cid, name, _ in SIX:  # all five logos and a letter circle, in both looks (AC-002)
         badge, marks = page.locator(f'#companies [data-company="{cid}"]'), page.locator(f'.station[data-company="{cid}"]')
         expect(marks).to_have_count(1)
         expect(page.locator(ROWS)).to_have_count(len(SIX))
         on = badge.evaluate(OFF_JS)
         assert (on["filter"], on["opacity"], on["lines"], on["struck"], on["faded"]) == ("none", 1, [], False, [1, 1])
+        # the look's circle (REQ-002): black at night, white by day — Connect's black in both
+        assert on["ground"] == ("rgb(0, 0, 0)" if scheme == "dark" or cid == "connect" else "rgb(255, 255, 255)"), on
         badge.click()
         expect(badge).to_have_attribute("aria-pressed", "false")
         off = badge.evaluate(OFF_JS)
@@ -341,7 +394,24 @@ PINS_JS = """() => [...document.querySelectorAll('.station.near')].map((m) => {
            tip: [p.left + p.width / 2, p.bottom], disc: [d.left, d.top, d.width, d.height] };
 })"""
 PIN_DISC = 30  # px — a company circle in a map pin (SPEC-0005 REQ-001)
-WHITE_CONTOUR = re.compile(r"rgb\(255, 255, 255\) 0px 0px 0px (\d+(?:\.\d+)?)px")
+# SPEC-0005 REQ-007: a pin's body and its 2 px contour, the look's text colour — white body, #111111 contour by day;
+# black body, white contour at night
+PIN_LOOK = {"light": ("rgb(255, 255, 255)", (17, 17, 17)), "dark": ("rgb(0, 0, 0)", (255, 255, 255))}
+CONTOUR = re.compile(r"^rgb\((\d+), (\d+), (\d+)\) 0px 0px 0px (\d+(?:\.\d+)?)px")
+# the map's measured colours (docs/domain/map-tile-colours.md, Tbilisi, levels 11–13): by day each level's darkest,
+# at night each level's lightest
+MAP_EXTREMES = {"light": ["#d09056", "#888887", "#727272"], "dark": ["#8b5728", "#6d6d6c", "#7f7f7f"]}
+
+
+def hex_rgb(code: str) -> tuple[int, ...]:
+    return tuple(int(code[i:i + 2], 16) for i in (1, 3, 5))
+
+
+def contour_of(shadow: str) -> tuple[tuple[int, ...], float]:
+    """The pin's contour — its box-shadow's first ring, drawn with no blur: its colour and width."""
+    m = CONTOUR.match(shadow)
+    assert m, shadow
+    return tuple(int(v) for v in m.groups()[:3]), float(m.group(4))
 
 
 def open_near(page_at: Callable[[float, float], Page], net: Net, companies: list[tuple[str, str, str]],
@@ -365,9 +435,10 @@ def zoom(page: Page, button: str, times: int) -> None:
 
 
 @pytest.mark.parametrize("scheme", ["light", "dark"])
-def test_from_the_city_view_each_station_is_a_black_pin_with_its_companys_circle(
+def test_from_the_city_view_each_station_is_a_pin_in_the_looks_colour_with_its_companys_circle(
         page_at: Callable[[float, float], Page], net: Net, scheme: str) -> None:
-    # SPEC-0005 REQ-007, AC-001's map, AC-010: a black teardrop pin, every one the same size, with its company's 30 px
+    # SPEC-0005 REQ-007, AC-001's map, AC-010: a teardrop pin — white by day, black at night —, every one the same
+    # size, with its company's 30 px
     # circle in its head — a logo's mark cut from our file, or the colour and letter of a company without a logo
     # (Nova) — and its tip straight under the circle
     page = open_near(page_at, net, SIX, scheme)
@@ -379,7 +450,7 @@ def test_from_the_city_view_each_station_is_a_black_pin_with_its_companys_circle
     assert len({tuple(round(v, 1) for v in p["size"]) for p in pins.values()}) == 1, pins  # all one size
     for cid, name, color in SIX:
         p, d = pins[cid], discs[cid]
-        assert (p["pins"], p["discs"], p["body"]) == (1, 1, "rgb(0, 0, 0)"), p
+        assert (p["pins"], p["discs"], p["body"]) == (1, 1, PIN_LOOK[scheme][0]), p
         assert_disc(d, PIN_DISC)
         if cid in logos:
             assert_mark(d, logos[cid], PIN_DISC)
@@ -407,18 +478,25 @@ def test_a_pins_tip_stands_on_its_stations_point(page_at: Callable[[float, float
     assert abs(pin["tip"][0] - centre[0]) <= 1 and abs(pin["tip"][1] - centre[1]) <= 1, (pin, centre)
 
 
-@pytest.mark.parametrize(("scheme", "ground"), [("light", (255, 255, 255)), ("dark", (28, 28, 30))])
-def test_a_pin_stands_out_from_the_map_with_a_white_contour_only_at_night(
-        page_at: Callable[[float, float], Page], net: Net, scheme: str, ground: tuple[int, ...]) -> None:
-    # SPEC-0005 REQ-007, AC-009: black on the light map with no contour; at night a white contour, 2 px at least —
-    # whichever shows the pin has 3 : 1 against the map (its ground at night: the page's #1C1C1E)
+@pytest.mark.parametrize("scheme", ["light", "dark"])
+def test_a_pin_stands_out_from_the_map_by_its_contour_in_the_looks_text_colour(
+        page_at: Callable[[float, float], Page], net: Net, scheme: str) -> None:
+    # SPEC-0005 REQ-007, AC-009, AC-010: the body the look's (white by day, black at night), a 2 px contour in the
+    # look's text colour (#111111 by day, white at night); the contour 3 : 1 on the map's measured colours — by day
+    # each level's darkest, at night each level's lightest — and on any grey from 0 to 255 the body or the contour
+    # stands out, the ★ pin's yellow body or its #111111 frame too
     page = open_near(page_at, net, FIVE, scheme)
+    body, ink = PIN_LOOK[scheme]
     for p in page.evaluate(PINS_JS):
-        white = WHITE_CONTOUR.search(p["contour"])
-        if scheme == "dark":
-            assert white and float(white.group(1)) >= 2 and ratio((255, 255, 255), ground) >= 3, p
-        else:
-            assert not white and ratio(rgb(p["body"]), ground) >= 3, p
+        colour, width = contour_of(p["contour"])
+        assert (p["body"], colour) == (body, ink) and width == 2, p
+        for extreme in MAP_EXTREMES[scheme]:
+            assert ratio(colour, hex_rgb(extreme)) >= 3, (p, extreme)
+        for v in range(256):
+            assert max(ratio(rgb(p["body"]), (v, v, v)), ratio(colour, (v, v, v))) >= 3, (p, v)
+    star = page.locator(".best-pin").evaluate(STAR_JS)
+    for v in range(256):
+        assert max(ratio(rgb(star["ground"]), (v, v, v)), ratio(rgb(star["frame"][2]), (v, v, v))) >= 3, (star, v)
 
 
 STAR_JS = """(s) => {

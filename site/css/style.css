@@ -13,7 +13,11 @@
   --accent: #ffc529; /* the chosen fuel and language, Google Maps and Waze, the ★ — the same in both looks */
   --on-accent: #111111;
   --cheap: #fff3c4; /* the cheapest line's ground in the price list (SPEC-0005 REQ-005) */
-  --disc-frame: #8e8e93; /* a company circle's frame, in both looks: 3 : 1 on the surface (SPEC-0005 REQ-001) */
+  /* SPEC-0005 REQ-001, REQ-007: a company circle and a map pin, in the look's colour — by day a white circle in a
+     #7C7C80 frame (3 : 1 on the page, the sheet, the cheapest line and the pin) and a white pin in a #111111 contour */
+  --disc-fill: #ffffff;
+  --disc-frame: #7c7c80;
+  --pin-body: #ffffff;
   --shadow: rgb(17 17 17 / 0.16);
   --header-h: 52px;
   --overlap: 24px; /* how far the sheet rises over the map */
@@ -30,6 +34,9 @@
   --muted: #a1a1a6;
   --line: #3a3a3c;
   --cheap: #3a3018;
+  --disc-fill: #000000;
+  --disc-frame: #8e8e93;
+  --pin-body: #000000;
   --shadow: rgb(0 0 0 / 0.6);
   color-scheme: dark;
 }
@@ -372,9 +379,10 @@ h1 {
   box-shadow: 0 1px 3px rgb(15 23 42 / 0.4);
 }
 
-/* SPEC-0005 REQ-007: from the city view a station is a black teardrop pin — a square turned 45° with three round
-   corners, its sharp corner the tip on the station's point (js/app.js anchors the marker there) — with the company's
-   30 px circle upright in its head; at night a white contour, so it stands out from the dark map */
+/* SPEC-0005 REQ-007: from the city view a station is a teardrop pin — a square turned 45° with three round corners,
+   its sharp corner the tip on the station's point (js/app.js anchors the marker there) — with the company's 30 px
+   circle upright in its head. Its body is the look's (white by day, black at night) and its 2 px contour the text's
+   colour: the two are opposites, so on any map colour one of them stands out (docs/domain/map-tile-colours.md) */
 .station .pin {
   position: absolute;
   top: 0;
@@ -382,8 +390,8 @@ h1 {
   width: 36px;
   height: 36px;
   border-radius: 50% 50% 50% 0;
-  background: #000000;
-  box-shadow: 0 1px 4px rgb(15 23 42 / 0.45);
+  background: var(--pin-body);
+  box-shadow: 0 0 0 2px var(--text), 0 1px 4px rgb(15 23 42 / 0.45);
   transform: rotate(-45deg);
 }
 
@@ -472,7 +480,8 @@ h1 {
   display: none;
 }
 
-/* SPEC-0005 REQ-001: a company's sign — one black circle in a neutral frame (3 : 1 on the sheet in both looks), the
+/* SPEC-0005 REQ-001: a company's sign — one circle in the look's colour (white by day, black at night) in a neutral
+   frame (3 : 1 on the page, the sheet, the cheapest line and the pin in both looks), the
    same wherever the company shows; each place gives it its size (--d). The frame is drawn inside the circle, so the
    circle is its whole size; the logo's mark is set in shares of it (js/app.js). */
 .disc {
@@ -484,9 +493,14 @@ h1 {
   height: var(--d, 48px);
   overflow: hidden;
   border-radius: 50%;
-  background: #000000;
+  background: var(--disc-fill);
   outline: 2px solid var(--disc-frame);
   outline-offset: -2px;
+}
+
+/* a mark that cannot be read on white keeps a black circle in the light look too (js/logos.js `black`: Connect) */
+.disc.black {
+  background: #000000;
 }
 
 .disc img {
