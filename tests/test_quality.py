@@ -113,8 +113,10 @@ CONTRAST_JS = """() => {
   };
   const out = [];
   for (const el of document.querySelectorAll(
-      'h1, h2, .chip span, .lang button, #best p, #best label, .go a, .to-prices, #price-table th, #price-table td, '
-      + '.foot p, .foot a, .leaflet-control-attribution, .leaflet-control-zoom a, .badge, .station span')) {
+      'h1, h2, .chip span, .lang button, #best p, #best label, .go a, .to-prices, #price-list p, #price-list .price, '
+      + '#price-list .tag, '
+      + '.foot p, .foot a, .leaflet-control-attribution, .leaflet-control-zoom a, .badge[aria-pressed="true"] .letter, '
+      + '.station .letter')) {
     if (!el.textContent.trim() || !el.getClientRects().length) continue;
     const fg = rgb(getComputedStyle(el).color).slice(0, 3);
     const [a, b] = [lum(fg), lum(background(el))].sort((x, y) => y - x);
@@ -135,14 +137,15 @@ def test_every_text_has_wcag_aa_contrast(page_at: Callable[[float, float], Page]
     page.emulate_media(color_scheme=scheme)
     page.goto(net.base)
     expect(page.locator("#best a.go-google")).to_be_visible()
-    page.get_by_text("დიზელი", exact=True).first.click()  # a chosen chip: black on orange (SPEC-0004 REQ-005)
+    page.get_by_text("დიზელი", exact=True).first.click()  # a chosen chip: black on yellow (SPEC-0005 REQ-006)
     if logos:
-        expect(page.locator(".station.near.logo").first).to_be_visible()  # the companies' marks on the map
+        expect(page.locator(".station.near .disc img").first).to_be_visible()  # the companies' marks on the map
     else:
-        expect(page.locator(".station.near span").first).to_have_text(re.compile(r"\S"))  # letters on the map
-    page.evaluate("document.querySelector('#price-table tbody tr')?.classList.add('stale')")  # a greyed-out row
-    checked = page.evaluate(CONTRAST_JS)  # every company on: each colour as a badge and as letters on the map
-    page.locator("#companies .badge").first.click()  # a switched-off badge: its frame and crossed-out name (SPEC-0002)
+        expect(page.locator(".station.near .letter").first).to_have_text(re.compile(r"\S"))  # letters on the map
+    page.evaluate("document.querySelector('#price-list li:not(.cheap)')?.classList.add('stale')")  # a greyed-out line
+    checked = page.evaluate(CONTRAST_JS)  # every company on: each colour as a letter circle and as letters on the map
+    # a switched-off circle: its mark fades on purpose (SPEC-0005 REQ-002) — not text; its frame: test_logos.py
+    page.locator("#companies .badge").first.click()
     expect(page.locator("#companies .badge").first).to_have_attribute("aria-pressed", "false")
     checked += page.evaluate(CONTRAST_JS)
     assert len(checked) > 40

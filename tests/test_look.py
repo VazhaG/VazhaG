@@ -1,4 +1,10 @@
-"""SPEC-0004 — the black-and-orange look (PLAN-0004).
+"""SPEC-0004 — the black-and-orange look (PLAN-0004); SPEC-0005 — the reference photo's colours (PLAN-0005 T2).
+
+SPEC-0005 REQ-006 (PLAN-0005 T2) replaces T4's colours: the page and the header bar in the page colour (#F2F2F7 by
+day, #1C1C1E at night); the sheet, the cards and the fuel chips on the surface colour (#FFFFFF, #2C2C2E) — so a
+company circle's #8E8E93 frame keeps its 3 : 1 on the sheet (REQ-001); the text #111111 / #FFFFFF, the muted text
+#5F5F64 / #A1A1A6, the lines #E5E5EA / #3A3A3C; in both looks the yellow accent #FFC529 with #111111 letters for the
+chosen fuel and language (in bold too), Google Maps and Waze and the ★; a link in the text's colour, underlined.
 
 T4: the colour roles of REQ-005 in both looks — the black header bar with a white title, orange main and chosen
 buttons with black letters, the unchosen fuels on the sheet's colour in a neutral frame, the underlined links, the
@@ -18,7 +24,7 @@ from datetime import datetime
 import pytest
 from playwright.sync_api import Page, expect
 
-from support import SITE, Net, no_logos
+from support import DISCS_JS, DRAWN, SITE, Net, assert_disc, assert_mark
 
 TBILISI = (41.7151, 44.8271)
 ROLES_JS = """() => {
@@ -27,7 +33,7 @@ ROLES_JS = """() => {
   const on = '.lang button[aria-pressed="true"]', off = '.lang button[aria-pressed="false"]';
   return {
     page: css('body', 'backgroundColor'), text: css('body', 'color'), sheet: css('.sheet', 'backgroundColor'),
-    header: css('.top', 'backgroundColor'), title: css('.top h1', 'color'),
+    card: css('#best', 'backgroundColor'), header: css('.top', 'backgroundColor'), title: css('.top h1', 'color'),
     muted: css('.foot', 'color'), line: css('.prices', 'borderTopColor'),
     go: [css('.go a', 'backgroundColor'), css('.go a', 'color')],
     chosen: [css(chosen, 'backgroundColor'), css(chosen, 'color'), Number(css(chosen, 'fontWeight')) >= 700],
@@ -39,16 +45,16 @@ ROLES_JS = """() => {
     star: [css('.best-pin', 'backgroundColor'), css('.best-pin', 'color'), document.querySelector('.best-pin')?.textContent],
   };
 }"""
-WHITE, BLACK, ORANGE = "rgb(255, 255, 255)", "rgb(17, 17, 17)", "rgb(249, 115, 22)"
-BOTH = {"header": BLACK, "title": WHITE, "go": [ORANGE, BLACK], "chosen": [ORANGE, BLACK, True],
-        "langOn": [ORANGE, BLACK, True], "langOff": [WHITE, True], "star": [ORANGE, BLACK, "★"]}
+WHITE, INK, YELLOW = "rgb(255, 255, 255)", "rgb(17, 17, 17)", "rgb(255, 197, 41)"  # #FFFFFF, #111111, #FFC529
+DAY_PAGE, NIGHT_PAGE, NIGHT_SURFACE = "rgb(242, 242, 247)", "rgb(28, 28, 30)", "rgb(44, 44, 46)"
+BOTH = {"go": [YELLOW, INK], "chosen": [YELLOW, INK, True], "langOn": [YELLOW, INK, True], "star": [YELLOW, INK, "★"]}
 LOOKS = {
-    "light": BOTH | {"page": WHITE, "text": BLACK, "sheet": WHITE, "muted": "rgb(75, 85, 99)",
-                     "line": "rgb(229, 231, 235)", "other": [WHITE, BLACK, "solid", True],
-                     "link": ["rgb(194, 65, 12)", "underline"]},
-    "dark": BOTH | {"page": "rgb(0, 0, 0)", "text": "rgb(245, 245, 245)", "sheet": BLACK, "muted": "rgb(163, 163, 163)",
-                    "line": "rgb(42, 42, 42)", "other": [BLACK, "rgb(245, 245, 245)", "solid", True],
-                    "link": ["rgb(251, 146, 60)", "underline"]},
+    "light": BOTH | {"page": DAY_PAGE, "text": INK, "sheet": WHITE, "card": WHITE, "header": DAY_PAGE, "title": INK,
+                     "muted": "rgb(95, 95, 100)", "line": "rgb(229, 229, 234)", "other": [WHITE, INK, "solid", True],
+                     "langOff": [INK, True], "link": [INK, "underline"]},
+    "dark": BOTH | {"page": NIGHT_PAGE, "text": WHITE, "sheet": NIGHT_SURFACE, "card": NIGHT_SURFACE, "header": NIGHT_PAGE,
+                    "title": WHITE, "muted": "rgb(161, 161, 166)", "line": "rgb(58, 58, 60)",
+                    "other": [NIGHT_SURFACE, WHITE, "solid", True], "langOff": [WHITE, True], "link": [WHITE, "underline"]},
 }
 
 
@@ -70,6 +76,21 @@ def test_each_colour_role_is_the_one_recorded(page_at: Callable[[float, float], 
     # AC-008: every role of REQ-005, measured on the drawn page
     page = open_look(page_at, net, scheme)
     assert page.evaluate(ROLES_JS) == LOOKS[scheme]
+
+
+@pytest.mark.parametrize("scheme", ["light", "dark"])
+def test_the_star_card_shows_the_cheapest_companys_mark_in_its_circle(page_at: Callable[[float, float], Page],
+                                                                      net: Net, scheme: str) -> None:
+    # SPEC-0005 REQ-004, AC-001's card: on the real data, the cheapest company's mark in a 32 px circle; the compact
+    # card 240 px high at most
+    page = open_look(page_at, net, scheme)
+    logos = dict(page.evaluate("() => import('./js/logos.js').then((m) => m.LOGOS.map((l) => [l.id, l.file]))"))
+    page.wait_for_function(DRAWN, arg="#best .disc img")
+    (d,) = page.evaluate(DISCS_JS, "#best .disc")
+    assert_disc(d, 32)
+    assert_mark(d, logos[d["id"]], 32)
+    box = page.locator("#best").bounding_box()
+    assert box and box["height"] <= 240, box
 
 
 @pytest.mark.parametrize("scheme", ["light", "dark"])
@@ -107,7 +128,7 @@ def test_on_a_first_visit_the_look_follows_the_phone(page: Page, net: Net, phone
     expect(switch).to_have_attribute("aria-pressed", "true" if phone == "dark" else "false")
     assert page.evaluate(SIGN) == ('"☀"' if phone == "dark" else '"☾"')  # where a press takes the page
     assert page.evaluate(LOOK) == phone
-    assert page.evaluate(BACKGROUND) == ("rgb(0, 0, 0)" if phone == "dark" else "rgb(255, 255, 255)")
+    assert page.evaluate(BACKGROUND) == (NIGHT_PAGE if phone == "dark" else DAY_PAGE)
 
 
 def test_the_switch_changes_the_look_and_keeps_its_name_in_both_languages(page: Page, net: Net) -> None:
@@ -118,14 +139,14 @@ def test_the_switch_changes_the_look_and_keeps_its_name_in_both_languages(page: 
     switch.click()
     expect(switch).to_have_attribute("aria-pressed", "true")
     assert page.evaluate(SIGN) == '"☀"'
-    assert page.evaluate(BACKGROUND) == "rgb(0, 0, 0)"
+    assert page.evaluate(BACKGROUND) == NIGHT_PAGE
     page.get_by_role("button", name="ENG").click()
     switch = page.get_by_role("button", name="Dark mode", exact=True)
     expect(switch).to_have_attribute("aria-pressed", "true")
     switch.click()
     expect(switch).to_have_attribute("aria-pressed", "false")
     assert page.evaluate(SIGN) == '"☾"'
-    assert page.evaluate(BACKGROUND) == "rgb(255, 255, 255)"
+    assert page.evaluate(BACKGROUND) == DAY_PAGE
 
 
 @pytest.mark.parametrize(("phone", "choice"), [("light", "dark"), ("dark", "light")])
@@ -144,18 +165,22 @@ def test_the_choice_is_kept_on_the_phone_and_wins_over_its_setting(page: Page, n
 
 
 @pytest.mark.parametrize(("phone", "choice", "edge"), [("dark", "light", "rgb(15, 23, 42)"),
-                                                       ("light", "dark", "rgb(255, 233, 0)")])
+                                                       ("light", "dark", "rgb(255, 255, 255)")])
 def test_a_light_colours_outline_follows_the_sites_look(page: Page, net: Net, phone: str, choice: str,
                                                        edge: str) -> None:
-    # SPEC-0003 REQ-003 by the site's look: a dark outline on a light colour in the light look only
-    no_logos(net)
+    # SPEC-0003 REQ-003 by the site's look: a dark outline on a light colour's dot on the map in the light look only
+    # (the row's circles have one neutral frame since SPEC-0005 REQ-001)
     connect = {"id": "connect", "name": "Connect", "color": "#ffe900", "source": "https://c.example/", "time": TIME,
-               "basis": "read", "prices": [{"grade": "დიზელი", "fuel": "diesel", "price": 4.9}]}
+               "basis": "read", "prices": [{"grade": "რეგულარი", "fuel": "regular", "price": 4.9}]}
     open_plain(page, net, phone, [connect])
+    net.data["stations.json"] = {"generated": TIME, "companies": [connect | {"stations": [
+        {"name": "", "address": "a", "lat": 41.7, "lng": 44.8, "fuels": ["regular"]}]}]}
+    page.reload()  # no place allowed: the whole country's view, where a station is its colour's small dot
     page.locator(THEME).click()
     assert page.evaluate(LOOK) == choice
-    badge = page.locator('#companies [data-company="connect"]')
-    assert badge.evaluate("(b) => getComputedStyle(b).borderTopColor") == edge
+    dot = page.locator('.station[data-company="connect"]:not(.near) span')
+    expect(dot).to_have_count(1)
+    assert dot.evaluate("(s) => getComputedStyle(s).borderTopColor") == edge
 
 
 def first_look(page: Page, net: Net, phone: str) -> str:
@@ -185,7 +210,7 @@ def test_with_the_storage_blocked_the_switch_still_works_on_this_visit(page: Pag
     open_plain(page, net, "light")
     page.locator(THEME).click()
     expect(page.locator(THEME)).to_have_attribute("aria-pressed", "true")
-    assert page.evaluate(BACKGROUND) == "rgb(0, 0, 0)"
+    assert page.evaluate(BACKGROUND) == NIGHT_PAGE
 
 
 def test_a_kept_dark_look_is_there_before_the_main_script_runs(page: Page, net: Net) -> None:
@@ -196,7 +221,7 @@ def test_a_kept_dark_look_is_there_before_the_main_script_runs(page: Page, net: 
     page.goto(net.base, wait_until="commit")
     page.wait_for_timeout(3000)
     assert page.evaluate("document.querySelectorAll('#companies *').length") == 0  # the main script never ran
-    assert page.evaluate(BACKGROUND) == "rgb(0, 0, 0)"
+    assert page.evaluate(BACKGROUND) == NIGHT_PAGE
     assert page.evaluate(SIGN) == '"☀"'  # review C3: the switch already shows the dark look's sign
     # and before the first drawing: a plain script in <head>, ahead of the styles, so the browser waits for it
     head = (SITE / "index.html").read_text(encoding="utf-8").split("</head>")[0]
@@ -219,8 +244,9 @@ LOGO_FILES = ["logos/socar.svg", "logos/rompetrol.png", "logos/lukoil.png", "log
 @pytest.mark.parametrize("language", ["ka", "en"])
 def test_on_a_phone_the_card_the_row_and_both_switches_fit(page_at: Callable[[float, float], Page], net: Net,
                                                            scheme: str, language: str) -> None:
-    # AC-009: 375 × 812 — the ★ card and "all prices" on the first screen, no sideways page, the logos scroll in
-    # their row, and the look switch and the language switch both inside the header bar, clear of the title
+    # AC-009: 375 × 812 — the ★ card and "all prices" on the first screen, no sideways page, the five companies'
+    # circles in one row that does not scroll (SPEC-0005 REQ-001), and the look switch and the language switch both
+    # inside the header bar, clear of the title
     page = open_look(page_at, net, scheme)
     if language == "en":
         page.get_by_role("button", name="ENG").click()
@@ -229,7 +255,14 @@ def test_on_a_phone_the_card_the_row_and_both_switches_fit(page_at: Callable[[fl
         box = page.locator(target).bounding_box()
         assert box and box["y"] + box["height"] <= 812, (target, box)
     assert page.evaluate("document.documentElement.scrollWidth <= window.innerWidth")
-    assert page.locator("#companies").evaluate("(r) => r.scrollWidth > r.clientWidth")
+    expect(page.locator("#companies .badge")).to_have_count(5)
+    assert page.locator("#companies").evaluate("(r) => r.scrollWidth <= r.clientWidth")
+    # SPEC-0005 AC-008: with the visitor's place the list's first line is on the first screen too, whole; and under
+    # the filters and the fuel chips 260 px of the map at least are in view, down to the sheet
+    first = page.locator("#price-list li").first.bounding_box()
+    assert first and first["y"] + first["height"] <= 812, first
+    over, sheet = page.locator(".over-map").bounding_box(), page.locator(".sheet").bounding_box()
+    assert over and sheet and sheet["y"] - (over["y"] + over["height"]) >= 260, (over, sheet)
     bar, title = page.locator(".top").bounding_box(), page.locator(".top h1").bounding_box()
     assert bar and title and page.locator(".top h1").evaluate("(h) => h.scrollWidth <= h.clientWidth + 1")
     lines = page.locator(".top h1").evaluate("""(h) => { const r = document.createRange(); r.selectNodeContents(h);
@@ -241,21 +274,58 @@ def test_on_a_phone_the_card_the_row_and_both_switches_fit(page_at: Callable[[fl
         assert box["y"] >= bar["y"] and box["y"] + box["height"] <= bar["y"] + bar["height"], (target, box)
 
 
+@pytest.mark.parametrize("scheme", ["light", "dark"])
+@pytest.mark.parametrize("language", ["ka", "en"])
+def test_on_a_phone_without_a_place_the_chosen_citys_card_fits(page: Page, net: Net, scheme: str,
+                                                                language: str) -> None:
+    # SPEC-0005 AC-008 without the visitor's place: a city chosen from the list — the whole card and "all prices" on
+    # the first screen, 260 px of the map under the filters, no sideways page
+    net.real_data = True
+    generated = json.loads((SITE / "data" / "prices.json").read_text(encoding="utf-8"))["generated"]
+    page.clock.set_fixed_time(datetime.fromisoformat(generated))
+    page.emulate_media(color_scheme=scheme)
+    page.goto(net.base)  # no place allowed: the city list comes
+    if language == "en":
+        page.get_by_role("button", name="ENG").click()
+    expect(page.locator("#city")).to_be_visible()
+    page.locator("#city").select_option(label="თბილისი" if language == "ka" else "Tbilisi")
+    expect(page.locator("#best a.go-google")).to_be_visible()
+    for target in ("#best", "#best a.to-prices"):
+        box = page.locator(target).bounding_box()
+        assert box and box["y"] + box["height"] <= 812, (target, box)
+    over, sheet = page.locator(".over-map").bounding_box(), page.locator(".sheet").bounding_box()
+    assert over and sheet and sheet["y"] - (over["y"] + over["height"]) >= 260, (over, sheet)
+    assert page.evaluate("document.documentElement.scrollWidth <= window.innerWidth")
+
+
+BOXES_JS = """() => [...document.querySelectorAll(
+    '#companies .badge, #price-list li, .filter-button, #panel-company .option')].map((el) => {
+  const r = el.getBoundingClientRect();
+  return [el.className, Math.round(r.x * 2) / 2, Math.round(r.y * 2) / 2, Math.round(r.width * 2) / 2,
+          Math.round(r.height * 2) / 2];
+})"""
+
+
 @pytest.mark.parametrize("how", ["missing", "stalled"])
 def test_without_any_logo_the_card_comes_within_10_seconds_and_the_row_stays(
         page_at: Callable[[float, float], Page], net: Net, how: str) -> None:
-    # AC-006: every logo answers 404, or never answers; the page does not wait for them
-    net.held.update(LOGO_FILES)  # first unanswered; "missing" answers them 404 once the row is measured
+    # AC-006 (SPEC-0005 AC-007): every logo answers 404, or never answers; the page does not wait for them, and the
+    # row, the list, the filters and an open company panel keep their sizes and places as the logos fail
+    net.held.update(LOGO_FILES)  # first unanswered; "missing" answers them 404 once the page is measured
     net.real_data = True
     page = page_at(*TBILISI)
     generated = json.loads((SITE / "data" / "prices.json").read_text(encoding="utf-8"))["generated"]
     page.clock.set_fixed_time(datetime.fromisoformat(generated))
     page.goto(net.base, wait_until="domcontentloaded")  # a stalled picture holds the page's "load" back
     expect(page.locator("#best a.go-google")).to_be_visible(timeout=10_000)
-    row = page.locator("#companies").bounding_box()
+    page.locator("#filter-company").click()  # its circles wait for the same files
+    expect(page.locator("#panel-company .option")).to_have_count(5)
+    row, boxes = page.locator("#companies").bounding_box(), page.evaluate(BOXES_JS)
+    assert len(boxes) > 12, boxes
     if how == "missing":
         for file in LOGO_FILES:
             net.pending[file].fulfill(status=404, body="")
-        expect(page.locator("#companies img")).to_have_count(0)  # every badge is its name now
+        expect(page.locator(".disc img")).to_have_count(0)  # every company is its letter circle now, everywhere
     page.wait_for_timeout(1500)
     assert page.locator("#companies").bounding_box() == row  # the row stays where it is
+    assert page.evaluate(BOXES_JS) == boxes  # and nothing in it, in the list or in the filter moves

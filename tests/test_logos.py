@@ -3,9 +3,16 @@
 T1: five logo files inside the site, each the very bytes docs/domain/fuel-price-sources.md records, named in the page's
 own list by the company's exact code; in the badge row a company with a logo shows it — one picture from our list, no
 name text, on its own ground in a neutral frame, named for a screen reader (REQ-001, REQ-003; AC-001, AC-004).
-T2: switched off, a logo is grey, faded and crossed out; a company whose code is not exactly in our list, or whose file
-fails, has its name badge, and a failed file is not asked for again on this visit (REQ-001, REQ-004; AC-002, AC-005,
-AC-006).
+T2: a company whose code is not exactly in our list, or whose file fails, has no picture, and a failed file is not
+asked for again on this visit (REQ-001, REQ-004; AC-002, AC-005, AC-006).
+
+SPEC-0005 (PLAN-0005) changes the row: T1 — every company is one 48 px black circle in a #8E8E93 frame, a logo's mark
+its longer side 60 % of the circle, a company without a logo the same circle in its colour with its first letter; a
+switched-off circle only fades — grey, 0.35–0.5 — with no line and no crossed-out name (REQ-001, REQ-002; AC-001's
+row, AC-002, AC-006's row). T3 — on the map, from the city view, a station is a teardrop pin with its company's
+30 px circle in its head and its tip on the station's point; the ★ round and yellow in a #111111 frame (REQ-007;
+AC-001's map, AC-009, AC-010). T8 — the light look: white circles in a #7C7C80 frame, Connect's black in both looks
+(marked in our logo list and checked against its file), white pins in a 2 px #111111 contour; the dark look as it was.
 """
 
 from __future__ import annotations
@@ -18,25 +25,26 @@ from xml.etree import ElementTree
 import pytest
 from playwright.sync_api import Page, expect
 
-from support import DRAWN, LOGO_IDS, ROOT, SITE, Net, logos_without
+from support import (
+    DISCS_JS,
+    DRAWN,
+    LOGO_IDS,
+    ROOT,
+    SITE,
+    Net,
+    assert_disc,
+    assert_letter,
+    assert_mark,
+    logos_without,
+    no_logos,
+)
 
 DOMAIN = ROOT / "docs" / "domain" / "fuel-price-sources.md"
 TIME = "2026-11-01T12:00:00Z"
 FIVE = [("socar", "SOCAR", "#e41e30"), ("rompetrol", "Rompetrol", "#f39200"), ("lukoil", "Lukoil", "#8a1538"),
         ("wissol", "Wissol", "#00843d"), ("connect", "Connect", "#ffe900")]
-DARK_GROUND = {"socar", "connect"}  # REQ-001: SOCAR's letters are white, Connect's yellow is lost on white
 BADGES = "#companies button.badge"
 LIST_JS = "() => import('./js/logos.js').then((m) => m.LOGOS.map((l) => [l.id, l.file]))"
-BADGE_JS = """(b) => {
-  const s = getComputedStyle(b), r = b.getBoundingClientRect();
-  return {
-    imgs: [...b.querySelectorAll('img')].map((i) => [i.getAttribute('src'), i.complete && i.naturalWidth > 0,
-                                                     getComputedStyle(i).filter, i.getAttribute('alt')]),
-    pictures: b.querySelectorAll('svg, picture, object, embed, iframe').length,
-    text: b.textContent.trim(), name: b.getAttribute('aria-label'), filter: s.filter,
-    ground: s.backgroundColor, edge: s.borderTopColor, edgeWidth: s.borderTopWidth, width: r.width, height: r.height,
-  };
-}"""
 
 
 def logo_list(page: Page, net: Net) -> dict[str, str]:
@@ -106,37 +114,123 @@ def open_five(page: Page, net: Net, scheme: str) -> None:
     page.goto(net.base)
 
 
+ROW_DISCS = "#companies .disc"
+ROW_DISC = 48  # px — a company circle in the row (SPEC-0005 REQ-001)
+
+
 @pytest.mark.parametrize("scheme", ["light", "dark"])
-def test_each_company_with_a_logo_shows_it_on_its_badge(page: Page, net: Net, scheme: str) -> None:
-    # AC-001: one picture from our list, loaded and drawn; no name text, no colour filter; the name for a screen
-    # reader; the logo's own ground, the same in both looks; a thin neutral frame; 44 × 44 at least. The stylesheet
-    # asks for 1.5 px (REQ-001); Chromium draws any width from 1 up to 2 px as 1 px, on every screen (PLAN-0004, T1)
+def test_each_company_with_a_logo_shows_its_mark_in_a_black_circle_in_the_row(page: Page, net: Net,
+                                                                               scheme: str) -> None:
+    # SPEC-0005 AC-001, the row: 48 px circles, each the company's mark from our list; the name for a screen reader
     logos = logo_list(page, net)
     open_five(page, net, scheme)
     badges = page.locator(BADGES)
     expect(badges).to_have_count(len(FIVE))
     page.wait_for_function(DRAWN, arg="#companies img")
-    for i, (cid, name, _) in enumerate(FIVE):
+    discs = page.evaluate(DISCS_JS, ROW_DISCS)
+    assert [d["id"] for d in discs] == [cid for cid, *_ in FIVE], discs  # one circle per company, in its badge
+    for i, ((cid, name, _), d) in enumerate(zip(FIVE, discs, strict=True)):
         expect(badges.nth(i)).to_have_attribute("data-company", cid)
-        got = badges.nth(i).evaluate(BADGE_JS)
-        assert got["imgs"] == [[logos[cid], True, "none", ""]] and got["pictures"] == 0, (cid, got)
-        assert (got["text"], got["name"], got["filter"]) == ("", name, "none"), (cid, got)
-        assert got["ground"] == ("rgb(17, 17, 17)" if cid in DARK_GROUND else "rgb(255, 255, 255)"), (cid, got)
-        assert got["edge"] == "rgb(107, 114, 128)" and 1 <= float(got["edgeWidth"][:-2]) < 2, (cid, got)
-        assert got["width"] >= 44 and got["height"] >= 44, (cid, got)
+        assert_disc(d, ROW_DISC)
+        assert_mark(d, logos[cid], ROW_DISC)
+        box = badges.nth(i).bounding_box()
+        assert box and box["width"] >= ROW_DISC and box["height"] >= ROW_DISC, (cid, box)  # a finger's size
         expect(page.get_by_role("button", name=name, exact=True)).to_have_count(1)
+
+
+@pytest.mark.parametrize("scheme", ["light", "dark"])
+def test_a_company_without_a_logo_is_the_same_circle_in_its_colour_with_its_first_letter(page: Page, net: Net,
+                                                                                         scheme: str) -> None:
+    # SPEC-0005 REQ-001, AC-006's row: no logo in our list — the same 48 px circle and frame; its colour, its letter
+    # in the ink that reads on it, and its name for a screen reader
+    no_logos(net)
+    open_five(page, net, scheme)
+    expect(page.locator(BADGES)).to_have_count(len(FIVE))
+    discs = page.evaluate(DISCS_JS, ROW_DISCS)
+    for (cid, name, color), d in zip(FIVE, discs, strict=True):
+        assert d["id"] == cid, d
+        assert_disc(d, ROW_DISC)
+        assert_letter(d, ROW_DISC, name[0], rgb_of(color))
+        expect(page.get_by_role("button", name=name, exact=True)).to_have_count(1)
+
+
+# SPEC-0005 REQ-001, AC-001: each mark's opaque pixels (alpha >= 128, the file at its own size), drawn on white and
+# measured against white, drawn on black and measured against black — the most contrasting one of each
+MARK_CONTRAST_JS = """async () => {
+  const { LOGOS } = await import('./js/logos.js');
+  const lum = (c) => {
+    const p = c.map((v) => v / 255).map((v) => (v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4));
+    return 0.2126 * p[0] + 0.7152 * p[1] + 0.0722 * p[2];
+  };
+  const ratio = (a, b) => (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
+  const out = [];
+  for (const logo of LOGOS) {
+    const img = new Image();
+    img.src = logo.file;
+    await img.decode();
+    const [fw, fh] = logo.size, [x, y, w, h] = logo.mark;
+    const canvas = document.createElement('canvas');
+    canvas.width = fw;
+    canvas.height = fh;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(img, 0, 0, fw, fh);
+    const px = ctx.getImageData(x, y, w, h).data;
+    let onWhite = 0, onBlack = 0, opaque = 0;
+    for (let i = 0; i < px.length; i += 4) {
+      const a = px[i + 3] / 255;
+      if (a < 128 / 255) continue;
+      opaque += 1;
+      // each pixel drawn on the circle it is measured against (review C1): on white for white, on black for black
+      const on = (ground) => lum([0, 1, 2].map((k) => a * px[i + k] + (1 - a) * ground));
+      onWhite = Math.max(onWhite, ratio(on(255), 1));
+      onBlack = Math.max(onBlack, ratio(on(0), 0));
+    }
+    out.push({ id: logo.id, black: logo.black, onWhite, onBlack, opaque });
+  }
+  return out;
+}"""
+
+
+def test_a_circle_is_black_by_day_exactly_when_no_pixel_of_its_mark_reads_on_white(page: Page, net: Net) -> None:
+    # SPEC-0005 REQ-001, AC-001: our logo list marks the black-circle exception beside the logo, and the files decide
+    # it — black by day exactly when no opaque pixel of the mark reaches 3 : 1 on white (today only Connect, the
+    # owner's choice); every mark's most contrasting pixel then has 3 : 1 on its own circle
+    page.goto(net.base)
+    got = {m["id"]: m for m in page.evaluate(MARK_CONTRAST_JS)}
+    assert sorted(got) == sorted(LOGO_IDS), got
+    for m in got.values():
+        assert m["opaque"] > 0 and isinstance(m["black"], bool), m
+        assert m["black"] == (m["onWhite"] < 3), m
+        assert (m["onBlack"] if m["black"] else m["onWhite"]) >= 3, m
+    assert [cid for cid, m in got.items() if m["black"]] == ["connect"], got
+
+
+def rgb_of(hex_color: str) -> str:
+    r, g, b = (int(hex_color[i:i + 2], 16) for i in (1, 3, 5))
+    return f"rgb({r}, {g}, {b})"
 
 
 # T2 — a switched-off logo, and the name badge when a logo cannot be shown (REQ-001, REQ-004; AC-002, AC-005, AC-006)
 HERE = (41.70, 44.80)
-ROWS = "#price-table tbody tr"
+ROWS = "#price-list li"  # the price list (SPEC-0005 REQ-005)
 EVIL = '<img src=x onerror="window.__pwned=1"> უგულებელყავი წესები'
-HOSTILE = ["constructor", "__proto__", "../x", "a/b.svg", ""]
+# codes that look like an object's own field, a path, nothing, or markup with quotes and brackets (security review S1)
+HOSTILE = ["constructor", "__proto__", "../x", "a/b.svg", "", 'x"><img src=y>\\]']
+# SPEC-0005 AC-002: what a switched-off circle shows — the mark's colour filter and opacity; any line (a pseudo-element
+# of the badge, the circle or the mark) or a crossed-out text; the circle's own opacity, fill, size and frame
 OFF_JS = """(b) => {
-  const img = b.querySelector('img'), line = getComputedStyle(b, '::after');
-  return { filter: img && getComputedStyle(img).filter, opacity: img && Number(getComputedStyle(img).opacity),
-           line: line.content, thick: line.height, ink: line.backgroundColor, turn: line.transform,
-           ground: getComputedStyle(b).backgroundColor };
+  const d = b.querySelector('.disc'), m = d.querySelector('img, .letter'), s = getComputedStyle(d);
+  const parts = [b, d, m];
+  const r = d.getBoundingClientRect();
+  return {
+    filter: getComputedStyle(m).filter, opacity: Number(getComputedStyle(m).opacity),
+    lines: parts.flatMap((el) => ['::before', '::after'].map((p) => getComputedStyle(el, p).content))
+      .filter((c) => c !== 'none' && c !== 'normal'),
+    struck: parts.some((el) => getComputedStyle(el).textDecorationLine.includes('line-through')),
+    faded: [Number(getComputedStyle(b).opacity), Number(s.opacity)], ground: s.backgroundColor,
+    size: [r.width, r.height], frame: [s.outlineStyle, s.outlineWidth, s.outlineColor, s.borderTopStyle,
+                                       s.borderTopWidth, s.borderTopColor],
+  };
 }"""
 BEHIND_JS = """(el) => {
   for (el = el.parentElement; el; el = el.parentElement) {
@@ -174,34 +268,44 @@ def serve(net: Net, companies: list[tuple[str, str, str]]) -> None:
     net.data["stations.json"] = {"generated": TIME, "companies": stations}
 
 
+SIX = [*FIVE, ("nova", "Nova", "#2563eb")]  # Nova: no logo in our list — its colour and first letter
+
+
 @pytest.mark.parametrize("scheme", ["light", "dark"])
-def test_a_switched_off_logo_is_grey_faded_and_crossed_out_and_comes_back(page_at: Callable[[float, float], Page],
-                                                                          net: Net, scheme: str) -> None:
-    # AC-002 — on a light ground (Rompetrol) and on a dark one (SOCAR); the company leaves the map and the table
-    serve(net, FIVE)
+def test_a_switched_off_circle_only_fades_and_comes_back(page_at: Callable[[float, float], Page], net: Net,
+                                                         scheme: str) -> None:
+    # SPEC-0005 AC-002 — a logo on its own light ground (Rompetrol) and dark one (SOCAR), and a letter circle (Nova):
+    # off, the mark is grey and faded and nothing else changes — no line, no crossed-out name, the circle, its fill
+    # and its frame as they were; the company leaves the map and the table, and all comes back when it is on again
+    serve(net, SIX)
     page = page_at(*HERE)
     page.emulate_media(color_scheme=scheme)
     page.clock.set_fixed_time(TIME)
     page.goto(net.base)
     page.get_by_text("დიზელი", exact=True).first.click()
-    for cid, name in (("rompetrol", "Rompetrol"), ("socar", "SOCAR")):
+    page.wait_for_function(DRAWN, arg="#companies img")
+    for cid, name, _ in SIX:  # all five logos and a letter circle, in both looks (AC-002)
         badge, marks = page.locator(f'#companies [data-company="{cid}"]'), page.locator(f'.station[data-company="{cid}"]')
         expect(marks).to_have_count(1)
-        expect(page.locator(ROWS)).to_have_count(5)
+        expect(page.locator(ROWS)).to_have_count(len(SIX))
         on = badge.evaluate(OFF_JS)
-        assert (on["filter"], on["opacity"], on["line"]) == ("none", 1, "none"), (cid, on)
+        assert (on["filter"], on["opacity"], on["lines"], on["struck"], on["faded"]) == ("none", 1, [], False, [1, 1])
+        # the look's circle (REQ-002): black at night, white by day — Connect's black in both
+        assert on["ground"] == ("rgb(0, 0, 0)" if scheme == "dark" or cid == "connect" else "rgb(255, 255, 255)"), on
         badge.click()
         expect(badge).to_have_attribute("aria-pressed", "false")
         off = badge.evaluate(OFF_JS)
         assert off["filter"] == "grayscale(1)" and 0.35 <= off["opacity"] <= 0.5, (cid, off)
-        assert off["line"] != "none" and float(off["thick"][:-2]) >= 2 and off["turn"] != "none", (cid, off)
-        assert ratio(rgb(off["ink"]), rgb(off["ground"])) >= 3, (cid, off)
+        assert off["lines"] == [] and not off["struck"], (cid, off)  # no line, no crossed-out name
+        assert (off["faded"], off["ground"], off["size"], off["frame"]) == (
+            [1, 1], on["ground"], on["size"], on["frame"]), (cid, on, off)  # the circle and its frame stay
         expect(marks).to_have_count(0)
-        expect(page.locator(ROWS)).to_have_count(4)
-        expect(page.locator("#price-table")).not_to_contain_text(name)
+        expect(page.locator(ROWS)).to_have_count(len(SIX) - 1)
+        expect(page.locator("#price-list")).not_to_contain_text(name)
         badge.click()
         expect(badge).to_have_attribute("aria-pressed", "true")
-        assert badge.evaluate(OFF_JS)["filter"] == "none"
+        back = badge.evaluate(OFF_JS)
+        assert (back["filter"], back["opacity"]) == ("none", 1), (cid, back)
         expect(marks).to_have_count(1)
 
 
@@ -232,10 +336,19 @@ def test_only_an_exact_code_in_our_list_gets_a_picture_and_a_name_stays_text(pag
     page.wait_for_function(DRAWN, arg="#companies img")
     srcs = page.locator("#companies img").evaluate_all("(i) => i.map((x) => x.getAttribute('src'))")
     assert srcs == ["logos/socar.svg"]
-    expect(page.locator(BADGES).first).to_have_text(EVIL)  # a name badge: the name as text only
+    expect(page.locator(BADGES).first).to_have_text("<")  # a letter circle: the name's first letter, as text only
+    expect(page.locator(BADGES).first).to_have_attribute("aria-label", EVIL)
     expect(page.locator('#companies [data-company="socar"]')).to_have_attribute("aria-label", EVIL)
     expect(page.get_by_role("button", name=EVIL)).to_have_count(2)
     expect(page.locator("#companies script")).to_have_count(0)
+    # each code is read back exactly from its badge, and the one with quotes and brackets keeps the keyboard's focus
+    # when it is pressed (the badge is found again by its code — review S1)
+    codes = page.locator(BADGES).evaluate_all("(b) => b.map((x) => x.dataset.company)")
+    assert codes == [*HOSTILE, "socar"], codes
+    odd = page.locator(BADGES).nth(len(HOSTILE) - 1)
+    odd.click()
+    expect(odd).to_have_attribute("aria-pressed", "false")
+    assert page.evaluate("document.activeElement.dataset.company") == HOSTILE[-1]
     page.wait_for_load_state("networkidle")
     assert page.evaluate("window.__pwned") is None
     allowed = {"", "css/style.css", "js/theme.js", "js/app.js", "js/i18n.js", "js/logic.js", "js/logos.js",
@@ -246,49 +359,60 @@ def test_only_an_exact_code_in_our_list_gets_a_picture_and_a_name_stays_text(pag
     assert net.outside == []
 
 
-def test_a_logo_that_does_not_load_leaves_a_name_badge_and_is_not_asked_again(page: Page, net: Net) -> None:
-    # AC-006 and REQ-004: the others keep their logos; drawing the row anew does not ask for the failed file again
+def test_a_logo_that_does_not_load_leaves_a_letter_circle_and_is_not_asked_again(page: Page, net: Net) -> None:
+    # AC-006 and REQ-004 (SPEC-0005 AC-006's row): the same circle in the company's colour with its letter; the others
+    # keep their logos; drawing the row anew does not ask for the failed file again
     net.files["logos/lukoil.png"] = (404, "text/plain", "")
     open_five(page, net, "light")
     lukoil = page.locator('#companies [data-company="lukoil"]')
-    expect(lukoil).to_have_text("Lukoil")
+    expect(lukoil).to_have_text("L")
     expect(lukoil.locator("img")).to_have_count(0)
-    assert lukoil.evaluate("b => getComputedStyle(b).backgroundColor") == "rgb(138, 21, 56)"  # its colour
+    expect(lukoil).to_have_attribute("aria-label", "Lukoil")
+    (d,) = page.evaluate(DISCS_JS, '#companies [data-company="lukoil"] .disc')
+    assert_disc(d, ROW_DISC)
+    assert_letter(d, ROW_DISC, "L", "rgb(138, 21, 56)")  # its colour, #8a1538
     expect(page.locator("#companies img")).to_have_count(4)
     socar = page.locator('#companies [data-company="socar"]')
     socar.click()  # the row is drawn anew, twice
     socar.click()
-    expect(lukoil).to_have_text("Lukoil")
+    expect(lukoil).to_have_text("L")
     assert [u for u in net.requests if u.endswith("/logos/lukoil.png")] == [f"{net.base}logos/lukoil.png"]
 
 
-# T3 — the companies' marks on the map (REQ-002, REQ-003, REQ-004; AC-003, AC-004, AC-005)
-MARKS_JS = """async () => {
-  const { LOGOS } = await import('./js/logos.js');
-  const byId = new Map(LOGOS.map((l) => [l.id, l]));
-  return [...document.querySelectorAll('.station')].map((m) => {
-    const logo = byId.get(m.dataset.company), frame = m.querySelector('span'), img = m.querySelector('img');
-    const f = frame.getBoundingClientRect(), s = getComputedStyle(frame);
-    const out = { id: m.dataset.company, near: m.classList.contains('near'), frame: [f.width, f.height],
-                  ground: s.backgroundColor, round: s.borderRadius, text: frame.textContent,
-                  imgs: m.querySelectorAll('img').length };
-    if (img && logo) {
-      const r = img.getBoundingClientRect(), k = r.width / logo.size[0], [x, y, w, h] = logo.mark;
-      const left = r.left + x * k, top = r.top + y * k;
-      const v = (getComputedStyle(img).clipPath.match(/[\\d.]+/g) || []).map(Number);
-      // inset() is written like a margin: one, two, three or four values — top, right, bottom, left
-      const [t, rt, b, lt] = [v[0], v[1] ?? v[0], v[2] ?? v[0], v[3] ?? v[1] ?? v[0]];
-      const shown = v.length ? [r.left + lt, r.top + t, r.width - rt - lt, r.height - t - b] : null;
-      Object.assign(out, { src: img.getAttribute('src'), alt: img.getAttribute('alt'), mark: [w * k, h * k],
-                           clip: getComputedStyle(img).clipPath, shown, at: [left, top, w * k, h * k],
-                           off: [left + w * k / 2 - (f.left + f.width / 2), top + h * k / 2 - (f.top + f.height / 2)],
-                           loaded: img.complete && img.naturalWidth > 0,
-                           inside: left >= f.left - 0.5 && top >= f.top - 0.5 && left + w * k <= f.right + 0.5
-                                   && top + h * k <= f.bottom + 0.5 });
-    }
-    return out;
-  });
-}"""
+# T3 — the companies' marks on the map (REQ-002, REQ-003, REQ-004; AC-003, AC-004, AC-005). SPEC-0005 (PLAN-0005 T3):
+# from the city view a station is a black teardrop pin with the company's 30 px circle in its head and its tip on the
+# station's point, with a white contour at night; the ★ is round and yellow in a #111111 frame (REQ-007; AC-001's map,
+# AC-009, AC-010)
+FAR_JS = """() => [...document.querySelectorAll('.station')].map((m) => ({
+  id: m.dataset.company, near: m.classList.contains('near'), text: m.textContent,
+  imgs: m.querySelectorAll('img').length, ground: getComputedStyle(m.firstElementChild).backgroundColor,
+}))"""
+PINS_JS = """() => [...document.querySelectorAll('.station.near')].map((m) => {
+  const pin = m.querySelector('.pin'), disc = m.querySelector('.disc');
+  const p = pin.getBoundingClientRect(), d = disc.getBoundingClientRect(), s = getComputedStyle(pin);
+  return { id: m.dataset.company, pins: m.querySelectorAll('.pin').length, discs: m.querySelectorAll('.disc').length,
+           body: s.backgroundColor, contour: s.boxShadow, size: [p.width, p.height],
+           tip: [p.left + p.width / 2, p.bottom], disc: [d.left, d.top, d.width, d.height] };
+})"""
+PIN_DISC = 30  # px — a company circle in a map pin (SPEC-0005 REQ-001)
+# SPEC-0005 REQ-007: a pin's body and its 2 px contour, the look's text colour — white body, #111111 contour by day;
+# black body, white contour at night
+PIN_LOOK = {"light": ("rgb(255, 255, 255)", (17, 17, 17)), "dark": ("rgb(0, 0, 0)", (255, 255, 255))}
+CONTOUR = re.compile(r"^rgb\((\d+), (\d+), (\d+)\) 0px 0px 0px (\d+(?:\.\d+)?)px")
+# the map's measured colours (docs/domain/map-tile-colours.md, Tbilisi, levels 11–13): by day each level's darkest,
+# at night each level's lightest
+MAP_EXTREMES = {"light": ["#d09056", "#888887", "#727272"], "dark": ["#8b5728", "#6d6d6c", "#7f7f7f"]}
+
+
+def hex_rgb(code: str) -> tuple[int, ...]:
+    return tuple(int(code[i:i + 2], 16) for i in (1, 3, 5))
+
+
+def contour_of(shadow: str) -> tuple[tuple[int, ...], float]:
+    """The pin's contour — its box-shadow's first ring, drawn with no blur: its colour and width."""
+    m = CONTOUR.match(shadow)
+    assert m, shadow
+    return tuple(int(v) for v in m.groups()[:3]), float(m.group(4))
 
 
 def open_near(page_at: Callable[[float, float], Page], net: Net, companies: list[tuple[str, str, str]],
@@ -312,23 +436,93 @@ def zoom(page: Page, button: str, times: int) -> None:
 
 
 @pytest.mark.parametrize("scheme", ["light", "dark"])
-def test_from_the_city_view_each_station_is_its_companys_mark_in_a_white_round_frame(
+def test_from_the_city_view_each_station_is_a_pin_in_the_looks_colour_with_its_companys_circle(
         page_at: Callable[[float, float], Page], net: Net, scheme: str) -> None:
-    # AC-003: the mark is cut from the logo's own file; frame 28 px at least, the mark 22; a decoration (alt="")
-    page = open_near(page_at, net, FIVE, scheme)
+    # SPEC-0005 REQ-007, AC-001's map, AC-010: a teardrop pin — white by day, black at night —, every one the same
+    # size, with its company's 30 px
+    # circle in its head — a logo's mark cut from our file, or the colour and letter of a company without a logo
+    # (Nova) — and its tip straight under the circle
+    page = open_near(page_at, net, SIX, scheme)
     logos = dict(page.evaluate(LIST_JS))
     page.wait_for_function(DRAWN, arg=".station img")
-    marks = {m["id"]: m for m in page.evaluate(MARKS_JS)}
-    for cid, *_ in FIVE:
-        m = marks[cid]
-        assert m["near"] and m["imgs"] == 1 and (m["src"], m["alt"], m["loaded"]) == (logos[cid], "", True), m
-        assert min(m["frame"]) >= 28 and max(m["mark"]) >= 21.5 and m["inside"], m
-        assert m["clip"].startswith("inset("), m  # only the mark shows through the frame
-        assert max(abs(v) for v in m["off"]) <= 0.5, m  # in the middle of its frame
-        assert m["shown"] and all(abs(a - b) <= 0.6 for a, b in zip(m["shown"], m["at"], strict=True)), m
-        assert (m["ground"], m["round"], m["text"]) == ("rgb(255, 255, 255)", "50%", ""), m
+    pins = {p["id"]: p for p in page.evaluate(PINS_JS)}
+    discs = {d["id"]: d for d in page.evaluate(DISCS_JS, ".station .disc")}
+    assert sorted(pins) == sorted(discs) == sorted(cid for cid, *_ in SIX), (pins, discs)
+    assert len({tuple(round(v, 1) for v in p["size"]) for p in pins.values()}) == 1, pins  # all one size
+    for cid, name, color in SIX:
+        p, d = pins[cid], discs[cid]
+        assert (p["pins"], p["discs"], p["body"]) == (1, 1, PIN_LOOK[scheme][0]), p
+        assert_disc(d, PIN_DISC)
+        if cid in logos:
+            assert_mark(d, logos[cid], PIN_DISC)
+        else:
+            assert_letter(d, PIN_DISC, name[0], rgb_of(color))
+        x, y, w, h = p["disc"]
+        assert abs(p["tip"][0] - (x + w / 2)) <= 0.5 and p["tip"][1] >= y + h + 4, p  # the tip under the circle
     page.locator('.station[data-company="lukoil"]').dispatch_event("click")
     expect(page.locator(".leaflet-popup-content")).to_contain_text("Lukoil")  # the window names the company
+
+
+def test_a_pins_tip_stands_on_its_stations_point(page_at: Callable[[float, float], Page], net: Net) -> None:
+    # SPEC-0005 AC-010: the tip on the station's place (±1 px) — here the visitor's own place, as the map draws it
+    serve(net, [("socar", "SOCAR", "#e41e30")])
+    net.data["stations.json"]["companies"][0]["stations"][0].update(lat=HERE[0], lng=HERE[1])  # type: ignore[index]
+    page = page_at(*HERE)
+    page.clock.set_fixed_time(TIME)
+    page.goto(net.base)
+    page.get_by_text("დიზელი", exact=True).first.click()
+    expect(page.locator(".station.near")).to_have_count(1)
+    you = page.locator("path.you").bounding_box()
+    (pin,) = page.evaluate(PINS_JS)
+    assert you, you
+    centre = (you["x"] + you["width"] / 2, you["y"] + you["height"] / 2)
+    assert abs(pin["tip"][0] - centre[0]) <= 1 and abs(pin["tip"][1] - centre[1]) <= 1, (pin, centre)
+
+
+@pytest.mark.parametrize("scheme", ["light", "dark"])
+def test_a_pin_stands_out_from_the_map_by_its_contour_in_the_looks_text_colour(
+        page_at: Callable[[float, float], Page], net: Net, scheme: str) -> None:
+    # SPEC-0005 REQ-007, AC-009, AC-010: the body the look's (white by day, black at night), a 2 px contour in the
+    # look's text colour (#111111 by day, white at night); the contour 3 : 1 on the map's measured colours — by day
+    # each level's darkest, at night each level's lightest — and on any grey from 0 to 255 the body or the contour
+    # stands out, the ★ pin's yellow body or its #111111 frame too
+    page = open_near(page_at, net, FIVE, scheme)
+    body, ink = PIN_LOOK[scheme]
+    for p in page.evaluate(PINS_JS):
+        colour, width = contour_of(p["contour"])
+        assert (p["body"], colour) == (body, ink) and width == 2, p
+        for extreme in MAP_EXTREMES[scheme]:
+            assert ratio(colour, hex_rgb(extreme)) >= 3, (p, extreme)
+        for v in range(256):
+            assert max(ratio(rgb(p["body"]), (v, v, v)), ratio(colour, (v, v, v))) >= 3, (p, v)
+    star = page.locator(".best-pin").evaluate(STAR_JS)
+    for v in range(256):
+        assert max(ratio(rgb(star["ground"]), (v, v, v)), ratio(rgb(star["frame"][2]), (v, v, v))) >= 3, (star, v)
+
+
+STAR_JS = """(s) => {
+  const c = getComputedStyle(s), r = s.getBoundingClientRect();
+  return { round: c.borderRadius, ground: c.backgroundColor, ink: c.color, text: s.textContent,
+           frame: [c.borderTopStyle, parseFloat(c.borderTopWidth), c.borderTopColor],
+           size: [r.width, r.height], centre: [r.left + r.width / 2, r.top + r.height / 2] };
+}"""
+
+
+@pytest.mark.parametrize("scheme", ["light", "dark"])
+def test_the_star_is_round_and_yellow_in_a_dark_frame_over_its_stations_point(
+        page_at: Callable[[float, float], Page], net: Net, scheme: str) -> None:
+    # SPEC-0005 REQ-007, AC-010: the ★ in the middle of the cheapest station's place — SOCAR's here, over its pin's tip
+    page = open_near(page_at, net, FIVE, scheme)
+    expect(page.locator("#best")).to_contain_text("SOCAR")
+    star = page.locator(".best-pin")
+    expect(star).to_have_count(1)
+    got = star.evaluate(STAR_JS)
+    assert (got["round"], got["ground"], got["ink"], got["text"]) == ("50%", "rgb(255, 197, 41)", "rgb(17, 17, 17)",
+                                                                     "★"), got
+    assert got["frame"][0] == "solid" and got["frame"][1] >= 1.5 and got["frame"][2] == "rgb(17, 17, 17)", got
+    assert abs(got["size"][0] - got["size"][1]) <= 0.5, got
+    tip = {p["id"]: p["tip"] for p in page.evaluate(PINS_JS)}["socar"]
+    assert abs(got["centre"][0] - tip[0]) <= 1 and abs(got["centre"][1] - tip[1]) <= 1, (got, tip)
 
 
 def test_from_far_a_station_is_still_its_companys_small_dot(page: Page, net: Net) -> None:
@@ -338,26 +532,103 @@ def test_from_far_a_station_is_still_its_companys_small_dot(page: Page, net: Net
     page.goto(net.base)  # no place allowed: the first view shows all of Georgia
     page.get_by_text("დიზელი", exact=True).first.click()  # the fuel the stations sell
     expect(page.locator(".station:not(.near)")).to_have_count(len(FIVE))
-    marks = page.evaluate(MARKS_JS)
+    marks = page.evaluate(FAR_JS)
     assert all(not m["near"] and m["imgs"] == 0 and m["text"] == "" for m in marks), marks
     assert {m["id"]: m["ground"] for m in marks}["socar"] == "rgb(228, 30, 48)"  # SOCAR's colour, #e41e30
+    expect(page.locator(".station .pin")).to_have_count(0)
 
 
 def test_each_logo_file_is_asked_once_whatever_the_row_and_the_map_do(page_at: Callable[[float, float], Page],
                                                                       net: Net) -> None:
-    # AC-004: opening, switching a company off and on, leaving the city view and coming back
+    # AC-004 (SPEC-0005 AC-007: all five places together): opening — the row, the map, the ★ card and the list —,
+    # the company filter opened and closed, a company switched off and on, the city view left and come back to
     page = open_near(page_at, net, FIVE)
-    expect(page.locator(".station.near.logo")).to_have_count(len(FIVE))
+    expect(page.locator(".station.near .disc img")).to_have_count(len(FIVE))
+    expect(page.locator("#best .disc img, #price-list .disc img")).to_have_count(1 + len(FIVE))
+    page.locator("#filter-company").click()
+    expect(page.locator("#panel-company .disc img")).to_have_count(len(FIVE))
+    page.locator("#filter-company").click()
     wissol = page.locator('#companies [data-company="wissol"]')
     wissol.click()
     wissol.click()
     zoom(page, "out", 3)
     expect(page.locator(".station.near")).to_have_count(0)
     zoom(page, "in", 3)
-    expect(page.locator(".station.near.logo")).to_have_count(len(FIVE))
+    expect(page.locator(".station.near .disc img")).to_have_count(len(FIVE))
     page.wait_for_load_state("networkidle")
     asked = sorted(u[len(net.base):] for u in net.requests if u.startswith(f"{net.base}logos/"))
     assert asked == sorted(dict(page.evaluate(LIST_JS)).values()), asked
+
+
+def five_places(page: Page) -> dict[str, dict[str, dict]]:
+    """Every company circle drawn, by place and by company — the company panel opened to draw its own."""
+    page.locator("#filter-company").click()
+    expect(page.locator("#panel-company .option")).not_to_have_count(0)
+    page.wait_for_function(DRAWN, arg=".disc img")
+    places = {"row": "#companies .disc", "list": "#price-list .disc", "filter": "#panel-company .disc",
+              "card": "#best .disc", "map": ".station .disc"}
+    return {place: {d["id"]: d for d in page.evaluate(DISCS_JS, sel)} for place, sel in places.items()}
+
+
+SIZES = {"row": 48, "list": 40, "filter": 32, "card": 32, "map": 30}  # px — a circle in each place (REQ-001)
+
+
+def test_two_companies_without_a_logo_are_letter_circles_in_all_five_places(
+        page_at: Callable[[float, float], Page], net: Net) -> None:
+    # SPEC-0005 AC-006: Lukoil's file answers 404 and Nova is not in our list — in the row, the list, the company
+    # filter, the ★ card (Nova is the cheapest near) and on the map, each is the circle of that place in its colour
+    # with its letter; the other companies keep their logos; switched off, a letter circle only fades
+    net.files["logos/lukoil.png"] = (404, "text/plain", "")
+    serve(net, [("nova", "Nova", "#2563eb"), *FIVE])  # the first company's price is the lowest
+    page = page_at(*HERE)
+    page.clock.set_fixed_time(TIME)
+    page.goto(net.base)
+    page.get_by_text("დიზელი", exact=True).first.click()
+    expect(page.locator("#best .who strong")).to_have_text("Nova")
+    expect(page.locator('#companies [data-company="lukoil"]')).to_have_text("L")  # its file has failed
+    logos = dict(page.evaluate(LIST_JS))
+    places = five_places(page)
+    for place, size in SIZES.items():
+        got = places[place]
+        assert "nova" in got and (place == "card" or "lukoil" in got), (place, sorted(got))
+        for cid, d in got.items():
+            assert_disc(d, size)
+            if cid == "nova":
+                assert_letter(d, size, "N", "rgb(37, 99, 235)")  # #2563eb
+            elif cid == "lukoil":
+                assert_letter(d, size, "L", "rgb(138, 21, 56)")  # #8a1538
+            else:
+                assert_mark(d, logos[cid], size)
+    page.keyboard.press("Escape")
+    nova = page.locator('#companies [data-company="nova"]')
+    nova.click()
+    expect(nova).to_have_attribute("aria-pressed", "false")
+    faded = nova.locator(".letter").evaluate("(l) => [getComputedStyle(l).filter, Number(getComputedStyle(l).opacity)]")
+    assert faded[0] == "grayscale(1)" and 0.35 <= faded[1] <= 0.5, faded
+
+
+def test_a_hostile_name_or_code_is_only_text_in_the_list_and_the_card(page_at: Callable[[float, float], Page],
+                                                                      net: Net) -> None:
+    # SPEC-0005 AC-007 in the list and the ★ card: codes like an object's own field, a path or nothing, and a name
+    # with HTML — the name is text everywhere, a picture only for the exact code in our list, no request by them
+    companies = [(cid, EVIL if i == 0 else f"Co{i}", "#e41e30") for i, cid in enumerate(HOSTILE)]
+    serve(net, [*companies, ("socar", EVIL, "#e41e30")])  # "constructor", the first, is the cheapest near
+    page = page_at(*HERE)
+    page.clock.set_fixed_time(TIME)
+    page.goto(net.base)
+    page.get_by_text("დიზელი", exact=True).first.click()
+    expect(page.locator(ROWS)).to_have_count(len(HOSTILE) + 1)
+    expect(page.locator("#best .who strong")).to_have_text(EVIL)  # the name as text
+    expect(page.locator(ROWS).first.locator(".price-name strong")).to_have_text(EVIL)
+    page.wait_for_function(DRAWN, arg="#best img, #price-list img")
+    srcs = page.locator("#best img, #price-list img").evaluate_all("(i) => i.map((x) => x.getAttribute('src'))")
+    assert srcs == ["logos/socar.svg"], srcs  # SOCAR's line only
+    expect(page.locator("#best script, #price-list script")).to_have_count(0)
+    page.wait_for_load_state("networkidle")
+    assert page.evaluate("window.__pwned") is None
+    asked = {u[len(net.base):].split("?")[0] for u in net.requests if u.startswith(net.base)}
+    assert {a for a in asked if a.startswith("logos/")} == {"logos/socar.svg"}, asked
+    assert net.outside == []
 
 
 def test_on_the_map_only_an_exact_code_gets_a_mark(page_at: Callable[[float, float], Page], net: Net) -> None:
@@ -367,7 +638,7 @@ def test_on_the_map_only_an_exact_code_gets_a_mark(page_at: Callable[[float, flo
     page.wait_for_function(DRAWN, arg=".station img")
     srcs = page.locator(".station img").evaluate_all("(i) => i.map((x) => x.getAttribute('src'))")
     assert srcs == ["logos/socar.svg"]
-    expect(page.locator(".station.near:not(.logo) span")).to_have_text(["C"] * (len(companies) - 1))
+    expect(page.locator(".station.near .letter")).to_have_text(["C"] * (len(companies) - 1))
 
 
 def test_a_logo_that_fails_on_the_map_leaves_letter_circles_and_is_not_asked_again(
@@ -375,12 +646,12 @@ def test_a_logo_that_fails_on_the_map_leaves_letter_circles_and_is_not_asked_aga
     # REQ-004, AC-006 on the map
     net.files["logos/wissol.svg"] = (404, "text/plain", "")
     page = open_near(page_at, net, FIVE)
-    expect(page.locator('.station[data-company="wissol"] span')).to_have_text("W")
+    expect(page.locator('.station[data-company="wissol"] .letter')).to_have_text("W")
     expect(page.locator('.station[data-company="wissol"] img')).to_have_count(0)
-    expect(page.locator(".station.near.logo")).to_have_count(len(FIVE) - 1)
+    expect(page.locator(".station.near .disc img")).to_have_count(len(FIVE) - 1)
     zoom(page, "out", 3)
     zoom(page, "in", 3)
-    expect(page.locator('.station[data-company="wissol"] span')).to_have_text("W")
+    expect(page.locator('.station[data-company="wissol"] .letter')).to_have_text("W")
     assert [u for u in net.requests if u.endswith("/logos/wissol.svg")] == [f"{net.base}logos/wissol.svg"]
 
 
@@ -450,14 +721,13 @@ def test_a_slow_logo_moves_nothing_in_the_row(page: Page, net: Net) -> None:
         (waiting, loaded)
 
 
-def test_a_removed_logo_leaves_the_name_badge_and_the_letter_circle(page_at: Callable[[float, float], Page],
-                                                                    net: Net) -> None:
+def test_a_removed_logo_leaves_the_letter_circles(page_at: Callable[[float, float], Page], net: Net) -> None:
     # AC-011: the file and its line taken out together (REQ-004) — the page no longer asks for the file
     net.files["js/logos.js"] = (200, "text/javascript", logos_without("lukoil"))
     net.files["logos/lukoil.png"] = (404, "text/plain", "")
     page = open_near(page_at, net, FIVE)
-    expect(page.locator('#companies [data-company="lukoil"]')).to_have_text("Lukoil")
-    expect(page.locator('.station[data-company="lukoil"] span')).to_have_text("L")
+    expect(page.locator('#companies [data-company="lukoil"]')).to_have_text("L")
+    expect(page.locator('.station[data-company="lukoil"] .letter')).to_have_text("L")
     expect(page.locator("#companies img")).to_have_count(len(FIVE) - 1)
     assert not [u for u in net.requests if "lukoil.png" in u]
 
@@ -472,8 +742,8 @@ def test_a_logo_that_fails_late_leaves_the_open_window_and_the_focus_alone(page_
     expect(page.locator(".leaflet-popup-content")).to_contain_text("SOCAR")
     page.locator('#companies [data-company="rompetrol"]').focus()
     net.pending["logos/wissol.svg"].fulfill(status=404, body="")
-    expect(page.locator('#companies [data-company="wissol"]')).to_have_text("Wissol")
-    expect(page.locator('.station[data-company="wissol"] span')).to_have_text("W")
+    expect(page.locator('#companies [data-company="wissol"]')).to_have_text("W")
+    expect(page.locator('.station[data-company="wissol"] .letter')).to_have_text("W")
     page.wait_for_timeout(300)  # past Leaflet's 200 ms fade: a closed window would be gone by now
     expect(page.locator(".leaflet-popup")).to_have_count(1)
     expect(page.locator(".leaflet-popup-content")).to_contain_text("SOCAR")

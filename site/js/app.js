@@ -2,7 +2,7 @@
 // (textContent, never innerHTML) — REQ-008. The visitor's place stays in this page: it is never sent (REQ-010).
 import { FUELS, lang, LANGS, setLang, t } from './i18n.js';
 import {
-  cheapestNearby, companiesOf, inkOn, placed, priceRows, routeLinks, stationPrices, stationsFor,
+  cheapestNearby, companiesOf, inkOn, lowestFresh, placed, priceRows, routeLinks, stationPrices, stationsFor,
 } from './logic.js';
 import { logoOf } from './logos.js';
 
@@ -11,8 +11,9 @@ const TILES = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
 const OSM_CREDIT = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors';
 const LOCATE = { enableHighAccuracy: false, timeout: 10000, maximumAge: 300000 }; // REQ-001: 10 seconds at most
 const NEAR_ZOOM = 12;
-// a station's window opens clear of the fuel choice on the map's top and of the sheet over its lower edge
-const POPUP = { autoPanPaddingTopLeft: [12, 72], autoPanPaddingBottomRight: [12, 48] };
+// a station's window opens clear of the filters and the fuel choice on the map's top (SPEC-0005 REQ-003) and of the
+// sheet over its lower edge
+const POPUP = { autoPanPaddingTopLeft: [12, 128], autoPanPaddingBottomRight: [12, 48] };
 // What stays on this phone, and nothing else: the chosen language, the companies switched off (SPEC-0002 REQ-004)
 // and the chosen look (SPEC-0004 REQ-006)
 const LANG_KEY = 'fuel-map.lang';
@@ -107,29 +108,14 @@ function stationWindow(s) {
   return box;
 }
 
-// SPEC-0002 REQ-002: from the city view on, a station is its company's colour with the company's first letter; from
-// farther away, a small dot, so the whole country's map stays readable. SPEC-0004 REQ-002: from the same view a
-// company with a logo shows its mark instead of the letter.
+// SPEC-0002 REQ-002: from the city view on, a station shows its company; from farther away it is a small dot in the
+// company's colour, so the whole country's map stays readable.
 const LETTERS_FROM = 11;
-// SPEC-0004 REQ-002: the mark is MARK pixels on its longer side, centred in a white round frame of FRAME pixels; it is
-// the logo's own file, scaled and moved so that only the mark shows through the frame.
-const MARK = 22;
-const FRAME = 30;
-
-function logoMark(logo, onFail) {
-  const frame = element('span');
-  const img = logoImage(logo, onFail);
-  const [x, y, w, h] = logo.mark;
-  const k = MARK / Math.max(w, h);
-  img.style.width = `${logo.size[0] * k}px`;
-  img.style.height = `${logo.size[1] * k}px`;
-  img.style.left = `${(FRAME - w * k) / 2 - x * k}px`;
-  img.style.top = `${(FRAME - h * k) / 2 - y * k}px`;
-  // only the mark shows — not the edge of the letters beside it (Lukoil's word under its square)
-  img.style.clipPath = `inset(${y * k}px ${(logo.size[0] - x - w) * k}px ${(logo.size[1] - y - h) * k}px ${x * k}px)`;
-  frame.append(img);
-  return L.divIcon({ className: 'station near logo', html: frame, iconSize: [FRAME, FRAME] });
-}
+// SPEC-0005 REQ-007: from the city view a station is a black pin with its company's circle (REQ-001) in its head — a
+// square of PIN pixels turned 45° with three round corners, its sharp corner turned down as the tip. The tip is half
+// the square's diagonal below its middle, and the marker's anchor is set there, so the tip stands on the station.
+const PIN = 36;
+const TIP = PIN / 2 + (PIN / 2) * Math.SQRT2;
 
 // SPEC-0003 REQ-003: a light colour (its letters are dark) gets a dark outline by day — the stylesheet uses --edge only
 // on the light page and map.
@@ -138,21 +124,22 @@ function setEdge(el, color) {
   if (ink !== '#ffffff') el.style.setProperty('--edge', ink);
 }
 
-function stationIcon(s, near, marker) {
-  const logo = near ? usableLogo(s.companyId) : null;
-  if (logo) return logoMark(logo, () => setStationIcon(marker)); // a file that fails: this marker's letter instead
-  const mark = element('span', '', near ? (s.company.trim()[0] ?? '?') || '?' : '');
-  mark.style.backgroundColor = s.color;
-  mark.style.color = inkOn(s.color);
-  setEdge(mark, s.color);
-  const size = near ? 24 : 12;
-  return L.divIcon({ className: near ? 'station near' : 'station', html: mark, iconSize: [size, size] });
+function stationIcon(s, near) {
+  if (near) {
+    const pin = element('span', 'pin');
+    pin.append(disc({ id: s.companyId, name: s.company, color: s.color })); // a file that fails: its letter, in place
+    return L.divIcon({ className: 'station near', html: pin, iconSize: [PIN, PIN], iconAnchor: [PIN / 2, TIP] });
+  }
+  const dot = element('span');
+  dot.style.backgroundColor = s.color;
+  setEdge(dot, s.color);
+  return L.divIcon({ className: 'station', html: dot, iconSize: [12, 12] });
 }
 
 // A marker's look, set again in place: Leaflet keeps the marker and its open window (review C1, C2).
 function setStationIcon(marker) {
   const s = marker.options.station;
-  marker.setIcon(stationIcon(s, state.near, marker));
+  marker.setIcon(stationIcon(s, state.near));
   marker.getElement()?.setAttribute('data-company', s.companyId);
 }
 
@@ -161,7 +148,7 @@ function renderStations(stations) {
   state.near = state.map.getZoom() >= LETTERS_FROM;
   for (const s of stationsFor(stations, state.fuel)) {
     const marker = L.marker([s.lat, s.lng], { keyboard: false, station: s });
-    marker.setIcon(stationIcon(s, state.near, marker)); // before it is on the map: no element is drawn twice
+    marker.setIcon(stationIcon(s, state.near)); // before it is on the map: no element is drawn twice
     marker.bindPopup(() => stationWindow(s), POPUP).addTo(state.markers);
     marker.getElement().dataset.company = s.companyId;
   }
@@ -186,10 +173,6 @@ function markBest(b) {
     .bindPopup(() => stationWindow(b), POPUP)
     .addTo(state.map);
 }
-
-// SPEC-0004 REQ-001: a logo is drawn this many pixels high on its badge; its width keeps the file's proportions, and
-// both are set before the picture arrives, so a slow or failed file never moves the row (REQ-003).
-const LOGO_HEIGHT = 30;
 
 // SPEC-0004 REQ-003, REQ-004: each logo file is asked for once on a visit. One loader picture per file asks for it;
 // the page's own pictures get the address only once the file has arrived, so the browser gives it from what it
@@ -233,34 +216,54 @@ function logoImage(logo, onFail) {
   return img;
 }
 
-// SPEC-0002: a company without a logo — its name on its colour.
-function nameBadge(badge, c) {
-  badge.classList.remove('logo');
-  badge.removeAttribute('aria-label');
-  badge.textContent = c.name || '?';
-  badge.style.setProperty('--company', c.color);
-  badge.style.setProperty('--ink', inkOn(c.color));
-  setEdge(badge, c.color);
+// SPEC-0005 REQ-001: a company's sign — one black circle, the same wherever the company shows; the stylesheet gives
+// each place its size. A logo shows its mark, the part that reads small, cut from its own file: the mark's longer side
+// is MARK_SHARE of the circle, set in shares of the circle, so the picture fits any size before its file arrives and a
+// slow file moves nothing. A company without a logo, or whose file fails, has its colour and first letter instead —
+// changed in place, so an open station window and the keyboard's focus stay where they are (review C1).
+const MARK_SHARE = 0.6;
+
+function share(v) {
+  return `${v * 100}%`;
 }
 
-// SPEC-0004 REQ-001: a company with a logo in our list shows it on its own ground; its name is what a screen reader
-// says. Switched off, the stylesheet greys it and crosses it out with a line in --strike, the ink that reads on the
-// ground. A file that fails leaves the name badge (REQ-004).
-function logoBadge(badge, logo, c) {
-  badge.classList.add('logo');
-  badge.setAttribute('aria-label', c.name || '?');
-  badge.style.setProperty('--ground', logo.ground);
-  badge.style.setProperty('--strike', inkOn(logo.ground));
-  const img = logoImage(logo, () => {
-    nameBadge(badge, c); // the same button: the keyboard's focus stays on it
-    markRowEdges();
-  });
-  img.width = Math.round((LOGO_HEIGHT * logo.size[0]) / logo.size[1]);
-  img.height = LOGO_HEIGHT;
-  badge.append(img);
+function markImage(logo, onFail) {
+  const img = logoImage(logo, onFail);
+  const [x, y, w, h] = logo.mark;
+  const [fw, fh] = logo.size;
+  const k = MARK_SHARE / Math.max(w, h); // the circle's width per pixel of the file
+  img.style.width = share(fw * k);
+  img.style.height = share(fh * k);
+  img.style.left = share((1 - w * k) / 2 - x * k);
+  img.style.top = share((1 - h * k) / 2 - y * k);
+  // only the mark shows — not the letters beside it (Lukoil's word under its square)
+  img.style.clipPath = `inset(${share(y / fh)} ${share((fw - x - w) / fw)} ${share((fh - y - h) / fh)} ${share(x / fw)})`;
+  return img;
 }
 
-// SPEC-0002: the badge row above the ★ card — one per company in the data.
+function firstLetter(name) {
+  return Array.from(name.trim())[0] ?? '?';
+}
+
+function letterDisc(circle, c) {
+  const letter = element('span', 'letter', firstLetter(c.name));
+  letter.style.backgroundColor = c.color;
+  letter.style.color = inkOn(c.color); // REQ-007 of SPEC-0002: the ink that reads best on the colour
+  circle.replaceChildren(letter);
+}
+
+function disc(c) {
+  const circle = element('span', 'disc');
+  circle.setAttribute('aria-hidden', 'true'); // a picture of the name — its place says the name in words
+  if (logoOf(c.id)?.black) circle.classList.add('black'); // SPEC-0005 REQ-001: black in the light look too
+  const logo = usableLogo(c.id);
+  if (logo) circle.append(markImage(logo, () => letterDisc(circle, c)));
+  else letterDisc(circle, c);
+  return circle;
+}
+
+// SPEC-0002: the badge row above the ★ card — one per company in the data; its name is what a screen reader says
+// (SPEC-0005 REQ-001), its state is aria-pressed.
 function renderCompanies() {
   const box = document.getElementById('companies');
   box.setAttribute('aria-label', t('companies.label'));
@@ -269,17 +272,17 @@ function renderCompanies() {
     badge.type = 'button';
     badge.dataset.company = c.id;
     badge.setAttribute('aria-pressed', String(!state.off.has(c.id)));
-    const logo = usableLogo(c.id);
-    if (logo) logoBadge(badge, logo, c);
-    else nameBadge(badge, c);
+    badge.setAttribute('aria-label', c.name || '?');
+    badge.append(disc(c));
     badge.addEventListener('click', () => toggleCompany(c.id));
     return badge;
   }));
   markRowEdges();
 }
 
-// SPEC-0003 REQ-005: five or more badges scroll in their row; an edge with more badges beyond it fades (the
-// stylesheet's 24 px strip), and a badge reached from the keyboard is brought clear of the strip (the row's padding).
+// SPEC-0003 REQ-005: badges that do not fit scroll in their row (five circles fit a phone — SPEC-0005); an edge with
+// more badges beyond it fades (the stylesheet's 24 px strip), and a badge reached from the keyboard is brought clear
+// of the strip (the row's padding).
 function markRowEdges() {
   const row = document.getElementById('companies');
   row.classList.toggle('more-start', row.scrollLeft > 1);
@@ -296,12 +299,17 @@ function watchRow() {
   window.addEventListener('resize', markRowEdges);
 }
 
-// REQ-003: a badge switches its company off or on — the map, the ★ and the table follow at once.
-function toggleCompany(id) {
-  if (state.off.has(id)) state.off.delete(id);
+// SPEC-0002 REQ-003, SPEC-0005 REQ-003: a company switched off or on, from the badge row or the company filter — the
+// map, the ★, the list, the row and the filter follow at once.
+function setCompany(id, on) {
+  if (on) state.off.delete(id);
   else state.off.add(id);
   saveOff();
   render();
+}
+
+function toggleCompany(id) {
+  setCompany(id, state.off.has(id));
   // the row was drawn anew: the pressed badge keeps the focus, for the keyboard and the screen reader
   document.querySelector(`#companies [data-company="${CSS.escape(id)}"]`)?.focus();
 }
@@ -384,7 +392,11 @@ function renderBest(prices, stations, allOff, pricesHidden) {
     return;
   }
   card.hidden = false;
-  const parts = [element('h2', 'best-title', t('best.title'))];
+  // SPEC-0005 REQ-004: compact — the title with "all prices" beside it, the company's circle, who and where, the price
+  // and the distance on one line, then the two buttons
+  const head = element('div', 'best-head');
+  head.append(element('h2', 'best-title', t('best.title')));
+  const parts = [head];
   if (state.asking) parts.push(cityPicker());
   if (!state.here) {
     card.replaceChildren(...parts);
@@ -397,14 +409,16 @@ function renderBest(prices, stations, allOff, pricesHidden) {
     parts.push(element('p', 'note', t('companies.allOff')));
   } else if (result.best) {
     const b = result.best;
+    const row = element('div', 'best-row');
+    row.dataset.company = b.companyId;
     const who = element('p', 'who');
-    const dot = element('span', 'dot');
-    dot.style.backgroundColor = b.color;
-    who.append(dot, element('strong', '', b.company), ` · ${b.grade}`);
+    who.append(element('strong', '', b.company), ` · ${b.grade}`);
     if (b.name) who.append(` · ${b.name}`);
     const line = element('p', 'best-line');
-    line.append(element('span', 'price', priceText(b.price)), ` · ${b.distanceKm.toFixed(1)} ${t('unit.km')}`);
-    parts.push(who, line);
+    line.append(element('span', 'price', priceText(b.price)),
+      element('span', 'km', `${b.distanceKm.toFixed(1)} ${t('unit.km')}`));
+    row.append(disc({ id: b.companyId, name: b.company, color: b.color }), who, line);
+    parts.push(row);
     if (b.stale) parts.push(element('p', 'note', t('price.stale')));
     parts.push(routeButtons(b.lat, b.lng));
   } else {
@@ -412,7 +426,7 @@ function renderBest(prices, stations, allOff, pricesHidden) {
   }
   const all = element('a', 'to-prices', t('sheet.all'));
   all.href = '#prices-title';
-  parts.push(all);
+  head.append(all);
   card.replaceChildren(...parts);
 }
 
@@ -436,15 +450,162 @@ function renderFuels() {
     input.name = 'fuel';
     input.value = key;
     input.checked = key === state.fuel;
-    input.addEventListener('change', () => {
-      state.fuel = key;
-      showChosen(box);
-      render();
-    });
+    input.addEventListener('change', () => chooseFuel(key));
     label.append(input, element('span', '', t(`fuel.${key}`)));
     box.append(label);
   }
   showChosen(box);
+}
+
+// The fuel chosen, from the chips or the fuel filter: both show it, and the page follows.
+function chooseFuel(key) {
+  state.fuel = key;
+  const box = document.getElementById('fuels');
+  for (const input of box.querySelectorAll('input')) input.checked = input.value === key;
+  showChosen(box);
+  render();
+}
+
+// SPEC-0005 REQ-003: the two filters on the map's top. Each button says what is chosen and opens its panel over the
+// map: the companies with a checkbox each — its circle and its name — or the six fuels, to choose one. A panel is
+// drawn when it opens and emptied when it closes; while it is open, the page's changes are set on its boxes in place,
+// so the keyboard's focus stays where it is.
+const FILTERS = ['company', 'fuel'];
+let openFilter = null;
+let arrowing = false; // the arrows go through the fuels and choose them; only Space, a tap or Esc closes the panel
+
+function filterButton(kind) {
+  return document.getElementById(`filter-${kind}`);
+}
+
+function filterPanel(kind) {
+  return document.getElementById(`panel-${kind}`);
+}
+
+function option(input, ...content) {
+  const line = element('label', 'option');
+  line.append(input, ...content);
+  return line;
+}
+
+function companyOptions() {
+  const set = element('fieldset');
+  set.append(element('legend', 'visually-hidden', t('companies.label')));
+  for (const c of companiesOf(state.prices, state.stations)) {
+    const input = document.createElement('input');
+    input.type = 'checkbox';
+    input.value = c.id;
+    input.checked = !state.off.has(c.id);
+    input.addEventListener('change', () => setCompany(c.id, input.checked)); // the panel stays open
+    const line = option(input, disc(c), element('span', 'option-name', c.name || '?'));
+    line.dataset.company = c.id;
+    set.append(line);
+  }
+  return set;
+}
+
+function fuelOptions() {
+  const set = element('fieldset');
+  set.append(element('legend', 'visually-hidden', t('fuel.legend')));
+  for (const key of FUELS) {
+    const input = document.createElement('input');
+    input.type = 'radio';
+    input.name = 'fuel-filter';
+    input.value = key;
+    input.checked = key === state.fuel;
+    // a tap ends the choice — on the fuel already chosen too, which changes nothing (review C1); the arrows go
+    // through the fuels and choose each, and the panel stays open
+    input.addEventListener('click', () => {
+      if (arrowing) return;
+      if (state.fuel !== key) chooseFuel(key);
+      closePanel();
+    });
+    input.addEventListener('change', () => {
+      if (arrowing) chooseFuel(key);
+    });
+    set.append(option(input, element('span', 'option-name', t(`fuel.${key}`))));
+  }
+  return set;
+}
+
+function fillPanel(kind) {
+  filterPanel(kind).replaceChildren(kind === 'company' ? companyOptions() : fuelOptions());
+}
+
+function openPanel(kind) {
+  closePanel(false);
+  fillPanel(kind);
+  filterPanel(kind).hidden = false;
+  filterButton(kind).setAttribute('aria-expanded', 'true');
+  openFilter = kind;
+}
+
+function closePanel(focus = true) {
+  if (!openFilter) return;
+  const kind = openFilter;
+  openFilter = null;
+  filterPanel(kind).hidden = true;
+  filterPanel(kind).replaceChildren();
+  filterButton(kind).setAttribute('aria-expanded', 'false');
+  // the page stays where it is, even if the button is out of view (review C2)
+  if (focus) filterButton(kind).focus({ preventScroll: true });
+}
+
+// The filter's name small above, what is chosen under it — one height in both languages (SPEC-0005 AC-008). The
+// dot between them is for a screen reader only: the button says "კომპანია · 4/5".
+function filterLabel(kind, name, value) {
+  const text = element('span', 'filter-text');
+  text.append(element('span', 'filter-name', name));
+  if (value) {
+    const chosen = element('span', 'filter-value');
+    chosen.append(element('span', 'visually-hidden', ' · '), value);
+    text.append(chosen);
+  }
+  filterButton(kind).replaceChildren(text);
+}
+
+// The buttons say what is chosen. An open panel's boxes already show it: while a panel is open, the choice changes
+// only through its own boxes — a tap or a key anywhere else is a click outside, which closes it. Only the data can
+// arrive meanwhile: the company panel is then drawn anew with them.
+function syncFilters() {
+  const companies = companiesOf(state.prices, state.stations);
+  const on = companies.filter((c) => !state.off.has(c.id)).length;
+  filterLabel('company', t('filter.company'), companies.length ? `${on}/${companies.length}` : '');
+  filterLabel('fuel', t('filter.fuel'), t(`fuel.${state.fuel}`));
+  const shown = [...filterPanel('company').querySelectorAll('input')].map((box) => box.value);
+  if (openFilter === 'company' && shown.join('\n') !== companies.map((c) => c.id).join('\n')) fillPanel('company');
+}
+
+const CONTROLS = 'button, a[href], input, select, textarea, label';
+
+function watchFilters() {
+  for (const kind of FILTERS) {
+    filterButton(kind).addEventListener('click', () => (openFilter === kind ? closePanel() : openPanel(kind)));
+  }
+  // Esc closes the open panel, and the focus goes back to its button
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape' && openFilter) closePanel();
+  });
+  // a tap outside the open panel and its button closes it — caught on its way down, before the map's own handlers;
+  // the focus goes back to the button, unless the tap was on another control, which then has it
+  document.addEventListener('click', (event) => {
+    if (!openFilter) return;
+    const target = event.target;
+    if (filterPanel(openFilter).contains(target) || filterButton(openFilter).contains(target)) return;
+    closePanel(!target.closest?.(CONTROLS));
+  }, true);
+  const fuels = filterPanel('fuel');
+  fuels.addEventListener('keydown', (event) => {
+    arrowing = event.key.startsWith('Arrow');
+    // Space or Enter on the fuel the arrows reached ends the choice: a checked radio fires no click of its own
+    if ((event.key === ' ' || event.key === 'Enter') && event.target.matches('input')) {
+      event.preventDefault();
+      closePanel();
+    }
+  });
+  fuels.addEventListener('keyup', () => {
+    arrowing = false;
+  });
 }
 
 async function loadJson(name) {
@@ -460,17 +621,23 @@ function setStatus(text) {
   document.getElementById('status').textContent = text;
 }
 
-function rowElement(row) {
-  const tr = element('tr', row.stale ? 'stale' : '');
-  const dot = element('span', 'dot');
-  dot.style.backgroundColor = row.color;
-  const who = element('td', 'who');
-  who.append(dot, element('strong', '', row.company), element('span', 'grade', row.grade));
-  const when = element('td', 'time', formatTime(row.time));
-  if (row.basis === 'source') when.append(element('span', 'note', t('time.source')));
-  if (row.stale) when.append(element('span', 'note', t('price.stale')));
-  tr.append(who, element('td', 'price', priceText(row.price)), when);
-  return tr;
+// SPEC-0005 REQ-005: one line of the price list — the company's circle; its name, with "cheapest" beside it on the
+// list's lowest fresh price; the grade; when the price was read, whose time that is and whether it is old; the price.
+function priceLine(row, low) {
+  const cheap = !row.stale && row.price === low;
+  const li = element('li', [row.stale && 'stale', cheap && 'cheap'].filter(Boolean).join(' '));
+  li.dataset.company = row.companyId;
+  const name = element('p', 'price-name');
+  name.append(element('strong', '', row.company));
+  if (cheap) name.append(' ', element('span', 'tag', t('list.cheapest')));
+  const when = [`${t('table.time')} ${formatTime(row.time)}`];
+  if (row.basis === 'source') when.push(t('time.source'));
+  if (row.stale) when.push(t('price.stale'));
+  const who = element('div', 'price-who');
+  who.append(name, element('p', 'grade', row.grade), element('p', 'time', when.join(' · ')));
+  li.append(disc({ id: row.companyId, name: row.company, color: row.color }), who,
+    element('span', 'price', priceText(row.price)));
+  return li;
 }
 
 function render() {
@@ -480,20 +647,23 @@ function render() {
   const rows = priceRows(prices, state.fuel, Date.now());
   const pricesHidden = !rows.length && state.off.size > 0 && priceRows(state.prices, state.fuel, Date.now()).length > 0;
   renderCompanies();
+  syncFilters();
   renderStations(stations);
   renderBest(prices, stations, allOff, pricesHidden);
-  const body = document.querySelector('#price-table tbody');
+  // SPEC-0005 REQ-005: the list of the chosen fuel; a message stands in its place, under its title
+  const list = document.getElementById('price-list');
   if (!state.prices) {
-    body.replaceChildren();
+    list.replaceChildren();
     setStatus(t('status.noPrices'));
     return;
   }
   if (allOff) {
-    body.replaceChildren();
+    list.replaceChildren();
     setStatus(t('companies.allOff'));
     return;
   }
-  body.replaceChildren(...rows.map(rowElement));
+  const low = lowestFresh(rows);
+  list.replaceChildren(...rows.map((row) => priceLine(row, low)));
   setStatus(rows.length ? '' : t(pricesHidden ? 'companies.filtered' : 'status.noFuelPrice'));
 }
 
@@ -561,7 +731,7 @@ function setLanguage(code) {
   state.map.closePopup();
   applyStatic();
   renderFuels();
-  render();
+  render(); // an open panel closed already: the language button's tap was a tap outside it
 }
 
 // SPEC-0004 REQ-006: the visitor's look — 'light' or 'dark' once chosen (kept on the phone; with a blocked storage, for
@@ -625,8 +795,10 @@ async function main() {
     button.addEventListener('click', () => setLanguage(button.dataset.lang));
   }
   watchRow();
+  watchFilters();
   initMap();
   renderFuels();
+  syncFilters();
   setStatus(t('status.loading'));
   let cities;
   [state.prices, state.stations, cities] = await Promise.all(

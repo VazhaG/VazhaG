@@ -32,6 +32,7 @@ export function priceRows(data, fuel, now) {
     for (const p of c.prices ?? []) {
       if (p?.fuel !== fuel || typeof p.price !== 'number' || !Number.isFinite(p.price)) continue;
       rows.push({
+        companyId: String(c.id ?? ''),
         company: String(c.name ?? ''),
         color: safeColor(c.color),
         grade: String(p.grade ?? ''),
@@ -44,6 +45,13 @@ export function priceRows(data, fuel, now) {
   }
   rows.sort((a, b) => a.price - b.price || a.company.localeCompare(b.company));
   return rows;
+}
+
+// SPEC-0005 REQ-005: the lowest fresh price of the list — "cheapest" goes to every line with it, never to an old price
+// however low; with no fresh price, to none (null).
+export function lowestFresh(rows) {
+  const fresh = rows.filter((r) => !r.stale).map((r) => r.price);
+  return fresh.length ? Math.min(...fresh) : null;
 }
 
 export function placed(lat, lng) {

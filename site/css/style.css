@@ -1,23 +1,23 @@
 /* Layout chosen by the owner (intent §5): layout 1 "map on top", in the app style of 2026-10-30 — the map fills the
-   first screen, the fuel choice floats on it and the sheet with the ★ card rises over its lower edge. Colours:
-   black and orange, a light and a dark look (SPEC-0004 REQ-005; the codes are Claude's choice — a hypothesis the
-   owner saw in a picture on 2026-11-01). */
+   first screen, the fuel choice floats on it and the sheet with the ★ card rises over its lower edge. Colours: the
+   owner's reference photo, a light and a dark look (SPEC-0005 REQ-006; the codes are a hypothesis read from the photo
+   — the owner saw them in a picture on 2026-11-02). */
 :root {
   --white: #ffffff;
-  --black: #111111;
-  --orange: #f97316;
-  --page: var(--white);
-  --sheet: var(--white);
-  --raised: #f3f4f6;
-  --text: var(--black);
-  --muted: #4b5563;
-  --line: #e5e7eb;
-  --accent: var(--orange); /* the main and the chosen buttons, the ★ */
-  --on-accent: var(--black);
-  --link: #c2410c;
-  --bar: var(--black); /* the header bar, the same in both looks */
-  --on-bar: var(--white);
-  --frame: #6b7280; /* a neutral frame: 3 : 1 on the white and on the black */
+  --page: #f2f2f7; /* the page and the header bar */
+  --surface: #ffffff; /* the sheet, the cards, the filters and the fuel chips */
+  --raised: #e5e5ea; /* the map's ground before its pictures come */
+  --text: #111111;
+  --muted: #5f5f64;
+  --line: #e5e5ea;
+  --accent: #ffc529; /* the chosen fuel and language, Google Maps and Waze, the ★ — the same in both looks */
+  --on-accent: #111111;
+  --cheap: #fff3c4; /* the cheapest line's ground in the price list (SPEC-0005 REQ-005) */
+  /* SPEC-0005 REQ-001, REQ-007: a company circle and a map pin, in the look's colour — by day a white circle in a
+     #7C7C80 frame (3 : 1 on the page, the sheet, the cheapest line and the pin) and a white pin in a #111111 contour */
+  --disc-fill: #ffffff;
+  --disc-frame: #7c7c80;
+  --pin-body: #ffffff;
   --shadow: rgb(17 17 17 / 0.16);
   --header-h: 52px;
   --overlap: 24px; /* how far the sheet rises over the map */
@@ -27,13 +27,16 @@
 /* SPEC-0004 REQ-006: the dark look is the site's own — js/theme.js sets it before the first drawing, from the
    visitor's choice or else the phone's setting; the switch in the header changes it */
 :root[data-theme="dark"] {
-  --page: #000000;
-  --sheet: var(--black);
-  --raised: #1c1c1c;
-  --text: #f5f5f5;
-  --muted: #a3a3a3;
-  --line: #2a2a2a;
-  --link: #fb923c;
+  --page: #1c1c1e;
+  --surface: #2c2c2e;
+  --raised: #2c2c2e;
+  --text: #ffffff;
+  --muted: #a1a1a6;
+  --line: #3a3a3c;
+  --cheap: #3a3018;
+  --disc-fill: #000000;
+  --disc-frame: #8e8e93;
+  --pin-body: #000000;
   --shadow: rgb(0 0 0 / 0.6);
   color-scheme: dark;
 }
@@ -63,7 +66,7 @@ body {
   gap: 8px;
   height: var(--header-h);
   padding: 0 16px;
-  background: var(--bar);
+  background: var(--page); /* SPEC-0005 REQ-006: the header bar is the page's colour */
   border-bottom: 1px solid var(--line);
 }
 
@@ -74,7 +77,7 @@ h1 {
 }
 
 .top h1 {
-  color: var(--on-bar);
+  color: var(--text);
 }
 
 .tools {
@@ -91,10 +94,10 @@ h1 {
   width: 36px;
   height: 36px;
   padding: 0;
-  border: 1px solid var(--frame);
+  border: 1px solid var(--line);
   border-radius: 50%;
-  background: var(--bar);
-  color: var(--on-bar);
+  background: var(--surface);
+  color: var(--text);
   font: inherit;
   font-size: 1.05rem;
   line-height: 1;
@@ -112,14 +115,14 @@ h1 {
 
 .theme:focus-visible,
 .lang button:focus-visible {
-  outline: 2px solid var(--on-bar);
+  outline: 2px solid var(--text);
   outline-offset: 2px;
 }
 
 .lang {
   display: flex;
   flex: none;
-  border: 1px solid var(--frame);
+  border: 1px solid var(--line);
   border-radius: 999px;
   overflow: hidden;
 }
@@ -127,14 +130,14 @@ h1 {
 .lang button {
   padding: 6px 12px;
   border: 0;
-  background: var(--bar);
-  color: var(--on-bar);
+  background: var(--surface);
+  color: var(--text);
   font: inherit;
   font-size: 0.85rem;
   cursor: pointer;
 }
 
-/* REQ-005: the chosen language — orange, and in bold letters, so it shows without colour too */
+/* SPEC-0005 REQ-006: the chosen language — yellow, and in bold letters, so it shows without colour too */
 .lang button[aria-pressed="true"] {
   background: var(--accent);
   color: var(--on-accent);
@@ -149,24 +152,165 @@ h1 {
 .map {
   z-index: 0;
   isolation: isolate; /* Leaflet's layers stay under the fuel choice and the sheet */
-  height: calc(100vh - var(--header-h) - 300px); /* the badges, the ★ card and "all prices" fit the first screen */
-  height: calc(100svh - var(--header-h) - 300px);
+  /* the map is the first screen's largest part (55 % and more — PLAN-0001, 2026-10-30), and still the badges, the ★
+     card, "all prices" and the list's first line fit the first screen, with 260 px of the map at least in view under
+     the filters and the fuel chips (SPEC-0005 AC-008) */
+  height: calc(100vh - var(--header-h) - 312px);
+  height: calc(100svh - var(--header-h) - 312px);
   min-height: 300px;
   background: var(--raised);
 }
 
-.fuels {
+/* SPEC-0005 REQ-003: the map's top — the two filters, and the fuel chips under them */
+.over-map {
   position: absolute;
   z-index: 2;
   top: 10px;
   right: 0;
   left: 0;
   display: flex;
+  flex-direction: column;
+  gap: 6px;
+  pointer-events: none; /* the map is still dragged between them */
+}
+
+.filters {
+  position: relative;
+  z-index: 1; /* an open panel lies over the fuel chips */
+  display: flex;
+  gap: 10px;
+  margin: 0 12px;
+}
+
+.filter {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+}
+
+/* a filter's button: its name and what is chosen ("კომპანია · 4/5", "საწვავი · დიზელი") — a finger's size at least */
+.filter-button {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  min-height: 44px;
+  padding: 8px 14px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: 0 2px 10px var(--shadow);
+  font: inherit;
+  font-size: 0.95rem;
+  text-align: left;
+  cursor: pointer;
+  pointer-events: auto;
+}
+
+/* the arrow is only drawn: its empty alternative keeps it out of the button's name for a screen reader */
+.filter-button::after {
+  content: "▾" / "";
+  margin-left: auto;
+  color: var(--muted);
+}
+
+.filter-button[aria-expanded="true"]::after {
+  content: "▴" / "";
+}
+
+/* the filter's name small above, what is chosen under it: one height in both languages */
+.filter-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  line-height: 1.2;
+}
+
+.filter-name {
+  color: var(--muted);
+  font-size: 0.75rem;
+}
+
+.filter-value {
+  overflow: hidden;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.filter-button:focus-visible {
+  outline: 2px solid var(--text);
+  outline-offset: 2px;
+}
+
+/* a filter's panel lies over the map, under the two buttons — never as far as the sheet with the ★ card */
+.panel {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  left: 0;
+  max-height: max(196px, calc(100vh - 468px)); /* down to some 10 px above the sheet, as the map's height goes */
+  max-height: max(196px, calc(100svh - 468px));
+  overflow-y: auto;
+  padding: 4px 6px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: 0 6px 20px var(--shadow);
+  pointer-events: auto;
+}
+
+.panel[hidden] {
+  display: none;
+}
+
+.panel fieldset {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.option {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 44px;
+  padding: 4px 8px;
+  cursor: pointer;
+}
+
+.option + .option {
+  border-top: 1px solid var(--line);
+}
+
+.option input {
+  flex: none;
+  width: 20px;
+  height: 20px;
+  margin: 0;
+  accent-color: var(--accent);
+}
+
+.option input:focus-visible {
+  outline: 2px solid var(--text);
+  outline-offset: 2px;
+}
+
+.option .disc {
+  --d: 32px;
+}
+
+.fuels {
+  display: flex;
   flex-wrap: nowrap;
   gap: 8px;
   min-width: 0;
   margin: 0;
-  padding: 2px 12px 8px;
+  padding: 2px 12px 4px;
   border: 0;
   overflow-x: auto;
   scrollbar-width: none;
@@ -194,9 +338,9 @@ h1 {
 .chip span {
   display: inline-block;
   padding: 7px 14px;
-  border: 1px solid var(--frame);
+  border: 1px solid var(--line);
   border-radius: 999px;
-  background: var(--sheet);
+  background: var(--surface);
   color: var(--text);
   box-shadow: 0 1px 6px var(--shadow);
   font-size: 0.95rem;
@@ -204,7 +348,7 @@ h1 {
   white-space: nowrap;
 }
 
-/* REQ-005: the chosen fuel — orange with black letters, and in bold letters, so it shows without colour too */
+/* SPEC-0005 REQ-006: the chosen fuel — yellow with black letters, and in bold, so it shows without colour too */
 .chip input:checked + span {
   border-color: var(--accent);
   background: var(--accent);
@@ -225,43 +369,50 @@ h1 {
   bottom: var(--overlap); /* above the part of the map the sheet covers */
 }
 
-/* SPEC-0002 REQ-002: a station — its company's colour, and from the city view on its first letter */
-.station span {
-  display: grid;
-  place-items: center;
+/* SPEC-0002 REQ-002: from farther away a station is a small dot in its company's colour */
+.station:not(.near) > span {
+  display: block;
   width: 100%;
   height: 100%;
   border: 1.5px solid var(--edge, var(--white)); /* SPEC-0003 REQ-003: dark for a light colour, by day */
   border-radius: 50%;
   box-shadow: 0 1px 3px rgb(15 23 42 / 0.4);
-  font-size: 12px;
-  font-weight: 800;
-  line-height: 1;
 }
 
-.station.near span {
-  border-width: 2px;
-}
-
-/* SPEC-0004 REQ-002: from the city view a station with a logo is its company's mark in a white round frame — the part
-   of the logo that reads small, shown through the frame from the same file; the same in both looks */
-.station.logo span {
-  position: relative;
-  overflow: hidden;
-  border: 0;
-  background: #ffffff;
-  box-shadow: 0 1px 4px rgb(15 23 42 / 0.45);
-}
-
-.station.logo img {
+/* SPEC-0005 REQ-007: from the city view a station is a teardrop pin — a square turned 45° with three round corners,
+   its sharp corner the tip on the station's point (js/app.js anchors the marker there) — with the company's 30 px
+   circle upright in its head. Its body is the look's (white by day, black at night) and its 2 px contour the text's
+   colour: the two are opposites, so on any map colour one of them stands out (docs/domain/map-tile-colours.md) */
+.station .pin {
   position: absolute;
-  max-width: none;
+  top: 0;
+  left: 0;
+  width: 36px;
+  height: 36px;
+  border-radius: 50% 50% 50% 0;
+  background: var(--pin-body);
+  box-shadow: 0 0 0 2px var(--text), 0 1px 4px rgb(15 23 42 / 0.45);
+  transform: rotate(-45deg);
 }
 
+.station .pin .disc {
+  --d: 30px;
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  transform: rotate(45deg);
+}
+
+:root[data-theme="dark"] .station .pin {
+  box-shadow: 0 0 0 2px var(--white);
+}
+
+/* SPEC-0005 REQ-007: the ★ stays round in the station's middle — yellow with a black ★, in a #111111 frame that shows
+   on the light map too */
 .best-pin {
   display: grid;
   place-items: center;
-  border: 2px solid var(--white);
+  border: 2px solid var(--on-accent);
   border-radius: 50%;
   background: var(--accent);
   color: var(--on-accent);
@@ -275,9 +426,9 @@ h1 {
   position: relative;
   z-index: 1;
   margin-top: calc(-1 * var(--overlap));
-  padding: 10px 16px 8px;
+  padding: 4px 16px 8px;
   border-radius: 20px 20px 0 0;
-  background: var(--sheet);
+  background: var(--surface);
   box-shadow: 0 -4px 18px var(--shadow);
 }
 
@@ -286,7 +437,7 @@ h1 {
   display: block;
   width: 40px;
   height: 4px;
-  margin: 0 auto 8px;
+  margin: 0 auto 4px;
   border-radius: 2px;
   background: var(--line);
 }
@@ -297,19 +448,19 @@ h1 {
   margin-left: auto;
 }
 
-/* SPEC-0002: the company badges — text on the company's colour, never a picture */
+/* SPEC-0002: the company badges — since SPEC-0005 each a circle with the company's mark or letter */
 .companies {
   display: flex;
   flex-wrap: nowrap;
   gap: 8px;
-  margin-bottom: 6px;
+  margin-bottom: 4px;
   padding: 4px; /* room for a badge's focus ring: the row scrolls, so it cuts what sticks out of it */
   overflow-x: auto;
   scrollbar-width: none;
   scroll-padding-inline: 24px; /* a badge reached from the keyboard stops clear of the faded strip */
 }
 
-/* SPEC-0003 REQ-005: five or more badges scroll in the row; an edge with more badges beyond it fades in 24 px */
+/* SPEC-0003 REQ-005: badges that do not fit scroll in the row; an edge with more badges beyond it fades in 24 px */
 .companies.more-end {
   -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 24px), transparent);
   mask-image: linear-gradient(to right, #000 calc(100% - 24px), transparent);
@@ -329,25 +480,70 @@ h1 {
   display: none;
 }
 
-.badge {
+/* SPEC-0005 REQ-001: a company's sign — one circle in the look's colour (white by day, black at night) in a neutral
+   frame (3 : 1 on the page, the sheet, the cheapest line and the pin in both looks), the
+   same wherever the company shows; each place gives it its size (--d). The frame is drawn inside the circle, so the
+   circle is its whole size; the logo's mark is set in shares of it (js/app.js). */
+.disc {
+  position: relative;
+  display: grid;
   flex: none;
-  min-width: 44px;
-  min-height: 44px;
-  padding: 8px 10px; /* four companies fit a phone's width in one line; five scroll in the row */
-  border: 2px solid var(--edge, var(--company)); /* SPEC-0003 REQ-003: dark for a light colour, by day */
-  border-radius: 999px;
-  background: var(--company);
-  color: var(--ink);
+  place-items: center;
+  width: var(--d, 48px);
+  height: var(--d, 48px);
+  overflow: hidden;
+  border-radius: 50%;
+  background: var(--disc-fill);
+  outline: 2px solid var(--disc-frame);
+  outline-offset: -2px;
+}
+
+/* a mark that cannot be read on white keeps a black circle in the light look too (js/logos.js `black`: Connect) */
+.disc.black {
+  background: #000000;
+}
+
+.disc img {
+  position: absolute;
+  max-width: none;
+}
+
+/* a company without a logo: the whole circle its colour, with its first letter in the ink that reads on it */
+.disc .letter {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  font-size: calc(var(--d, 48px) * 0.42);
+  font-weight: 800;
+  line-height: 1;
+}
+
+/* the row: five 48 px circles fit a phone's width in one line (SPEC-0005 REQ-001); more scroll in the row */
+.badge {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
   font: inherit;
-  font-size: 0.9rem;
-  font-weight: 700;
   cursor: pointer;
 }
 
-.badge[aria-pressed="false"] {
-  background: transparent; /* switched off: only the company's frame stays, and the name is crossed out */
-  color: var(--text);
-  text-decoration: line-through;
+.companies .disc {
+  --d: 48px;
+}
+
+/* SPEC-0005 REQ-002: switched off, the mark only loses its colour and fades — no line, no crossed-out name; the
+   circle and its frame stay as they are */
+.badge[aria-pressed="false"] .disc > * {
+  filter: grayscale(1);
+  opacity: 0.45;
 }
 
 .badge:focus-visible {
@@ -355,84 +551,87 @@ h1 {
   outline-offset: 2px;
 }
 
-/* SPEC-0004 REQ-001: a company's logo on its own ground in a neutral frame (3 : 1 on the page in both looks) — the
-   same in both looks; the name is the button's label */
-.badge.logo {
-  position: relative;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 6px 14px;
-  border: 1.5px solid #6b7280;
-  background: var(--ground);
-}
-
-.badge.logo img {
-  display: block;
-}
-
-/* SPEC-0004 REQ-001: switched off, the logo loses its colour and fades, and a line crosses it — off shows without
-   colour too; the line is the ink that reads on the logo's ground (3 : 1 at least) */
-.badge.logo[aria-pressed="false"] {
-  background: var(--ground);
-  text-decoration: none;
-}
-
-.badge.logo[aria-pressed="false"] img {
-  filter: grayscale(1);
-  opacity: 0.45;
-}
-
-.badge.logo[aria-pressed="false"]::after {
-  content: "";
-  position: absolute;
-  top: 50%;
-  right: 10px;
-  left: 10px;
-  height: 3px;
-  margin-top: -1.5px;
-  border-radius: 2px;
-  background: var(--strike);
-  transform: rotate(-14deg);
-  pointer-events: none;
+/* SPEC-0005 REQ-004, REQ-006: the ★ card, compact, on the surface colour and set off from the sheet by a line — its
+   title with "all prices" beside it; the company's circle, who and where, the price and the distance on one line; the
+   two buttons: 240 px high at most on a phone, so the list's first line is on the first screen too (AC-008) */
+.best {
+  padding: 4px 14px 8px;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: var(--surface);
 }
 
 .best[hidden] {
   display: none;
 }
 
+.best-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
 .best h2 {
-  margin: 0 0 8px;
-  font-size: 1.05rem;
+  margin: 0;
+  font-size: 0.95rem;
 }
 
 .best p {
-  margin: 4px 0;
+  margin: 2px 0;
+}
+
+.best-row {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 10px;
+  align-items: center;
+}
+
+.best-row .disc {
+  --d: 32px;
 }
 
 .best .who {
-  font-size: 1rem;
+  margin: 0;
+  font-size: 0.95rem;
+  line-height: 1.3;
+}
+
+.best-line {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
 }
 
 .best .price {
-  font-size: 1.9rem;
+  font-size: 1.35rem;
   font-weight: 800;
   font-variant-numeric: tabular-nums;
+  line-height: 1.15;
+  white-space: nowrap;
+}
+
+.best .km {
+  color: var(--muted);
+  font-size: 0.85rem;
+  white-space: nowrap;
 }
 
 .go {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 10px;
-  margin-top: 12px;
+  margin-top: 8px;
 }
 
 .go a {
   display: flex;
   align-items: center;
   justify-content: center;
-  min-height: 46px;
-  padding: 10px 12px;
+  min-height: 44px;
+  padding: 8px 12px;
   border-radius: 14px;
   background: var(--accent);
   color: var(--on-accent);
@@ -448,13 +647,13 @@ h1 {
 }
 
 .to-prices {
-  display: block;
-  margin-top: 8px;
-  padding: 6px;
-  color: var(--link);
+  flex: none;
+  padding: 4px 2px;
+  color: var(--text); /* SPEC-0005 REQ-006: a link is the text's colour, and shows by its line */
+  font-size: 0.9rem;
   font-weight: 600;
-  text-align: center;
-  text-decoration: underline; /* REQ-005: a link shows by its line, not only by its colour */
+  text-decoration: underline;
+  white-space: nowrap;
 }
 
 .to-prices::before {
@@ -472,7 +671,7 @@ h1 {
   padding: 10px;
   border: 1px solid var(--line);
   border-radius: 10px;
-  background: var(--sheet);
+  background: var(--surface);
   color: var(--text);
   font: inherit;
 }
@@ -491,7 +690,7 @@ h1 {
 /* The station window on the map */
 .leaflet-popup-content-wrapper,
 .leaflet-popup-tip {
-  background: var(--sheet);
+  background: var(--surface);
   color: var(--text);
 }
 
@@ -515,73 +714,90 @@ h1 {
 
 /* Every price */
 .prices {
-  margin-top: 8px;
-  padding: 4px 0 12px;
+  margin-top: 2px;
+  padding: 2px 0 12px;
   border-top: 1px solid var(--line);
 }
 
 h2 {
-  margin: 12px 0 8px;
+  margin: 4px 0;
   font-size: 1.05rem;
 }
 
-#price-table {
-  width: 100%;
-  border-collapse: collapse;
+/* SPEC-0005 REQ-005: every price of the chosen fuel as a list, as on the photo — one line per company's grade, a card
+   a finger's size at least: the company's circle (40 px), its name, the grade and when the price was read, the price */
+.price-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
 }
 
-#price-table th {
-  padding: 6px 4px;
-  border-bottom: 1px solid var(--line);
+.price-list > li {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 12px;
+  align-items: center;
+  min-height: 44px;
+  margin: 6px 0;
+  padding: 6px 12px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--surface);
+}
+
+.price-list .disc {
+  --d: 40px;
+}
+
+.price-list p {
+  margin: 0;
+  line-height: 1.2;
+}
+
+.price-list .grade,
+.price-list .time {
   color: var(--muted);
-  font-size: 0.8rem;
-  font-weight: 600;
-  text-align: left;
+  font-size: 0.85rem;
 }
 
-#price-table td {
-  padding: 12px 4px;
-  vertical-align: top;
-  border-bottom: 1px solid var(--line);
-}
-
-#price-table .price {
-  font-size: 1.05rem;
-  font-weight: 700;
+.price-list .price {
+  font-size: 1.1rem;
+  font-weight: 800;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
 
-#price-table .time {
-  color: var(--muted);
-  font-size: 0.85rem;
-  white-space: nowrap;
+/* REQ-005, REQ-006: the lowest fresh price — its line on the cheapest ground, and the word "cheapest" in the yellow,
+   so it shows without colour too */
+.price-list > li.cheap {
+  background: var(--cheap);
 }
 
-.dot {
+.price-list .tag {
   display: inline-block;
-  width: 10px;
-  height: 10px;
-  margin-right: 6px;
-  border-radius: 50%;
+  margin-left: 4px;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: var(--on-accent);
+  font-size: 0.8rem;
+  font-weight: 700;
 }
 
-.grade,
+/* SPEC-0001 REQ-006: an old price is grey, with its note */
+.price-list > li.stale,
+.price-list > li.stale .price {
+  color: var(--muted);
+}
+
+.price-list > li.stale .price {
+  font-weight: 400;
+}
+
 .note {
   display: block;
   font-size: 0.85rem;
-}
-
-.note {
   white-space: normal;
-}
-
-tr.stale {
-  color: var(--muted);
-}
-
-tr.stale .price {
-  font-weight: 400;
 }
 
 .foot {
@@ -599,7 +815,7 @@ tr.stale .price {
 }
 
 .foot a {
-  color: var(--link);
+  color: var(--text);
 }
 
 .visually-hidden {
@@ -618,11 +834,7 @@ tr.stale .price {
   background: var(--page);
 }
 
-:root[data-theme="dark"] .badge:not(.logo) {
-  border-color: var(--company);
-}
-
-:root[data-theme="dark"] .station span {
+:root[data-theme="dark"] .station:not(.near) > span {
   border-color: var(--white);
 }
 
@@ -644,5 +856,5 @@ tr.stale .price {
 
 :root[data-theme="dark"] .leaflet-container .leaflet-control-attribution a,
 :root[data-theme="dark"] .leaflet-container a.leaflet-popup-close-button {
-  color: var(--link);
+  color: var(--text);
 }

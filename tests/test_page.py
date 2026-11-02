@@ -53,7 +53,7 @@ def test_phone_first_screen_without_prices(page: Page, net: Net) -> None:
     assert [fuels.nth(i).get_attribute("value") for i in range(len(FUELS))] == FUELS
     expect(page.locator(".chip span")).to_have_text(FUELS_KA)
     for name in FUELS_KA:
-        expect(page.get_by_text(name, exact=True)).to_be_visible()
+        expect(page.locator("#fuels").get_by_text(name, exact=True)).to_be_visible()
     expect(page.locator("#status")).to_contain_text("ფასები ჯერ არ არის")
     expect(page.locator("footer")).to_contain_text("ფასი სტანდარტულია")  # REQ-004
     assert page.evaluate("document.documentElement.scrollWidth <= window.innerWidth")
@@ -89,11 +89,11 @@ def test_the_chosen_fuel_is_shown_whole_in_its_row(page: Page, net: Net) -> None
 
 
 def test_at_night_the_page_follows_the_phones_dark_mode(page: Page, net: Net) -> None:
-    # the owner's choice (2026-10-30); SPEC-0004 REQ-005: white by day, black at night
+    # the owner's choice (2026-10-30); SPEC-0005 REQ-006: #F2F2F7 by day, #1C1C1E at night
     background = "getComputedStyle(document.body).backgroundColor.match(/\\d+/g).slice(0, 3).map(Number)"
     page.emulate_media(color_scheme="dark")
     page.goto(net.base)
     assert max(page.evaluate(background)) < 64
     page.emulate_media(color_scheme="light")  # the phone turns light: with no choice of their own, the page follows
-    page.wait_for_function("() => getComputedStyle(document.body).backgroundColor === 'rgb(255, 255, 255)'",
-                           timeout=5000)  # white by day
+    page.wait_for_function("() => getComputedStyle(document.body).backgroundColor === 'rgb(242, 242, 247)'",
+                           timeout=5000)  # light grey by day

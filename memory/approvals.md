@@ -36,3 +36,16 @@ status: living
 | 2026-11-01 16:34 +0000 | PLAN-0003 | draft → approved | docs/plans/PLAN-0003-connect-stations-and-prices.md | — |
 | 2026-11-01 17:21 +0000 | SPEC-0004 | review → approved | docs/specs/SPEC-0004-logos-and-black-orange-look.md | — |
 | 2026-11-01 17:39 +0000 | PLAN-0004 | draft → approved | docs/plans/PLAN-0004-logos-and-black-orange-look.md | — |
+| 2026-11-01 20:47 +0000 | intent | draft → accepted | intent.md | — |
+| 2026-11-01 20:52 +0000 | SPEC-0001 | draft → approved | docs/specs/SPEC-0001-fuel-prices-map.md | — |
+| 2026-11-01 20:56 +0000 | SPEC-0002 | draft → approved | docs/specs/SPEC-0002-company-badges-and-filter.md | — |
+| 2026-11-01 20:58 +0000 | SPEC-0003 | draft → approved | docs/specs/SPEC-0003-connect-stations-and-prices.md | — |
+| 2026-11-01 21:02 +0000 | SPEC-0004 | draft → approved | docs/specs/SPEC-0004-logos-and-black-orange-look.md | — |
+| 2026-11-01 22:27 +0000 | PLAN-0001 | draft → approved | docs/plans/PLAN-0001-fuel-prices-map.md | — |
+| 2026-11-01 22:30 +0000 | PLAN-0002 | draft → approved | docs/plans/PLAN-0002-company-badges-and-filter.md | — |
+| 2026-11-01 22:34 +0000 | PLAN-0003 | draft → approved | docs/plans/PLAN-0003-connect-stations-and-prices.md | — |
+| 2026-11-01 22:39 +0000 | PLAN-0004 | draft → approved | docs/plans/PLAN-0004-logos-and-black-orange-look.md | — |
+| 2026-11-02 03:57 +0000 | SPEC-0005 | review → approved | docs/specs/SPEC-0005-look-from-reference-photo.md | — |
+| 2026-11-02 04:16 +0000 | PLAN-0005 | draft → approved | docs/plans/PLAN-0005-look-from-reference-photo.md | — |
+| 2026-11-02 09:14 +0000 | SPEC-0005 | review → approved | docs/specs/SPEC-0005-look-from-reference-photo.md | — |
+| 2026-11-02 09:29 +0000 | PLAN-0005 | draft → approved | docs/plans/PLAN-0005-look-from-reference-photo.md | — |
