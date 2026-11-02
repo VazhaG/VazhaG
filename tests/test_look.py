@@ -257,6 +257,12 @@ def test_on_a_phone_the_card_the_row_and_both_switches_fit(page_at: Callable[[fl
     assert page.evaluate("document.documentElement.scrollWidth <= window.innerWidth")
     expect(page.locator("#companies .badge")).to_have_count(5)
     assert page.locator("#companies").evaluate("(r) => r.scrollWidth <= r.clientWidth")
+    # SPEC-0005 AC-008: with the visitor's place the list's first line is on the first screen too, whole; and under
+    # the filters and the fuel chips 260 px of the map at least are in view, down to the sheet
+    first = page.locator("#price-list li").first.bounding_box()
+    assert first and first["y"] + first["height"] <= 812, first
+    over, sheet = page.locator(".over-map").bounding_box(), page.locator(".sheet").bounding_box()
+    assert over and sheet and sheet["y"] - (over["y"] + over["height"]) >= 260, (over, sheet)
     bar, title = page.locator(".top").bounding_box(), page.locator(".top h1").bounding_box()
     assert bar and title and page.locator(".top h1").evaluate("(h) => h.scrollWidth <= h.clientWidth + 1")
     lines = page.locator(".top h1").evaluate("""(h) => { const r = document.createRange(); r.selectNodeContents(h);
@@ -268,21 +274,58 @@ def test_on_a_phone_the_card_the_row_and_both_switches_fit(page_at: Callable[[fl
         assert box["y"] >= bar["y"] and box["y"] + box["height"] <= bar["y"] + bar["height"], (target, box)
 
 
+@pytest.mark.parametrize("scheme", ["light", "dark"])
+@pytest.mark.parametrize("language", ["ka", "en"])
+def test_on_a_phone_without_a_place_the_chosen_citys_card_fits(page: Page, net: Net, scheme: str,
+                                                                language: str) -> None:
+    # SPEC-0005 AC-008 without the visitor's place: a city chosen from the list — the whole card and "all prices" on
+    # the first screen, 260 px of the map under the filters, no sideways page
+    net.real_data = True
+    generated = json.loads((SITE / "data" / "prices.json").read_text(encoding="utf-8"))["generated"]
+    page.clock.set_fixed_time(datetime.fromisoformat(generated))
+    page.emulate_media(color_scheme=scheme)
+    page.goto(net.base)  # no place allowed: the city list comes
+    if language == "en":
+        page.get_by_role("button", name="ENG").click()
+    expect(page.locator("#city")).to_be_visible()
+    page.locator("#city").select_option(label="თბილისი" if language == "ka" else "Tbilisi")
+    expect(page.locator("#best a.go-google")).to_be_visible()
+    for target in ("#best", "#best a.to-prices"):
+        box = page.locator(target).bounding_box()
+        assert box and box["y"] + box["height"] <= 812, (target, box)
+    over, sheet = page.locator(".over-map").bounding_box(), page.locator(".sheet").bounding_box()
+    assert over and sheet and sheet["y"] - (over["y"] + over["height"]) >= 260, (over, sheet)
+    assert page.evaluate("document.documentElement.scrollWidth <= window.innerWidth")
+
+
+BOXES_JS = """() => [...document.querySelectorAll(
+    '#companies .badge, #price-list li, .filter-button, #panel-company .option')].map((el) => {
+  const r = el.getBoundingClientRect();
+  return [el.className, Math.round(r.x * 2) / 2, Math.round(r.y * 2) / 2, Math.round(r.width * 2) / 2,
+          Math.round(r.height * 2) / 2];
+})"""
+
+
 @pytest.mark.parametrize("how", ["missing", "stalled"])
 def test_without_any_logo_the_card_comes_within_10_seconds_and_the_row_stays(
         page_at: Callable[[float, float], Page], net: Net, how: str) -> None:
-    # AC-006: every logo answers 404, or never answers; the page does not wait for them
-    net.held.update(LOGO_FILES)  # first unanswered; "missing" answers them 404 once the row is measured
+    # AC-006 (SPEC-0005 AC-007): every logo answers 404, or never answers; the page does not wait for them, and the
+    # row, the list, the filters and an open company panel keep their sizes and places as the logos fail
+    net.held.update(LOGO_FILES)  # first unanswered; "missing" answers them 404 once the page is measured
     net.real_data = True
     page = page_at(*TBILISI)
     generated = json.loads((SITE / "data" / "prices.json").read_text(encoding="utf-8"))["generated"]
     page.clock.set_fixed_time(datetime.fromisoformat(generated))
     page.goto(net.base, wait_until="domcontentloaded")  # a stalled picture holds the page's "load" back
     expect(page.locator("#best a.go-google")).to_be_visible(timeout=10_000)
-    row = page.locator("#companies").bounding_box()
+    page.locator("#filter-company").click()  # its circles wait for the same files
+    expect(page.locator("#panel-company .option")).to_have_count(5)
+    row, boxes = page.locator("#companies").bounding_box(), page.evaluate(BOXES_JS)
+    assert len(boxes) > 12, boxes
     if how == "missing":
         for file in LOGO_FILES:
             net.pending[file].fulfill(status=404, body="")
-        expect(page.locator("#companies img")).to_have_count(0)  # every company is its letter circle now
+        expect(page.locator(".disc img")).to_have_count(0)  # every company is its letter circle now, everywhere
     page.wait_for_timeout(1500)
     assert page.locator("#companies").bounding_box() == row  # the row stays where it is
+    assert page.evaluate(BOXES_JS) == boxes  # and nothing in it, in the list or in the filter moves

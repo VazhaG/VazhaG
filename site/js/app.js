@@ -391,7 +391,11 @@ function renderBest(prices, stations, allOff, pricesHidden) {
     return;
   }
   card.hidden = false;
-  const parts = [element('h2', 'best-title', t('best.title'))];
+  // SPEC-0005 REQ-004: compact — the title with "all prices" beside it, the company's circle, who and where, the price
+  // and the distance on one line, then the two buttons
+  const head = element('div', 'best-head');
+  head.append(element('h2', 'best-title', t('best.title')));
+  const parts = [head];
   if (state.asking) parts.push(cityPicker());
   if (!state.here) {
     card.replaceChildren(...parts);
@@ -404,16 +408,16 @@ function renderBest(prices, stations, allOff, pricesHidden) {
     parts.push(element('p', 'note', t('companies.allOff')));
   } else if (result.best) {
     const b = result.best;
-    // SPEC-0005 REQ-004: compact — the company's circle beside who and where, the price and the distance under them
+    const row = element('div', 'best-row');
+    row.dataset.company = b.companyId;
     const who = element('p', 'who');
-    who.dataset.company = b.companyId;
-    const text = element('span', 'who-text');
-    text.append(element('strong', '', b.company), ` · ${b.grade}`);
-    if (b.name) text.append(` · ${b.name}`);
-    who.append(disc({ id: b.companyId, name: b.company, color: b.color }), text);
+    who.append(element('strong', '', b.company), ` · ${b.grade}`);
+    if (b.name) who.append(` · ${b.name}`);
     const line = element('p', 'best-line');
-    line.append(element('span', 'price', priceText(b.price)), ` · ${b.distanceKm.toFixed(1)} ${t('unit.km')}`);
-    parts.push(who, line);
+    line.append(element('span', 'price', priceText(b.price)),
+      element('span', 'km', `${b.distanceKm.toFixed(1)} ${t('unit.km')}`));
+    row.append(disc({ id: b.companyId, name: b.company, color: b.color }), who, line);
+    parts.push(row);
     if (b.stale) parts.push(element('p', 'note', t('price.stale')));
     parts.push(routeButtons(b.lat, b.lng));
   } else {
@@ -421,7 +425,7 @@ function renderBest(prices, stations, allOff, pricesHidden) {
   }
   const all = element('a', 'to-prices', t('sheet.all'));
   all.href = '#prices-title';
-  parts.push(all);
+  head.append(all);
   card.replaceChildren(...parts);
 }
 
@@ -539,9 +543,17 @@ function closePanel(focus = true) {
   if (focus) filterButton(kind).focus();
 }
 
-// One run of text, so a long one wraps after the dot ("საწვავი ·" / "ბუნებრივი აირი"), never in the middle of a word.
+// The filter's name small above, what is chosen under it — one height in both languages (SPEC-0005 AC-008). The
+// dot between them is for a screen reader only: the button says "კომპანია · 4/5".
 function filterLabel(kind, name, value) {
-  filterButton(kind).replaceChildren(element('span', 'filter-text', value ? `${name} · ${value}` : name));
+  const text = element('span', 'filter-text');
+  text.append(element('span', 'filter-name', name));
+  if (value) {
+    const chosen = element('span', 'filter-value');
+    chosen.append(element('span', 'visually-hidden', ' · '), value);
+    text.append(chosen);
+  }
+  filterButton(kind).replaceChildren(text);
 }
 
 // The buttons say what is chosen. An open panel's boxes already show it: while a panel is open, the choice changes

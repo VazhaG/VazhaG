@@ -452,9 +452,14 @@ def test_from_far_a_station_is_still_its_companys_small_dot(page: Page, net: Net
 
 def test_each_logo_file_is_asked_once_whatever_the_row_and_the_map_do(page_at: Callable[[float, float], Page],
                                                                       net: Net) -> None:
-    # AC-004: opening, switching a company off and on, leaving the city view and coming back
+    # AC-004 (SPEC-0005 AC-007: all five places together): opening — the row, the map, the ★ card and the list —,
+    # the company filter opened and closed, a company switched off and on, the city view left and come back to
     page = open_near(page_at, net, FIVE)
     expect(page.locator(".station.near .disc img")).to_have_count(len(FIVE))
+    expect(page.locator("#best .disc img, #price-list .disc img")).to_have_count(1 + len(FIVE))
+    page.locator("#filter-company").click()
+    expect(page.locator("#panel-company .disc img")).to_have_count(len(FIVE))
+    page.locator("#filter-company").click()
     wissol = page.locator('#companies [data-company="wissol"]')
     wissol.click()
     wissol.click()
@@ -465,6 +470,77 @@ def test_each_logo_file_is_asked_once_whatever_the_row_and_the_map_do(page_at: C
     page.wait_for_load_state("networkidle")
     asked = sorted(u[len(net.base):] for u in net.requests if u.startswith(f"{net.base}logos/"))
     assert asked == sorted(dict(page.evaluate(LIST_JS)).values()), asked
+
+
+def five_places(page: Page) -> dict[str, dict[str, dict]]:
+    """Every company circle drawn, by place and by company — the company panel opened to draw its own."""
+    page.locator("#filter-company").click()
+    expect(page.locator("#panel-company .option")).not_to_have_count(0)
+    page.wait_for_function(DRAWN, arg=".disc img")
+    places = {"row": "#companies .disc", "list": "#price-list .disc", "filter": "#panel-company .disc",
+              "card": "#best .disc", "map": ".station .disc"}
+    return {place: {d["id"]: d for d in page.evaluate(DISCS_JS, sel)} for place, sel in places.items()}
+
+
+SIZES = {"row": 48, "list": 40, "filter": 32, "card": 32, "map": 30}  # px — a circle in each place (REQ-001)
+
+
+def test_two_companies_without_a_logo_are_letter_circles_in_all_five_places(
+        page_at: Callable[[float, float], Page], net: Net) -> None:
+    # SPEC-0005 AC-006: Lukoil's file answers 404 and Nova is not in our list — in the row, the list, the company
+    # filter, the ★ card (Nova is the cheapest near) and on the map, each is the circle of that place in its colour
+    # with its letter; the other companies keep their logos; switched off, a letter circle only fades
+    net.files["logos/lukoil.png"] = (404, "text/plain", "")
+    serve(net, [("nova", "Nova", "#2563eb"), *FIVE])  # the first company's price is the lowest
+    page = page_at(*HERE)
+    page.clock.set_fixed_time(TIME)
+    page.goto(net.base)
+    page.get_by_text("დიზელი", exact=True).first.click()
+    expect(page.locator("#best .who strong")).to_have_text("Nova")
+    expect(page.locator('#companies [data-company="lukoil"]')).to_have_text("L")  # its file has failed
+    logos = dict(page.evaluate(LIST_JS))
+    places = five_places(page)
+    for place, size in SIZES.items():
+        got = places[place]
+        assert "nova" in got and (place == "card" or "lukoil" in got), (place, sorted(got))
+        for cid, d in got.items():
+            assert_disc(d, size)
+            if cid == "nova":
+                assert_letter(d, size, "N", "rgb(37, 99, 235)")  # #2563eb
+            elif cid == "lukoil":
+                assert_letter(d, size, "L", "rgb(138, 21, 56)")  # #8a1538
+            else:
+                assert_mark(d, logos[cid], size)
+    page.keyboard.press("Escape")
+    nova = page.locator('#companies [data-company="nova"]')
+    nova.click()
+    expect(nova).to_have_attribute("aria-pressed", "false")
+    faded = nova.locator(".letter").evaluate("(l) => [getComputedStyle(l).filter, Number(getComputedStyle(l).opacity)]")
+    assert faded[0] == "grayscale(1)" and 0.35 <= faded[1] <= 0.5, faded
+
+
+def test_a_hostile_name_or_code_is_only_text_in_the_list_and_the_card(page_at: Callable[[float, float], Page],
+                                                                      net: Net) -> None:
+    # SPEC-0005 AC-007 in the list and the ★ card: codes like an object's own field, a path or nothing, and a name
+    # with HTML — the name is text everywhere, a picture only for the exact code in our list, no request by them
+    companies = [(cid, EVIL if i == 0 else f"Co{i}", "#e41e30") for i, cid in enumerate(HOSTILE)]
+    serve(net, [*companies, ("socar", EVIL, "#e41e30")])  # "constructor", the first, is the cheapest near
+    page = page_at(*HERE)
+    page.clock.set_fixed_time(TIME)
+    page.goto(net.base)
+    page.get_by_text("დიზელი", exact=True).first.click()
+    expect(page.locator(ROWS)).to_have_count(len(HOSTILE) + 1)
+    expect(page.locator("#best .who strong")).to_have_text(EVIL)  # the name as text
+    expect(page.locator(ROWS).first.locator(".price-name strong")).to_have_text(EVIL)
+    page.wait_for_function(DRAWN, arg="#best img, #price-list img")
+    srcs = page.locator("#best img, #price-list img").evaluate_all("(i) => i.map((x) => x.getAttribute('src'))")
+    assert srcs == ["logos/socar.svg"], srcs  # SOCAR's line only
+    expect(page.locator("#best script, #price-list script")).to_have_count(0)
+    page.wait_for_load_state("networkidle")
+    assert page.evaluate("window.__pwned") is None
+    asked = {u[len(net.base):].split("?")[0] for u in net.requests if u.startswith(net.base)}
+    assert {a for a in asked if a.startswith("logos/")} == {"logos/socar.svg"}, asked
+    assert net.outside == []
 
 
 def test_on_the_map_only_an_exact_code_gets_a_mark(page_at: Callable[[float, float], Page], net: Net) -> None:

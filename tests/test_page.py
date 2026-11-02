@@ -53,7 +53,7 @@ def test_phone_first_screen_without_prices(page: Page, net: Net) -> None:
     assert [fuels.nth(i).get_attribute("value") for i in range(len(FUELS))] == FUELS
     expect(page.locator(".chip span")).to_have_text(FUELS_KA)
     for name in FUELS_KA:
-        expect(page.get_by_text(name, exact=True)).to_be_visible()
+        expect(page.locator("#fuels").get_by_text(name, exact=True)).to_be_visible()
     expect(page.locator("#status")).to_contain_text("ფასები ჯერ არ არის")
     expect(page.locator("footer")).to_contain_text("ფასი სტანდარტულია")  # REQ-004
     assert page.evaluate("document.documentElement.scrollWidth <= window.innerWidth")
