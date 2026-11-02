@@ -48,3 +48,4 @@ status: living
 | 2026-11-02 03:57 +0000 | SPEC-0005 | review → approved | docs/specs/SPEC-0005-look-from-reference-photo.md | — |
 | 2026-11-02 04:16 +0000 | PLAN-0005 | draft → approved | docs/plans/PLAN-0005-look-from-reference-photo.md | — |
 | 2026-11-02 09:14 +0000 | SPEC-0005 | review → approved | docs/specs/SPEC-0005-look-from-reference-photo.md | — |
+| 2026-11-02 09:29 +0000 | PLAN-0005 | draft → approved | docs/plans/PLAN-0005-look-from-reference-photo.md | — |
