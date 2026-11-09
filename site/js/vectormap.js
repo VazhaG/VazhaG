@@ -4,7 +4,8 @@
 // drawn — no WebGL2, a library file or a style that does not come, no map in 5 seconds, a look's style that does not
 // come — the ground is OpenStreetMap's tiles, as before the vector map: the map never stays empty.
 
-const STYLE_BASE = 'https://tiles.openfreemap.org/styles/';
+const MAP_HOST = 'https://tiles.openfreemap.org/';
+const STYLE_BASE = `${MAP_HOST}styles/`;
 const STYLES = { light: 'liberty', dark: 'dark' };
 const WAIT = 5000; // ms: the style and the first tiles (MapLibre's `load`) — REQ-007's 5 seconds, a hypothesis
 const OSM_TILES = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
@@ -25,7 +26,7 @@ const LABELS = {
   en: ['coalesce', ['get', 'name:latin'], ['get', 'name:en']],
 };
 
-const state = { kind: 'loading', map: null, layer: null, styles: {}, shown: null, turn: 0, timer: 0, watch: null };
+const state = { kind: 'loading', map: null, layer: null, styles: {}, shown: null, asking: null, timer: 0, watch: null };
 
 // what the map's ground is — 'loading' until MapLibre's first `load`, then 'vector', or 'osm' once it fell back — and
 // MapLibre's own map; the tests read MapLibre's style through it (tests/support.py: GROUND_JS)
@@ -45,6 +46,14 @@ function fallback(why) {
   state.layer = null;
   L.tileLayer(OSM_TILES, { maxZoom: 19, attribution: OSM_CREDIT, className: 'osm-tiles' }).addTo(state.map);
   state.map.getContainer().dataset.ground = 'osm';
+}
+
+// every address MapLibre is about to ask — the tile index, tiles, fonts, pictures, data — must be on OpenFreeMap's host:
+// the page's CSP does not reach MapLibre's worker, which fetches tiles and data itself (review S1, 2026-11-09); any
+// other address is refused here, on the page, before the request is made
+function onlyOpenFreeMap(url) {
+  if (!url.startsWith(MAP_HOST)) throw new Error(`not OpenFreeMap's host: ${url}`);
+  return { url };
 }
 
 function within(ms, promise) {
@@ -118,25 +127,30 @@ async function loadLibrary() {
   await Promise.all([script(BRIDGE), stylesheet(LIBRARY_CSS)]);
 }
 
-// the look or the language changed: the look's style — asked once, then kept — with the language's labels
+// the look or the language changed: the look's style — asked once, then kept under that look — with the language's
+// labels. A style still on its way is not asked again; when it comes, what is wanted is read afresh, because the look
+// may have been switched back meanwhile (review C1)
 async function restyle() {
   const gl = state.layer?.getMaplibreMap();
-  const wanted = `${look()} ${language()}`;
-  if (!gl || wanted === state.shown) return;
-  const turn = ++state.turn;
-  let style = state.styles[look()];
-  if (!style) {
-    try {
-      style = await within(WAIT, fetchStyle(STYLES[look()]));
-    } catch (error) {
-      if (turn === state.turn) fallback(error); // the look's style did not come (a later change may not need it)
-      return;
-    }
-    state.styles[look()] = style;
-    if (turn !== state.turn || state.kind === 'osm') return; // a later change is under way, or the map fell back
+  if (!gl || `${look()} ${language()}` === state.shown) return;
+  const want = look();
+  const style = state.styles[want];
+  if (style) {
+    state.shown = `${want} ${language()}`;
+    gl.setStyle(localized(style, language()));
+    return;
   }
-  state.shown = `${look()} ${language()}`;
-  gl.setStyle(localized(style, language()));
+  if (state.asking === want) return;
+  state.asking = want;
+  try {
+    state.styles[want] = await within(WAIT, fetchStyle(STYLES[want]));
+  } catch (error) {
+    if (look() === want) fallback(error); // the look's style did not come (a look switched back does not need it)
+    return;
+  } finally {
+    state.asking = null;
+  }
+  restyle();
 }
 
 // the bridge's layer with two changes: its credit is the page's own text (the bridge would copy the tile index's, and
@@ -168,13 +182,21 @@ export async function startGround(map) {
     if (state.kind === 'osm') return; // too late: the fallback is shown
     state.styles[first] = style;
     state.shown = `${first} ${language()}`;
-    state.layer = vectorLayer({ style: localized(style, language()) });
+    state.layer = vectorLayer({ style: localized(style, language()), transformRequest: onlyOpenFreeMap });
     state.layer.addTo(map);
   } catch (error) {
     fallback(error);
     return;
   }
-  state.layer.getMaplibreMap().once('load', () => {
+  const gl = state.layer.getMaplibreMap();
+  // a vector source that fails before the first `load` — its tile index, or a tile — leaves the map empty, yet MapLibre
+  // counts it as loaded and fires `load` all the same (review C2): it is a fallback cause, taken at once, so no frame —
+  // where `load` comes from — falls between (the tests see no error left behind)
+  gl.on('error', (event) => {
+    if (state.kind !== 'loading' || !event.sourceId || gl.getSource(event.sourceId)?.type !== 'vector') return;
+    fallback(event.error ?? `source ${event.sourceId} failed`);
+  });
+  gl.once('load', () => {
     clearTimeout(state.timer);
     state.kind = 'vector';
     map.getContainer().dataset.ground = 'vector';

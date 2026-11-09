@@ -7,10 +7,14 @@ Published: 2026-10-25
 Added: 2026-11-09
 
 The archive's sha512 matched the registry's "dist.integrity" for maplibre-gl@6.16.0. It was unpacked into an empty
-folder of its own and read before anything was copied: no hidden characters, LF line endings, no credential the
+folder of its own and read before anything was copied: no bidi controls and no Unicode tags (the engine's
+hidden-character check), and one invisible character only — a U+200B (zero-width space) inside the string literal of
+hasZeroWidthSpaces() in each .mjs file, text MapLibre compares map labels with; LF line endings; no credential the
 engine's scanner knows. The worker carries one globalThis.eval, on the path that loads an extra script into the
-workers (importScriptInWorkers, the right-to-left text plugin); this site calls neither, and its CSP (no
-'unsafe-eval', no blob: scripts) would refuse it anyway.
+workers (importScriptInWorkers, the right-to-left text plugin); this site calls neither. The page's CSP does not reach
+inside the worker (a worker made from the site's own file takes its policy from that file's response, and the site
+sends none), so not calling those two is the guard; js/vectormap.js also keeps every address MapLibre asks on
+OpenFreeMap's host (transformRequest).
 Copied from the archive unchanged, byte for byte: dist/maplibre-gl.mjs, dist/maplibre-gl-worker.mjs,
 dist/maplibre-gl.css, LICENSE.txt. Not copied: dist/maplibre-gl-shared.mjs (empty in this version), the -dev builds,
 the source maps and the type declarations.

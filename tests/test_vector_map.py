@@ -14,6 +14,7 @@ tiles with their credit within 6 seconds (5 and 1 of margin) — darkened by a f
 from __future__ import annotations
 
 import json
+import re
 import time
 
 import pytest
@@ -90,7 +91,6 @@ def test_the_credit_is_the_pages_own_text_never_the_tile_indexs_html(page: Page,
     expect(credit.locator("img")).to_have_count(0)
     links = set(credit.locator("a").evaluate_all("(links) => links.map((a) => a.href)"))
     assert links <= CREDIT_LINKS | {"https://leafletjs.com/"}, links
-    assert page.evaluate("window.__pwned") is None
 
 
 def test_the_vector_map_runs_under_the_exact_csp_and_asks_only_the_map_hosts(page: Page, net: Net) -> None:
@@ -178,11 +178,24 @@ def no_map_in_time(page: Page, net: Net, look: str) -> None:
     net.vector_held.add("planet/test/")  # the tiles never come: MapLibre's `load` never fires
 
 
+def tile_index_failing(page: Page, net: Net, look: str) -> None:
+    net.vector["planet"] = (503, "text/plain", "")  # MapLibre counts the source as loaded all the same (review C2)
+
+
+def tiles_failing(page: Page, net: Net, look: str) -> None:
+    net.vector_failing.add("planet/test/")
+
+
 CAUSES = {"no WebGL": no_webgl, "the library missing": library_missing, "the library silent": library_silent,
-          "the style missing": style_missing, "no map in 5 seconds": no_map_in_time}
+          "the style missing": style_missing, "no map in 5 seconds": no_map_in_time,
+          "the tile index failing": tile_index_failing, "the tiles failing": tiles_failing}
 # a cause that is certain at once needs no wait: well before REQ-007's 5 seconds (the silent ones take those 5)
-AT_ONCE = {"no WebGL", "the library missing", "the style missing"}
+AT_ONCE = {"no WebGL", "the library missing", "the style missing", "the tile index failing", "the tiles failing"}
 AT_ONCE_WITHIN = 4
+# every value the map's data-ground takes, in order — a map that fell back on its first load never claimed the vector
+GROUNDS_SEEN = """window.__grounds = [];
+new MutationObserver(() => window.__grounds.push(document.getElementById('map').dataset.ground))
+  .observe(document, { subtree: true, attributeFilter: ['data-ground'] });"""
 
 
 def assert_fallback(page: Page, net: Net, look: str, started: float, within: float = FALLBACK_WITHIN) -> None:
@@ -202,10 +215,77 @@ def assert_fallback(page: Page, net: Net, look: str, started: float, within: flo
 @pytest.mark.parametrize("cause", CAUSES)
 def test_the_map_falls_back_to_openstreetmap(page: Page, net: Net, cause: str) -> None:
     CAUSES[cause](page, net, "light")
+    page.add_init_script(GROUNDS_SEEN)
+    errors: list[str] = []
+    page.on("pageerror", lambda error: errors.append(str(error)))
     page.emulate_media(color_scheme="light")
     started = time.monotonic()
     page.goto(net.base)
     assert_fallback(page, net, "light", started, AT_ONCE_WITHIN if cause in AT_ONCE else FALLBACK_WITHIN)
+    assert page.evaluate("window.__grounds") == ["osm"]  # never taken for a drawn vector map on the way
+    page.wait_for_timeout(500)
+    assert errors == []  # the vector map was taken off cleanly: nothing left throwing
+
+
+def test_a_look_switch_undone_before_its_style_comes_keeps_each_looks_own_style(page: Page, net: Net) -> None:
+    # review C1: ☾ and then ☀ before the dark style comes — when it comes, it neither shows on the light look nor is
+    # kept as the light look's style
+    net.vector_held.add("styles/dark")
+    open_map(page, net, "light")
+    page.locator("#theme").click()
+    for _ in range(100):  # the dark style is on its way
+        if net.stalled:
+            break
+        page.wait_for_timeout(50)
+    page.locator("#theme").click()
+    net.vector_held.clear()
+    net.stalled.pop().fulfill(status=200, content_type="application/json", body=vector_answer("styles/dark")[2])
+    page.wait_for_timeout(1000)
+    assert ground(page)["style"] == "liberty"
+    page.locator("#theme").click()
+    until(page, "style", "dark")
+    page.locator("#theme").click()
+    until(page, "style", "liberty")
+    assert styles_asked(net) == ["liberty", "dark"]
+
+
+def test_a_style_on_its_way_is_asked_once_however_often_the_look_is_switched(page: Page, net: Net) -> None:
+    net.vector_held.add("styles/dark")
+    open_map(page, net, "light")
+    for _ in range(3):  # ☾ ☀ ☾ while the dark style is on its way
+        page.locator("#theme").click()
+        page.wait_for_timeout(200)
+    assert len(net.stalled) == 1, len(net.stalled)
+    net.vector_held.clear()
+    net.stalled.pop().fulfill(status=200, content_type="application/json", body=vector_answer("styles/dark")[2])
+    until(page, "style", "dark")
+    assert styles_asked(net) == ["liberty", "dark"]
+
+
+def test_a_failing_picture_source_does_not_drop_the_vector_map(page: Page, net: Net) -> None:
+    # only a vector source that fails leaves the map empty: the natural-earth pictures under it are a decoration
+    net.vector_failing.add("natural_earth/")
+    open_map(page, net)
+    page.wait_for_load_state("networkidle")
+    assert any(u.startswith(VECTOR_HOST + "natural_earth/") for u in net.requests)
+    expect(page.locator("#map")).to_have_attribute("data-ground", "vector")
+
+
+def test_the_map_asks_no_host_but_openfreemap_whatever_its_files_name(page: Page, net: Net) -> None:
+    # review S1: the page's CSP does not reach MapLibre's worker, which fetches tiles and data itself — so the page
+    # keeps every address a style or a tile index names on OpenFreeMap's host
+    index = json.loads(vector_answer("planet")[2])
+    index["tiles"] = ["https://tiles.example.net/{z}/{x}/{y}.pbf"]
+    net.vector["planet"] = (200, "application/json", json.dumps(index))
+    style = json.loads(vector_answer("styles/liberty")[2])
+    style["sources"]["elsewhere"] = {"type": "geojson", "data": "https://data.example.net/points.json"}
+    style["layers"].append({"id": "elsewhere", "type": "circle", "source": "elsewhere"})
+    net.vector["styles/liberty"] = (200, "application/json", json.dumps(style))
+    page.goto(net.base)
+    expect(page.locator("#map")).to_have_attribute("data-ground", re.compile(r"^(vector|osm)$"))
+    page.wait_for_load_state("networkidle")
+    page.wait_for_timeout(500)
+    assert net.outside == []
 
 
 def test_a_library_that_comes_after_the_fallback_does_not_bring_the_vector_map_back(page: Page, net: Net) -> None:

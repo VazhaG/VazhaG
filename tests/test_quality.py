@@ -62,8 +62,10 @@ document.addEventListener('securitypolicyviolation', (e) => window.__csp.push(`$
 
 def test_the_page_runs_under_its_own_content_security_policy(page_at: Callable[[float, float], Page],
                                                              net: Net) -> None:
-    # REQ-008 and REQ-010 do not rest on the code alone: the browser itself refuses a script, a style or a request to
-    # any other place, should a later change let one in
+    # REQ-008 and REQ-010 do not rest on the code alone: the browser itself refuses the page a script, a style or a
+    # request to any other place, should a later change let one in. MapLibre's worker is outside this rule (a worker
+    # from the site's own file takes its policy from its own response, and the site sends none): js/vectormap.js keeps
+    # its addresses on OpenFreeMap's host itself (tests/test_vector_map.py — review S1)
     net.real_data = True
     page = at_data_time(page_at(*VISITOR))
     page.add_init_script(WATCH_CSP)
@@ -81,10 +83,13 @@ def test_the_page_runs_under_its_own_content_security_policy(page_at: Callable[[
     assert page.evaluate("window.__ran") is None
 
 
-@pytest.mark.parametrize("ground", ["the vector map", "the library silent", "the style silent"])
+@pytest.mark.parametrize("ground", ["the vector map on its way", "the library silent", "the style silent"])
 def test_the_card_shows_within_10_seconds_on_a_slow_mobile_network(page_at: Callable[[float, float], Page],
                                                                     net: Net, ground: str) -> None:
-    # SPEC-0006 AC-009: the ★ card never waits for the map's ground — loading, or stuck on its library or its style
+    # SPEC-0006 AC-009: the ★ card never waits for the map's ground — loading, or stuck on its library or its style.
+    # On this slow network the local server's uncompressed library (1.1 MB) takes longer than REQ-007's 5 seconds, so
+    # in the first case the map itself ends on the fallback (measured 2026-11-09, review C-U1): the card's time is the
+    # check here; the published site, which compresses the library, is measured after publishing (PLAN-0006 T8)
     net.real_data = True
     if ground == "the library silent":
         net.held.add("vendor/maplibre/maplibre-gl.mjs")
@@ -101,6 +106,8 @@ def test_the_card_shows_within_10_seconds_on_a_slow_mobile_network(page_at: Call
     assert time.monotonic() - start < 10
     expect(page.locator("path.you")).to_have_count(1)
     assert page.evaluate("document.documentElement.scrollWidth <= window.innerWidth")
+    page.wait_for_timeout(500)  # the map's ground starts once the card is drawn: its library is then asked for
+    assert any(u.startswith(net.base + "vendor/maplibre/maplibre-gl.mjs") for u in net.requests)  # the vector map's way
 
 
 CONTRAST_JS = """() => {

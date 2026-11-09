@@ -199,6 +199,7 @@ class Net:
     # serves it, in place of vector_answer's
     vector_held: set[str] = field(default_factory=set)  # OpenFreeMap paths starting so are left unanswered
     stalled: list[Route] = field(default_factory=list)  # their open requests, kept until the page closes
+    vector_failing: set[str] = field(default_factory=set)  # OpenFreeMap paths starting so answer 503 at once
 
     def handle(self, route: Route) -> None:
         url = route.request.url
@@ -216,7 +217,8 @@ class Net:
             if path.startswith(tuple(self.vector_held)):
                 self.stalled.append(route)
                 return
-            status, content_type, body = self.vector.get(path) or vector_answer(path)
+            failing = path.startswith(tuple(self.vector_failing))
+            status, content_type, body = (503, "text/plain", "") if failing else self.vector.get(path) or vector_answer(path)
             route.fulfill(status=status, content_type=content_type, body=body)
         elif url.startswith(self.base):
             path = url[len(self.base):].split("?", 1)[0]
