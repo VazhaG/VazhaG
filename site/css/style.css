@@ -892,6 +892,12 @@ h2 {
   border-color: var(--white);
 }
 
+/* SPEC-0006 REQ-007: OpenStreetMap's tiles — the fallback map — are darkened at night, as before; the vector map has a
+   dark style of its own and no filter */
+:root[data-theme="dark"] .osm-tiles {
+  filter: invert(1) hue-rotate(180deg) brightness(0.9) contrast(0.9);
+}
+
 :root[data-theme="dark"] .leaflet-container .leaflet-control-attribution {
   background: rgb(0 0 0 / 0.8);
   color: var(--muted);

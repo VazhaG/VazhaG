@@ -81,9 +81,15 @@ def test_the_page_runs_under_its_own_content_security_policy(page_at: Callable[[
     assert page.evaluate("window.__ran") is None
 
 
+@pytest.mark.parametrize("ground", ["the vector map", "the library silent", "the style silent"])
 def test_the_card_shows_within_10_seconds_on_a_slow_mobile_network(page_at: Callable[[float, float], Page],
-                                                                    net: Net) -> None:
+                                                                    net: Net, ground: str) -> None:
+    # SPEC-0006 AC-009: the ★ card never waits for the map's ground — loading, or stuck on its library or its style
     net.real_data = True
+    if ground == "the library silent":
+        net.held.add("vendor/maplibre/maplibre-gl.mjs")
+    if ground == "the style silent":
+        net.vector_held.add("styles/")
     page = at_data_time(page_at(*VISITOR))
     cdp = page.context.new_cdp_session(page)
     cdp.send("Network.enable")

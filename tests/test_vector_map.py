@@ -5,6 +5,10 @@ colour filter; its labels in the site's language — the Georgian name (else the
 OpenFreeMap's credit in sight. The page runs under ADR-0013's exact CSP with no violation, asks no host but the site,
 OpenFreeMap and OpenStreetMap, and its footer says where the map comes from. The tests serve a small style of their own
 in OpenFreeMap's place (tests/support.py: vector_style) — never the network.
+
+PLAN-0006 T7 — the fallback (REQ-007; AC-008's fallback cases): with no WebGL, a library file that is missing or does
+not answer, a missing style, no map in 5 seconds, or a missing style on a look switch, the map shows OpenStreetMap's
+tiles with their credit within 6 seconds (5 and 1 of margin) — darkened by a filter at night, as before.
 """
 
 from __future__ import annotations
@@ -14,7 +18,7 @@ import time
 import pytest
 from playwright.sync_api import Page, expect
 
-from support import CSP, GROUND_JS, ROAD_NUMBER, STYLES, VECTOR_HOST, Net
+from support import CSP, GROUND_JS, ROAD_NUMBER, STYLES, TILE_HOST, VECTOR_HOST, Net
 
 CREDIT = "OpenFreeMap © OpenMapTiles Data from OpenStreetMap"  # ADR-0013 §1
 CREDIT_LINKS = {"https://openfreemap.org/", "https://www.openmaptiles.org/", "https://www.openstreetmap.org/copyright"}
@@ -120,3 +124,108 @@ def test_the_footer_says_where_the_map_comes_from(page: Page, net: Net) -> None:
         page.get_by_role("button", name=LANG_BUTTON[lang]).click()
         expect(note).to_contain_text("OpenFreeMap")
         expect(note).to_contain_text("OpenStreetMap")
+
+
+# T7 — the fallback (REQ-007; AC-008)
+
+LIBRARY = "vendor/maplibre/maplibre-gl.mjs"
+OSM_CREDIT = "© OpenStreetMap contributors"
+FALLBACK_WITHIN = 6  # seconds from the page's opening: REQ-007's 5 and 1 of margin (AC-008)
+# a browser without WebGL: every WebGL drawing context is refused
+NO_WEBGL = """(() => {
+  const get = HTMLCanvasElement.prototype.getContext;
+  HTMLCanvasElement.prototype.getContext = function (kind, ...rest) {
+    return /webgl/i.test(kind) ? null : get.call(this, kind, ...rest);
+  };
+})();"""
+
+
+def no_webgl(page: Page, net: Net, look: str) -> None:
+    page.add_init_script(NO_WEBGL)
+
+
+def library_missing(page: Page, net: Net, look: str) -> None:
+    net.files[LIBRARY] = (404, "text/plain", "")
+
+
+def library_silent(page: Page, net: Net, look: str) -> None:
+    net.held.add(LIBRARY)
+
+
+def style_missing(page: Page, net: Net, look: str) -> None:
+    net.vector["styles/" + STYLES[look]] = (404, "text/plain", "")
+
+
+def no_map_in_time(page: Page, net: Net, look: str) -> None:
+    net.vector_held.add("planet/test/")  # the tiles never come: MapLibre's `load` never fires
+
+
+CAUSES = {"no WebGL": no_webgl, "the library missing": library_missing, "the library silent": library_silent,
+          "the style missing": style_missing, "no map in 5 seconds": no_map_in_time}
+# a cause that is certain at once needs no wait: well before REQ-007's 5 seconds (the silent ones take those 5)
+AT_ONCE = {"no WebGL", "the library missing", "the style missing"}
+AT_ONCE_WITHIN = 4
+
+
+def assert_fallback(page: Page, net: Net, look: str, started: float, within: float = FALLBACK_WITHIN) -> None:
+    """OpenStreetMap's tiles with their credit in place of the vector map — darkened at night, never by day."""
+    expect(page.locator("#map")).to_have_attribute("data-ground", "osm", timeout=within * 1000)
+    assert time.monotonic() - started < within
+    expect(page.locator(".leaflet-tile-pane .osm-tiles img.leaflet-tile-loaded").first).to_be_attached()
+    assert any(u.startswith(TILE_HOST) for u in net.requests)
+    credit = page.locator(".leaflet-control-attribution")
+    expect(credit).to_contain_text(OSM_CREDIT)
+    expect(credit).not_to_contain_text("OpenFreeMap")
+    expect(page.locator(".leaflet-gl-layer")).to_have_count(0)
+    tiles = page.locator(".osm-tiles").evaluate("(el) => getComputedStyle(el).filter")
+    assert ("invert" in tiles) == (look == "dark"), tiles
+
+
+@pytest.mark.parametrize("cause", CAUSES)
+def test_the_map_falls_back_to_openstreetmap(page: Page, net: Net, cause: str) -> None:
+    CAUSES[cause](page, net, "light")
+    page.emulate_media(color_scheme="light")
+    started = time.monotonic()
+    page.goto(net.base)
+    assert_fallback(page, net, "light", started, AT_ONCE_WITHIN if cause in AT_ONCE else FALLBACK_WITHIN)
+
+
+def test_a_library_that_comes_after_the_fallback_does_not_bring_the_vector_map_back(page: Page, net: Net) -> None:
+    library_silent(page, net, "light")
+    page.goto(net.base)
+    expect(page.locator("#map")).to_have_attribute("data-ground", "osm", timeout=FALLBACK_WITHIN * 1000)
+    net.pending.pop(LIBRARY).continue_()  # the library arrives at last
+    page.wait_for_load_state("networkidle")
+    page.wait_for_timeout(1000)
+    expect(page.locator("#map")).to_have_attribute("data-ground", "osm")
+    expect(page.locator(".leaflet-gl-layer")).to_have_count(0)
+    expect(page.locator(".leaflet-control-attribution")).not_to_contain_text("OpenFreeMap")
+
+
+def test_with_no_webgl_the_library_is_not_even_asked_for(page: Page, net: Net) -> None:
+    no_webgl(page, net, "dark")
+    page.emulate_media(color_scheme="dark")
+    started = time.monotonic()
+    page.goto(net.base)
+    assert_fallback(page, net, "dark", started)  # at night the fallback tiles are darkened, as before
+    assert not [u for u in net.requests if "/vendor/maplibre" in u or u.startswith(VECTOR_HOST)]  # nothing to fetch
+
+
+def test_a_missing_style_on_a_look_switch_falls_back_too(page: Page, net: Net) -> None:
+    style_missing(page, net, "dark")
+    open_map(page, net, "light")
+    page.locator("#theme").click()
+    assert_fallback(page, net, "dark", time.monotonic())
+
+
+def test_after_the_fallback_the_tiles_follow_the_look(page: Page, net: Net) -> None:
+    style_missing(page, net, "light")
+    page.emulate_media(color_scheme="light")
+    page.goto(net.base)
+    expect(page.locator("#map")).to_have_attribute("data-ground", "osm")
+    tiles = page.locator(".osm-tiles")
+    page.locator("#theme").click()
+    assert "invert" in tiles.evaluate("(el) => getComputedStyle(el).filter")
+    page.locator("#theme").click()
+    assert tiles.evaluate("(el) => getComputedStyle(el).filter") == "none"
+    assert styles_asked(net) == ["liberty"]  # the vector map is not tried again

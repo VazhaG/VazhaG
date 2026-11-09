@@ -1,9 +1,14 @@
 // SPEC-0006 REQ-007, ADR-0013 §1: the map's ground — OpenFreeMap's vector map, "liberty" by day and "dark" at night,
 // drawn by MapLibre GL JS inside Leaflet (the @maplibre/maplibre-gl-leaflet bridge), its labels in the site's language.
-// js/app.js starts it once the list and the icons are drawn, so nothing on the page waits for it.
+// js/app.js starts it once the list and the icons are drawn, so nothing on the page waits for it. When it cannot be
+// drawn — no WebGL2, a library file or a style that does not come, no map in 5 seconds, a look's style that does not
+// come — the ground is OpenStreetMap's tiles, as before the vector map: the map never stays empty.
 
 const STYLE_BASE = 'https://tiles.openfreemap.org/styles/';
 const STYLES = { light: 'liberty', dark: 'dark' };
+const WAIT = 5000; // ms: the style and the first tiles (MapLibre's `load`) — REQ-007's 5 seconds, a hypothesis
+const OSM_TILES = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
+const OSM_CREDIT = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors';
 const here = (path) => new URL(path, import.meta.url).href;
 const LIBRARY = here('../vendor/maplibre/maplibre-gl.mjs');
 const WORKER = here('../vendor/maplibre/maplibre-gl-worker.mjs');
@@ -15,12 +20,37 @@ const LABELS = {
   en: ['coalesce', ['get', 'name:latin'], ['get', 'name:en']],
 };
 
-const state = { kind: 'loading', layer: null, styles: {}, shown: null, turn: 0 };
+const state = { kind: 'loading', map: null, layer: null, styles: {}, shown: null, turn: 0, timer: 0, watch: null };
 
-// what the map's ground is — 'loading' until MapLibre's first `load`, then 'vector' — and MapLibre's own map; the
-// tests read MapLibre's style through it (tests/support.py: GROUND_JS)
+// what the map's ground is — 'loading' until MapLibre's first `load`, then 'vector', or 'osm' once it fell back — and
+// MapLibre's own map; the tests read MapLibre's style through it (tests/support.py: GROUND_JS)
 export function ground() {
   return { kind: state.kind, map: state.layer?.getMaplibreMap() ?? null };
+}
+
+// REQ-007's fallback, for the rest of the visit: OpenStreetMap's tiles with their credit (css/style.css darkens them
+// at night — the vector map has a dark style of its own)
+function fallback(why) {
+  if (state.kind === 'osm') return;
+  console.warn('the vector map gave way to OpenStreetMap tiles:', why);
+  state.kind = 'osm';
+  clearTimeout(state.timer);
+  state.watch?.disconnect();
+  if (state.layer) {
+    // the bridge adds OpenFreeMap's credit on MapLibre's `load` and does not take it back on removal: read it first
+    const credit = state.layer.getAttribution();
+    state.map.removeLayer(state.layer);
+    state.map.attributionControl?.removeAttribution(credit);
+  }
+  state.layer = null;
+  L.tileLayer(OSM_TILES, { maxZoom: 19, attribution: OSM_CREDIT, className: 'osm-tiles' }).addTo(state.map);
+  state.map.getContainer().dataset.ground = 'osm';
+}
+
+function within(ms, promise) {
+  return Promise.race([promise, new Promise((_, reject) => {
+    setTimeout(() => reject(new Error(`no answer in ${ms} ms`)), ms);
+  })]);
 }
 
 function look() {
@@ -97,34 +127,54 @@ async function restyle() {
   let style = state.styles[look()];
   if (!style) {
     try {
-      style = await fetchStyle(STYLES[look()]);
+      style = await within(WAIT, fetchStyle(STYLES[look()]));
     } catch (error) {
-      console.warn('the map style did not load', error);
+      if (turn === state.turn) fallback(error); // the look's style did not come (a later change may not need it)
       return;
     }
     state.styles[look()] = style;
-    if (turn !== state.turn) return; // a later change is under way
+    if (turn !== state.turn || state.kind === 'osm') return; // a later change is under way, or the map fell back
   }
   state.shown = `${look()} ${language()}`;
   gl.setStyle(localized(style, language()));
 }
 
+// the bridge's layer, which can be taken off the map even when MapLibre could not start inside it
+function vectorLayer(options) {
+  const Layer = L.MaplibreGL.extend({
+    onRemove(map) {
+      if (this._glMap) L.MaplibreGL.prototype.onRemove.call(this, map);
+      else this._container?.remove();
+    },
+  });
+  return new Layer(options);
+}
+
 export async function startGround(map) {
-  if (!hasWebGL2()) return;
+  state.map = map;
+  if (!hasWebGL2()) {
+    fallback('no WebGL2'); // nothing to fetch: the library is not asked for
+    return;
+  }
+  state.timer = setTimeout(() => fallback(`no map in ${WAIT} ms`), WAIT);
   const first = look();
   try {
     const [style] = await Promise.all([fetchStyle(STYLES[first]), loadLibrary()]);
+    if (state.kind === 'osm') return; // too late: the fallback is shown
     state.styles[first] = style;
     state.shown = `${first} ${language()}`;
-    state.layer = L.maplibreGL({ style: localized(style, language()) }).addTo(map);
+    state.layer = vectorLayer({ style: localized(style, language()) });
+    state.layer.addTo(map);
   } catch (error) {
-    console.warn('the vector map did not start', error);
+    fallback(error);
     return;
   }
   state.layer.getMaplibreMap().once('load', () => {
+    clearTimeout(state.timer);
     state.kind = 'vector';
     map.getContainer().dataset.ground = 'vector';
   });
-  new MutationObserver(restyle).observe(document.documentElement, { attributeFilter: ['data-theme', 'lang'] });
+  state.watch = new MutationObserver(restyle);
+  state.watch.observe(document.documentElement, { attributeFilter: ['data-theme', 'lang'] });
   restyle(); // the look or the language may have changed while the library was on its way
 }

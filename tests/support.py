@@ -197,6 +197,8 @@ class Net:
     pending: dict[str, Route] = field(default_factory=dict)  # a held file's open request — a test may answer it late
     vector: dict[str, tuple[int, str, str | bytes]] = field(default_factory=dict)  # an OpenFreeMap path as the test
     # serves it, in place of vector_answer's
+    vector_held: set[str] = field(default_factory=set)  # OpenFreeMap paths starting so are left unanswered
+    stalled: list[Route] = field(default_factory=list)  # their open requests, kept until the page closes
 
     def handle(self, route: Route) -> None:
         url = route.request.url
@@ -211,6 +213,9 @@ class Net:
             route.fulfill(status=200, content_type="image/png", body=BLANK_PNG)
         elif url.startswith(VECTOR_HOST):
             path = url[len(VECTOR_HOST):].split("?", 1)[0]
+            if path.startswith(tuple(self.vector_held)):
+                self.stalled.append(route)
+                return
             status, content_type, body = self.vector.get(path) or vector_answer(path)
             route.fulfill(status=status, content_type=content_type, body=body)
         elif url.startswith(self.base):
