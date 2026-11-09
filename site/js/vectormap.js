@@ -9,6 +9,11 @@ const STYLES = { light: 'liberty', dark: 'dark' };
 const WAIT = 5000; // ms: the style and the first tiles (MapLibre's `load`) — REQ-007's 5 seconds, a hypothesis
 const OSM_TILES = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
 const OSM_CREDIT = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors';
+// ADR-0013 §1's credit, written by the page itself: the tile index's own credit is a file from elsewhere, and an
+// outside text never goes into the page as HTML (SPEC-0001 REQ-008)
+const OPENFREEMAP_CREDIT = '<a href="https://openfreemap.org/">OpenFreeMap</a> '
+  + '<a href="https://www.openmaptiles.org/">&copy; OpenMapTiles</a> '
+  + 'Data from <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>';
 const here = (path) => new URL(path, import.meta.url).href;
 const LIBRARY = here('../vendor/maplibre/maplibre-gl.mjs');
 const WORKER = here('../vendor/maplibre/maplibre-gl-worker.mjs');
@@ -36,12 +41,7 @@ function fallback(why) {
   state.kind = 'osm';
   clearTimeout(state.timer);
   state.watch?.disconnect();
-  if (state.layer) {
-    // the bridge adds OpenFreeMap's credit on MapLibre's `load` and does not take it back on removal: read it first
-    const credit = state.layer.getAttribution();
-    state.map.removeLayer(state.layer);
-    state.map.attributionControl?.removeAttribution(credit);
-  }
+  if (state.layer) state.map.removeLayer(state.layer); // its credit goes with it
   state.layer = null;
   L.tileLayer(OSM_TILES, { maxZoom: 19, attribution: OSM_CREDIT, className: 'osm-tiles' }).addTo(state.map);
   state.map.getContainer().dataset.ground = 'osm';
@@ -139,9 +139,14 @@ async function restyle() {
   gl.setStyle(localized(style, language()));
 }
 
-// the bridge's layer, which can be taken off the map even when MapLibre could not start inside it
+// the bridge's layer with two changes: its credit is the page's own text (the bridge would copy the tile index's, and
+// it adds that on MapLibre's `load` without taking it back on removal — a test found it), and it can be taken off the
+// map even when MapLibre could not start inside it
 function vectorLayer(options) {
   const Layer = L.MaplibreGL.extend({
+    getAttribution() {
+      return OPENFREEMAP_CREDIT;
+    },
     onRemove(map) {
       if (this._glMap) L.MaplibreGL.prototype.onRemove.call(this, map);
       else this._container?.remove();

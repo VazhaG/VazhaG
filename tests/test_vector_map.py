@@ -13,12 +13,13 @@ tiles with their credit within 6 seconds (5 and 1 of margin) — darkened by a f
 
 from __future__ import annotations
 
+import json
 import time
 
 import pytest
 from playwright.sync_api import Page, expect
 
-from support import CSP, GROUND_JS, ROAD_NUMBER, STYLES, TILE_HOST, VECTOR_HOST, Net
+from support import CSP, GROUND_JS, ROAD_NUMBER, STYLES, TILE_HOST, VECTOR_HOST, Net, vector_answer
 
 CREDIT = "OpenFreeMap © OpenMapTiles Data from OpenStreetMap"  # ADR-0013 §1
 CREDIT_LINKS = {"https://openfreemap.org/", "https://www.openmaptiles.org/", "https://www.openstreetmap.org/copyright"}
@@ -73,6 +74,23 @@ def test_openfreemaps_credit_is_shown_with_its_links(page: Page, net: Net) -> No
     expect(credit).to_contain_text(CREDIT)
     expect(credit).to_be_visible()
     assert CREDIT_LINKS <= set(credit.locator("a").evaluate_all("(links) => links.map((a) => a.href)"))
+
+
+def test_the_credit_is_the_pages_own_text_never_the_tile_indexs_html(page: Page, net: Net) -> None:
+    # SPEC-0001 REQ-008's rule for an outside text: OpenFreeMap's tile index is a file from elsewhere, so its credit
+    # never goes into the page as HTML — the page writes its own (ADR-0013's words)
+    index = json.loads(vector_answer("planet")[2])
+    index["attribution"] = ('<a href="https://prize.example/">Win a prize</a>'
+                            '<img src="data:," onerror="window.__pwned = 1">')
+    net.vector["planet"] = (200, "application/json", json.dumps(index))
+    open_map(page, net)
+    credit = page.locator(".leaflet-control-attribution")
+    expect(credit).to_contain_text(CREDIT)
+    expect(credit).not_to_contain_text("Win a prize")
+    expect(credit.locator("img")).to_have_count(0)
+    links = set(credit.locator("a").evaluate_all("(links) => links.map((a) => a.href)"))
+    assert links <= CREDIT_LINKS | {"https://leafletjs.com/"}, links
+    assert page.evaluate("window.__pwned") is None
 
 
 def test_the_vector_map_runs_under_the_exact_csp_and_asks_only_the_map_hosts(page: Page, net: Net) -> None:
