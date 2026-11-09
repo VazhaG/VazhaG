@@ -111,11 +111,14 @@ function stationWindow(s) {
 // SPEC-0002 REQ-002: from the city view on, a station shows its company; from farther away it is a small dot in the
 // company's colour, so the whole country's map stays readable.
 const LETTERS_FROM = 11;
-// SPEC-0005 REQ-007: from the city view a station is a black pin with its company's circle (REQ-001) in its head — a
-// square of PIN pixels turned 45° with three round corners, its sharp corner turned down as the tip. The tip is half
-// the square's diagonal below its middle, and the marker's anchor is set there, so the tip stands on the station.
-const PIN = 36;
-const TIP = PIN / 2 + (PIN / 2) * Math.SQRT2;
+// SPEC-0006 REQ-005: from the city view a station is its company's icon, ICON pixels — no pin, no frame —, laid with its
+// middle on the station's point; the icon itself is what a finger presses (no invisible margin, so a press on the
+// visible part of a covered icon opens that icon's station).
+const ICON = 34;
+// SPEC-0006 REQ-006: the ★ is a STAR-pixel badge; from the city view its middle is STAR_SHIFT pixels right of and above
+// the icon's middle — on the icon's top-right corner, clear of the logo's cut (60 % of the icon, round its middle).
+const STAR = 22;
+const STAR_SHIFT = 20;
 
 // SPEC-0003 REQ-003: a light colour (its letters are dark) gets a dark outline by day — the stylesheet uses --edge only
 // on the light page and map.
@@ -126,9 +129,8 @@ function setEdge(el, color) {
 
 function stationIcon(s, near) {
   if (near) {
-    const pin = element('span', 'pin');
-    pin.append(disc({ id: s.companyId, name: s.company, color: s.color })); // a file that fails: its letter, in place
-    return L.divIcon({ className: 'station near', html: pin, iconSize: [PIN, PIN], iconAnchor: [PIN / 2, TIP] });
+    const icon = disc({ id: s.companyId, name: s.company, color: s.color }); // a file that fails: its letter, in place
+    return L.divIcon({ className: 'station near', html: icon, iconSize: [ICON, ICON], iconAnchor: [ICON / 2, ICON / 2] });
   }
   const dot = element('span');
   dot.style.backgroundColor = s.color;
@@ -159,6 +161,14 @@ function renderStations(stations) {
 function redrawMarks(near) {
   state.near = near;
   state.markers.eachLayer(setStationIcon);
+  state.pin?.setIcon(starIcon(near)); // the ★ goes to the icon's corner, or back to the dot's middle
+}
+
+// The ★: on the icon's top-right corner from the city view on, over the dot's middle from farther away.
+function starIcon(near) {
+  const shift = near ? STAR_SHIFT : 0;
+  return L.divIcon({ className: 'best-pin', html: element('span', '', '★'), iconSize: [STAR, STAR],
+                     iconAnchor: [STAR / 2 - shift, STAR / 2 + shift] });
 }
 
 function markBest(b) {
@@ -166,7 +176,7 @@ function markBest(b) {
   state.pin = null;
   if (!b) return;
   state.pin = L.marker([b.lat, b.lng], {
-    icon: L.divIcon({ className: 'best-pin', html: element('span', '', '★'), iconSize: [30, 30] }),
+    icon: starIcon(state.near),
     title: t('best.title'),
     zIndexOffset: 1000,
   })

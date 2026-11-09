@@ -25,12 +25,13 @@ ICON_EDGE = {False: "rgba(0, 0, 0, 0.18) 0px 0px 0px 0.5px, rgba(15, 23, 42, 0.1
              True: "rgba(255, 255, 255, 0.28) 0px 0px 0px 1px, rgba(0, 0, 0, 0.5) 0px 2px 8px 0px"}
 ICON_ROUND = "23%"  # the corners: 23 % of the side, as an iOS app icon
 BLACK, WHITE_FILL = "rgb(0, 0, 0)", "rgb(255, 255, 255)"
-# where a station's mark stands on the map: a pin's tip from the city view on (SPEC-0005 REQ-007 — the lowest point of
-# its turned square), else the middle of its dot
+# where a station's mark stands on the map: the middle of its icon (from the city view on, SPEC-0006 REQ-005) or of
+# its dot — the marker is laid with its middle on the station's point either way
 POINT_JS = """(m) => {
-  const pin = m.querySelector('.pin'), r = (pin || m).getBoundingClientRect();
-  return [r.left + r.width / 2, pin ? r.bottom : r.top + r.height / 2];
+  const r = m.getBoundingClientRect();
+  return [r.left + r.width / 2, r.top + r.height / 2];
 }"""
+STAR_SHIFT = 20  # px: from the city view the ★'s middle is this far right of and above its icon's middle (REQ-006)
 # SPEC-0006 REQ-005 (SPEC-0005 REQ-001): every company icon the selector finds, measured as drawn — its size, fill,
 # corners, edge and shadow, and any frame left (a border or an outline); a logo's picture and the part of it that shows
 # (its mark, cut by clip-path from the file's own pixels); a letter icon's fill and ink.

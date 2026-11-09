@@ -11,7 +11,7 @@ from datetime import UTC, datetime, timedelta
 
 from playwright.sync_api import Page, expect
 
-from support import DISCS_JS, POINT_JS, Net, assert_icon, assert_letter
+from support import DISCS_JS, POINT_JS, STAR_SHIFT, Net, assert_icon, assert_letter
 
 NOW = datetime(2026, 10, 30, 12, 0, tzinfo=UTC)
 HERE = (41.70, 44.80)
@@ -157,9 +157,9 @@ def test_the_cheapest_station_is_marked_with_a_star_on_the_map(page_at: Callable
         assert box
         return box["x"] + box["width"] / 2, box["y"] + box["height"] / 2
 
-    # the ★ over the second station's place: its dot's middle, or its pin's tip (SPEC-0005 REQ-007)
+    # the ★ on the second station's icon's corner, from the city view (SPEC-0006 REQ-006)
     (px, py), (sx, sy) = centre(pin.bounding_box()), page.locator(".station").nth(1).evaluate(POINT_JS)
-    assert abs(px - sx) < 3 and abs(py - sy) < 3
+    assert abs(px - (sx + STAR_SHIFT)) < 3 and abs(py - (sy - STAR_SHIFT)) < 3
     pin.dispatch_event("click")
     expect(page.locator(".leaflet-popup-content")).to_contain_text("ვაკე")
     page.get_by_text("ბუნებრივი აირი", exact=True).first.click()  # no station is known to sell it

@@ -104,34 +104,28 @@ def badge(cid: str) -> str:
 
 
 def circle(cid: str) -> str:
-    """A company's letter circle on the map, from the city view — in its black pin (SPEC-0005 REQ-007)."""
+    """A company's letter icon on the map, from the city view (SPEC-0006 REQ-005)."""
     return f'.station[data-company="{cid}"] .letter'
 
 
-def pin(cid: str) -> str:
-    return f'.station[data-company="{cid}"] .pin'
-
-
 def mark(cid: str) -> str:
-    """A company's station on the map — a dot, or from the city view its pin."""
+    """A company's station on the map — a dot, or from the city view its icon."""
     return f'.station[data-company="{cid}"]'
 
 
-@pytest.mark.parametrize(("scheme", "ground"), [("light", WHITE), ("dark", NIGHT_PAGE)])
-def test_every_companys_pin_stands_out_from_the_map_whatever_its_colour(
-        page_at: Callable[[float, float], Page], net: Net, scheme: str, ground: tuple[int, ...]) -> None:
-    # AC-007 by SPEC-0005 REQ-007 (PLAN-0005 T8): from the city view a light colour's letter (Connect's yellow,
-    # Rompetrol's orange) sits in a pin like every other — white with a #111111 contour by day, black with a white one
-    # at night; the contour stands out from the map (3 : 1)
+@pytest.mark.parametrize("scheme", ["light", "dark"])
+def test_every_companys_letter_icon_keeps_its_colour_on_the_map(page_at: Callable[[float, float], Page], net: Net,
+                                                                scheme: str) -> None:
+    # AC-007 by SPEC-0006 REQ-005 (PLAN-0006 T3): from the city view a light colour's letter (Connect's yellow,
+    # Rompetrol's orange) is an icon like every other — all of it its colour, no pin round it; the look's faint edge and
+    # soft shadow set it off from the map (iOS-like — the owner's choice, 2026-11-09)
     no_logos(net)
     page = open_five(page_at, net, scheme)
-    body_of, ink = (WHITE, (17, 17, 17)) if scheme == "light" else ((0, 0, 0), WHITE)
     for cid, _, color, *_ in FIVE:
         assert style(page, circle(cid), "backgroundColor") == hex_rgb(color), cid  # the letter keeps its colour
-        assert style(page, pin(cid), "backgroundColor") == body_of, cid
-        contour = page.locator(pin(cid)).evaluate("(p) => getComputedStyle(p).boxShadow")
-        assert contour.startswith(f"rgb({ink[0]}, {ink[1]}, {ink[2]}) 0px 0px 0px 2px"), (cid, contour)
-        assert ratio(ink, ground) >= 3
+        expect(page.locator(f'{mark(cid)} .pin')).to_have_count(0)
+        edge = page.locator(f'{mark(cid)} .disc').evaluate("(d) => getComputedStyle(d).boxShadow")
+        assert edge == ICON_EDGE[scheme == "dark"], (cid, edge)
 
 
 @pytest.mark.parametrize(("scheme", "ground"), [("light", WHITE), ("dark", NIGHT_PAGE)])

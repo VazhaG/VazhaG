@@ -15,7 +15,7 @@ from datetime import UTC, datetime
 import pytest
 from playwright.sync_api import Page, expect
 
-from support import DRAWN, POINT_JS, SITE, TILE_HOST, Net, no_logos
+from support import DRAWN, POINT_JS, SITE, STAR_SHIFT, TILE_HOST, Net, no_logos
 
 TIME = "2026-10-30T12:00:00Z"
 REAL = [("socar", "SOCAR", "#e41e30"), ("rompetrol", "Rompetrol", "#f39200"), ("lukoil", "Lukoil", "#8a1538"),
@@ -223,8 +223,9 @@ def test_the_star_moves_to_the_cheapest_company_still_on(page_at: Callable[[floa
     alpha.click()
     expect(card).to_contain_text("Beta")
     (px, py) = centre(page.locator(".best-pin").bounding_box())
-    (sx, sy) = circles_of(page, "b").evaluate(POINT_JS)  # type: ignore[attr-defined]  # Beta's pin's tip
-    assert abs(px - sx) < 3 and abs(py - sy) < 3  # the ★ on the map moved with the card
+    (sx, sy) = circles_of(page, "b").evaluate(POINT_JS)  # type: ignore[attr-defined]  # Beta's icon's middle
+    # the ★ on the map moved with the card — onto Beta's icon's corner (SPEC-0006 REQ-006)
+    assert abs(px - (sx + STAR_SHIFT)) < 3 and abs(py - (sy - STAR_SHIFT)) < 3
     beta.click()
     expect(card).to_contain_text("Gamma")
     expect(card).to_contain_text("15.0 კმ")  # nothing on within 5 or 10 km: the zone grew to 20 km
