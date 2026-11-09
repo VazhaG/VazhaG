@@ -2,7 +2,7 @@
 id: PLAN-0006
 type: plan
 title: iOS-ის სტილი და Google-ის მსგავსი რუკა — აშენება
-status: draft
+status: approved
 created: 2026-11-09
 updated: 2026-11-09
 spec: "[[SPEC-0006-glass-look]]"
