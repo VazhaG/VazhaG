@@ -15,7 +15,7 @@ from datetime import datetime
 import pytest
 from playwright.sync_api import Page, expect
 
-from support import SITE, Net, no_logos
+from support import CSP, SITE, Net, no_logos
 
 # An odd place in Tbilisi, so its digits cannot turn up by chance in a station's or a tile's address.
 VISITOR = (41.723457, 44.766531)
@@ -56,9 +56,6 @@ def test_the_visitors_place_never_leaves_the_page(page_at: Callable[[float, floa
     assert set(stored) <= {"fuel-map.lang", "fuel-map.off"}  # the language and the companies switched off (SPEC-0002)
 
 
-# data: is Leaflet's own empty picture, set on a tile it no longer needs (no request leaves the page)
-CSP = ("default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data: https://tile.openstreetmap.org; "
-       "connect-src 'self'; base-uri 'none'; form-action 'none'")
 WATCH_CSP = """window.__csp = [];
 document.addEventListener('securitypolicyviolation', (e) => window.__csp.push(`${e.violatedDirective} ${e.blockedURI}`));"""
 

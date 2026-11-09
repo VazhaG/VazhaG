@@ -3,7 +3,7 @@
     <head>
         <meta charset="utf-8">
         <meta http-equiv="Content-Security-Policy"
-              content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data: https://tile.openstreetmap.org; connect-src 'self'; base-uri 'none'; form-action 'none'">
+              content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data: blob: https://tile.openstreetmap.org; connect-src 'self' https://tiles.openfreemap.org; worker-src 'self'; base-uri 'none'; form-action 'none'">
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <title>საწვავის ფასები საქართველოში</title>
         <meta name="description"
@@ -68,7 +68,7 @@
                 ფასი სტანდარტულია; თვითმომსახურებისა და ბარათის ფასი შეიძლება დაბალი იყოს.
             </p>
             <p id="tiles-note" data-i18n="note.tiles">
-                რუკის სურათები OpenStreetMap-ის სერვერიდან იტვირთება იმ არეალისთვის, რომელსაც ეკრანი აჩვენებს; შენი ზუსტი მდებარეობა არსად იგზავნება.
+                რუკა OpenFreeMap-ის სერვერიდან იტვირთება (თუ ის არ მუშაობს — OpenStreetMap-ის სერვერიდან) იმ არეალისთვის, რომელსაც ეკრანი აჩვენებს; შენი ზუსტი მდებარეობა არსად იგზავნება.
             </p>
             <p id="storage-note" data-i18n="note.storage">
                 ენა, კომპანიების არჩევანი და ნათელი თუ მუქი რეჟიმი მხოლოდ შენს ტელეფონში ინახება.

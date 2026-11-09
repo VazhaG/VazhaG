@@ -5,10 +5,9 @@ import {
   cheapestNearby, companiesOf, inkOn, lowestFresh, placed, priceRows, routeLinks, stationPrices, stationsFor,
 } from './logic.js';
 import { logoOf } from './logos.js';
+import { startGround } from './vectormap.js';
 
 const GEORGIA = [[41.05, 40.0], [43.6, 46.7]]; // south-west and north-east corners: the first view shows it all
-const TILES = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
-const OSM_CREDIT = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors';
 const LOCATE = { enableHighAccuracy: false, timeout: 10000, maximumAge: 300000 }; // REQ-001: 10 seconds at most
 const NEAR_ZOOM = 12;
 // a station's window opens clear of the filters and the fuel choice on the map's top (SPEC-0005 REQ-003) and of the
@@ -60,10 +59,11 @@ function priceText(price) {
   return `${price.toFixed(2)} ₾`;
 }
 
+// the map's ground — OpenFreeMap's vector map — comes later, from js/vectormap.js (SPEC-0006 REQ-007); 19 is the
+// closest view, as OpenStreetMap's tiles had it
 function initMap() {
-  state.map = L.map('map', { zoomSnap: 0.25, zoomControl: false }).fitBounds(GEORGIA);
+  state.map = L.map('map', { zoomSnap: 0.25, zoomControl: false, maxZoom: 19 }).fitBounds(GEORGIA);
   L.control.zoom({ position: 'bottomright' }).addTo(state.map); // the fuel choice floats on the map's top
-  L.tileLayer(TILES, { maxZoom: 19, attribution: OSM_CREDIT }).addTo(state.map);
   state.markers = L.layerGroup().addTo(state.map);
   state.map.on('zoomend', () => {
     const near = state.map.getZoom() >= LETTERS_FROM;
@@ -817,6 +817,7 @@ async function main() {
   state.cities = validCities(cities);
   render();
   locate();
+  startGround(state.map); // the list and the icons are drawn: now the map's ground, which nothing waits for
 }
 
 main();

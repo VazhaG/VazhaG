@@ -1,7 +1,8 @@
 """Shared test helpers: where the site lives and a stand-in for the network.
 
-The tests never reach the internet: map tiles get a blank picture, the data files get what the test chooses,
-and every other request outside the local server is refused and recorded (SPEC-0001 AC-010).
+The tests never reach the internet: map tiles get a blank picture, OpenFreeMap's vector map a small style of the
+tests' own (SPEC-0006 REQ-007), the data files get what the test chooses, and every other request outside the local
+server is refused and recorded (SPEC-0001 AC-010).
 """
 
 from __future__ import annotations
@@ -90,6 +91,95 @@ BLANK_PNG = base64.b64decode(
     "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII="
 )
 PHONE = {"width": 375, "height": 812}
+# the site's security rule, exactly as ADR-0013 §1 writes it: blob: pictures, OpenFreeMap's host and our own worker
+# file added to ADR-0012's (data: is Leaflet's own empty picture, set on a tile it no longer needs)
+CSP = ("default-src 'none'; script-src 'self'; style-src 'self'; "
+       "img-src 'self' data: blob: https://tile.openstreetmap.org; connect-src 'self' https://tiles.openfreemap.org; "
+       "worker-src 'self'; base-uri 'none'; form-action 'none'")
+# SPEC-0006 REQ-007, ADR-0013: the vector map's host. The tests never reach it: in its place they serve a small style
+# of their own in OpenFreeMap's shape (vector_style) — the same kinds of request the real style makes (the style, the
+# tile index and its tiles, the natural-earth pictures, the sprite and the fonts), so the page's CSP meets each one.
+VECTOR_HOST = "https://tiles.openfreemap.org/"
+STYLES = {"light": "liberty", "dark": "dark"}  # the look's style (ADR-0013)
+GROUNDS = {"liberty": "#f8f4f0", "dark": "#0e0e0e"}  # the small styles' ground colours
+# OpenFreeMap's credit, as its tile index gives it (https://tiles.openfreemap.org/planet, read 2026-11-09)
+OPENFREEMAP_CREDIT = ('<a href="https://openfreemap.org" target="_blank">OpenFreeMap</a> '
+                      '<a href="https://www.openmaptiles.org/" target="_blank">&copy; OpenMapTiles</a> Data from '
+                      '<a href="https://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap</a>')
+# the label text OpenFreeMap's styles write — the Latin name and the local one (liberty and dark, read 2026-11-09)
+STYLE_LABEL = ["case", ["has", "name:nonlatin"], ["concat", ["get", "name:latin"], "\n", ["get", "name:nonlatin"]],
+               ["coalesce", ["get", "name_en"], ["get", "name"]]]
+ROAD_NUMBER = ["to-string", ["get", "ref"]]  # a road's number: no name, so no language
+# MapLibre's own map, read through the page's module (js/vectormap.js): what the ground is, its style and label texts,
+# whether its canvas covers the map, and any colour filter on that canvas or on what holds it
+GROUND_JS = """async () => {
+  const { ground } = await import('./js/vectormap.js');
+  const g = ground(), gl = g.map, style = gl && gl.getStyle();
+  const canvas = document.querySelector('.leaflet-tile-pane .leaflet-gl-layer canvas');
+  const filters = [];
+  for (let el = canvas; el; el = el.parentElement) {
+    const f = getComputedStyle(el).filter;
+    if (f !== 'none') filters.push(`${el.tagName.toLowerCase()}.${el.className}: ${f}`);
+  }
+  const c = canvas && canvas.getBoundingClientRect(), m = document.getElementById('map').getBoundingClientRect();
+  return {
+    kind: g.kind, style: style ? style.name : null,
+    labels: style ? Object.fromEntries(style.layers.filter((l) => l.layout && l.layout['text-field'] !== undefined)
+                                                   .map((l) => [l.id, l.layout['text-field']])) : {},
+    covers: Boolean(c) && c.left <= m.left && c.top <= m.top && c.right >= m.right && c.bottom >= m.bottom,
+    filters,
+  };
+}"""
+
+
+def vector_style(name: str) -> dict:
+    """A small style in OpenFreeMap's shape: its name, its ground colour, a picture source, a vector source with its
+    tile index, Tbilisi's name as one labelled place, and a road-number label."""
+    tbilisi = {"type": "Feature", "geometry": {"type": "Point", "coordinates": [44.80, 41.72]},
+               "properties": {"name": "თბილისი", "name:ka": "თბილისი", "name:latin": "Tbilisi", "name:en": "Tbilisi",
+                              "name:nonlatin": "თბილისი"}}
+    font = ["Noto Sans Regular"]
+    return {
+        "version": 8,
+        "name": name,
+        "sprite": VECTOR_HOST + "sprites/ofm_f384/ofm",
+        "glyphs": VECTOR_HOST + "fonts/{fontstack}/{range}.pbf",
+        "sources": {
+            "ne2_shaded": {"type": "raster", "tileSize": 256, "maxzoom": 6,
+                           "tiles": [VECTOR_HOST + "natural_earth/ne2sr/{z}/{x}/{y}.png"]},
+            "openmaptiles": {"type": "vector", "url": VECTOR_HOST + "planet"},
+            "places": {"type": "geojson", "data": {"type": "FeatureCollection", "features": [tbilisi]}},
+        },
+        "layers": [
+            {"id": "background", "type": "background", "paint": {"background-color": GROUNDS[name]}},
+            {"id": "natural_earth", "type": "raster", "source": "ne2_shaded", "maxzoom": 7},
+            {"id": "water", "type": "fill", "source": "openmaptiles", "source-layer": "water",
+             "paint": {"fill-color": "#9ec7f3"}},
+            {"id": "place_label", "type": "symbol", "source": "places",
+             "layout": {"text-field": STYLE_LABEL, "text-font": font}},
+            {"id": "road_number", "type": "symbol", "source": "openmaptiles", "source-layer": "transportation_name",
+             "layout": {"text-field": ROAD_NUMBER, "text-font": font}},
+        ],
+    }
+
+
+def vector_answer(path: str) -> tuple[int, str, str | bytes]:
+    """What the stand-in for OpenFreeMap answers: the small styles, the tile index with OpenFreeMap's credit, an empty
+    tile or font range, a blank picture, an empty sprite index; anything else is not there."""
+    name = path.removeprefix("styles/")
+    if path.startswith("styles/") and name in GROUNDS:
+        return 200, "application/json", json.dumps(vector_style(name), ensure_ascii=False)
+    if path == "planet":
+        index = {"tilejson": "3.0.0", "minzoom": 0, "maxzoom": 14, "attribution": OPENFREEMAP_CREDIT,
+                 "tiles": [VECTOR_HOST + "planet/test/{z}/{x}/{y}.pbf"]}
+        return 200, "application/json", json.dumps(index)
+    if path.endswith(".pbf"):
+        return 200, "application/x-protobuf", b""
+    if path.endswith(".png"):
+        return 200, "image/png", BLANK_PNG
+    if path.endswith(".json"):
+        return 200, "application/json", "{}"
+    return 404, "text/plain", ""
 
 
 @dataclass
@@ -105,6 +195,8 @@ class Net:
     files: dict[str, tuple[int, str, str | bytes]] = field(default_factory=dict)  # a site file as the test serves it
     held: set[str] = field(default_factory=set)  # site files left unanswered, as on a stalled network
     pending: dict[str, Route] = field(default_factory=dict)  # a held file's open request — a test may answer it late
+    vector: dict[str, tuple[int, str, str | bytes]] = field(default_factory=dict)  # an OpenFreeMap path as the test
+    # serves it, in place of vector_answer's
 
     def handle(self, route: Route) -> None:
         url = route.request.url
@@ -117,6 +209,10 @@ class Net:
             return
         if url.startswith(TILE_HOST):
             route.fulfill(status=200, content_type="image/png", body=BLANK_PNG)
+        elif url.startswith(VECTOR_HOST):
+            path = url[len(VECTOR_HOST):].split("?", 1)[0]
+            status, content_type, body = self.vector.get(path) or vector_answer(path)
+            route.fulfill(status=status, content_type=content_type, body=body)
         elif url.startswith(self.base):
             path = url[len(self.base):].split("?", 1)[0]
             if path in self.files:

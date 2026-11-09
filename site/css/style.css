@@ -892,10 +892,6 @@ h2 {
   border-color: var(--white);
 }
 
-:root[data-theme="dark"] .leaflet-tile-pane {
-  filter: invert(1) hue-rotate(180deg) brightness(0.9) contrast(0.9);
-}
-
 :root[data-theme="dark"] .leaflet-container .leaflet-control-attribution {
   background: rgb(0 0 0 / 0.8);
   color: var(--muted);
