@@ -2,7 +2,7 @@
 id: ADR-0013
 type: adr
 title: სტეკი — სტატიკური საიტი, Google-ის მსგავსი ვექტორული რუკა (OpenFreeMap, MapLibre Leaflet-ის შიგნით), ფასების შემოწმება GitHub Actions-ში, ჰოსტინგი GitHub Pages (ADR-0012-ის ჩანაცვლება)
-status: proposed
+status: accepted
 date: 2026-11-09
 deciders: მფლობელი (`/approve`); შემთავაზებელი — Claude
 supersedes: "[[ADR-0012-static-site-github-actions-pages]]"

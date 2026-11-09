@@ -2,7 +2,7 @@
 id: ADR-0012
 type: adr
 title: სტეკი — სტატიკური საიტი (HTML, CSS, JavaScript, Leaflet + OpenStreetMap), ფასების შემოწმება Python-ით GitHub Actions-ში, ჰოსტინგი GitHub Pages
-status: accepted
+status: superseded
 date: 2026-10-30
 deciders: მფლობელი (`/approve`); შემთავაზებელი — Claude
 related:
@@ -10,6 +10,7 @@ related:
   - "[[SPEC-0001-fuel-prices-map]]"
   - "[[fuel-price-sources]]"
   - "[[docs/guides/website]]"
+superseded_by: "[[ADR-0013-vector-map-openfreemap]]"
 ---
 
 # ADR-0012: სტეკი — სტატიკური საიტი, ფასების შემოწმება GitHub Actions-ში, ჰოსტინგი GitHub Pages
