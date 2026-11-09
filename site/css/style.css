@@ -7,9 +7,17 @@
   --page: #f2f2f7; /* the page and the header bar */
   --surface: #ffffff; /* the sheet, the cards, the filters and the fuel chips */
   --raised: #e5e5ea; /* the map's ground before its pictures come */
-  --text: #111111;
-  --muted: #5f5f64;
-  --line: #e5e5ea;
+  /* SPEC-0006 REQ-003: by day the text, the muted text and the lines in the design system's slate */
+  --text: #0f172a;
+  --muted: #475569;
+  --line: #e2e8f0;
+  /* SPEC-0006 REQ-001: the iOS "Liquid Glass" controls — the glass, its light edge, the light line along its top and
+     its shadow; only full-strength text sits on it, so 0.55 (0.65 at night) keeps 4.5 : 1 whatever is under it */
+  --glass: rgb(255 255 255 / 0.55);
+  --glass-edge: rgb(255 255 255 / 0.65);
+  --glass-shine: rgb(255 255 255 / 0.85);
+  --glass-shadow: 0 8px 32px rgb(15 23 42 / 0.16);
+  --pin-edge: #111111; /* SPEC-0005 REQ-007: the light pin's contour stays #111111 (SPEC-0006 §3) */
   --accent: #ffc529; /* the chosen fuel and language, Google Maps and Waze, the ★ — the same in both looks */
   --on-accent: #111111;
   --cheap: #fff3c4; /* the cheapest line's ground in the price list (SPEC-0005 REQ-005) */
@@ -34,6 +42,10 @@
   --muted: #a1a1a6;
   --line: #3a3a3c;
   --cheap: #3a3018;
+  --glass: rgb(28 28 30 / 0.65);
+  --glass-edge: rgb(255 255 255 / 0.16);
+  --glass-shine: rgb(255 255 255 / 0.22);
+  --glass-shadow: 0 8px 32px rgb(0 0 0 / 0.55);
   --disc-fill: #000000;
   --disc-frame: #8e8e93;
   --pin-body: #000000;
@@ -125,12 +137,13 @@ h1 {
   border: 1px solid var(--line);
   border-radius: 999px;
   overflow: hidden;
+  background: var(--surface); /* the switch's own ground — glass where the browser can blur (SPEC-0006 REQ-001) */
 }
 
 .lang button {
   padding: 6px 12px;
   border: 0;
-  background: var(--surface);
+  background: transparent;
   color: var(--text);
   font: inherit;
   font-size: 0.85rem;
@@ -196,9 +209,9 @@ h1 {
   gap: 6px;
   min-width: 0;
   min-height: 44px;
-  padding: 8px 14px;
+  padding: 8px 18px;
   border: 1px solid var(--line);
-  border-radius: 16px;
+  border-radius: 26px; /* SPEC-0006 REQ-001: a capsule */
   background: var(--surface);
   color: var(--text);
   box-shadow: 0 2px 10px var(--shadow);
@@ -213,7 +226,7 @@ h1 {
 .filter-button::after {
   content: "▾" / "";
   margin-left: auto;
-  color: var(--muted);
+  color: var(--text); /* SPEC-0006 REQ-001: on the glass only full-strength ink */
 }
 
 .filter-button[aria-expanded="true"]::after {
@@ -228,9 +241,11 @@ h1 {
   line-height: 1.2;
 }
 
+/* SPEC-0006 REQ-001: the filter's name is small and bold, in the full-strength ink — it sits on the glass */
 .filter-name {
-  color: var(--muted);
+  color: var(--text);
   font-size: 0.75rem;
+  font-weight: 600;
 }
 
 .filter-value {
@@ -256,7 +271,7 @@ h1 {
   overflow-y: auto;
   padding: 4px 6px;
   border: 1px solid var(--line);
-  border-radius: 16px;
+  border-radius: 26px;
   background: var(--surface);
   color: var(--text);
   box-shadow: 0 6px 20px var(--shadow);
@@ -369,6 +384,67 @@ h1 {
   bottom: var(--overlap); /* above the part of the map the sheet covers */
 }
 
+/* SPEC-0006 REQ-001: the map's + / − — two 40 px circles apart, solid here; glass where the browser can blur (below) */
+.leaflet-container .leaflet-control-zoom.leaflet-bar {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+/* as specific as Leaflet's own corner rules (.leaflet-touch .leaflet-bar a:first-child), and after them */
+.leaflet-container .leaflet-control-zoom.leaflet-bar a,
+.leaflet-container .leaflet-control-zoom.leaflet-bar a:hover,
+.leaflet-container .leaflet-control-zoom.leaflet-bar a:focus {
+  width: 40px;
+  height: 40px;
+  margin-top: 8px;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  background: var(--surface);
+  color: var(--text);
+  font-size: 22px;
+  line-height: 38px;
+}
+
+/* SPEC-0006 REQ-001, REQ-002: the iOS "Liquid Glass" controls — the filters, the fuel chips not chosen, the open panel,
+   the + / − and the look and language switches. They are solid above; this one condition — a browser that can blur, by
+   either name — makes them glass, so a browser that cannot blur keeps the solid surface. What is under the glass is
+   blurred 24 px and its colours made stronger; a 1 px light edge, a light line along the top, a soft shadow. */
+@supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
+  .filter-button,
+  .chip input:not(:checked) + span,
+  .panel,
+  .leaflet-container .leaflet-control-zoom.leaflet-bar a,
+  .leaflet-container .leaflet-control-zoom.leaflet-bar a:hover,
+  .leaflet-container .leaflet-control-zoom.leaflet-bar a:focus,
+  .theme,
+  .lang {
+    border: 1px solid var(--glass-edge);
+    background: var(--glass);
+    box-shadow: inset 0 1px 0 var(--glass-shine), var(--glass-shadow);
+    -webkit-backdrop-filter: blur(24px) saturate(180%);
+    backdrop-filter: blur(24px) saturate(180%);
+  }
+}
+
+/* SPEC-0006 REQ-002: a visitor whose phone asks for less transparency gets the solid surface (where the browser
+   passes that setting on — a hypothesis; on the glass the text has 4.5 : 1 anyway) */
+@media (prefers-reduced-transparency: reduce) {
+  .filter-button,
+  .chip input:not(:checked) + span,
+  .panel,
+  .leaflet-container .leaflet-control-zoom.leaflet-bar a,
+  .leaflet-container .leaflet-control-zoom.leaflet-bar a:hover,
+  .leaflet-container .leaflet-control-zoom.leaflet-bar a:focus,
+  .theme,
+  .lang {
+    background: var(--surface);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+}
+
 /* SPEC-0002 REQ-002: from farther away a station is a small dot in its company's colour */
 .station:not(.near) > span {
   display: block;
@@ -391,7 +467,7 @@ h1 {
   height: 36px;
   border-radius: 50% 50% 50% 0;
   background: var(--pin-body);
-  box-shadow: 0 0 0 2px var(--text), 0 1px 4px rgb(15 23 42 / 0.45);
+  box-shadow: 0 0 0 2px var(--pin-edge), 0 1px 4px rgb(15 23 42 / 0.45);
   transform: rotate(-45deg);
 }
 
@@ -840,13 +916,6 @@ h2 {
 
 :root[data-theme="dark"] .leaflet-tile-pane {
   filter: invert(1) hue-rotate(180deg) brightness(0.9) contrast(0.9);
-}
-
-:root[data-theme="dark"] .leaflet-bar a,
-:root[data-theme="dark"] .leaflet-bar a:hover {
-  border-bottom-color: var(--line);
-  background: var(--raised);
-  color: var(--text);
 }
 
 :root[data-theme="dark"] .leaflet-container .leaflet-control-attribution {

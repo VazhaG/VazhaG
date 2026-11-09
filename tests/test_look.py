@@ -47,14 +47,19 @@ ROLES_JS = """() => {
 }"""
 WHITE, INK, YELLOW = "rgb(255, 255, 255)", "rgb(17, 17, 17)", "rgb(255, 197, 41)"  # #FFFFFF, #111111, #FFC529
 DAY_PAGE, NIGHT_PAGE, NIGHT_SURFACE = "rgb(242, 242, 247)", "rgb(28, 28, 30)", "rgb(44, 44, 46)"
+# SPEC-0006 REQ-003 (PLAN-0006 T1): by day the text #0F172A, the muted text #475569, the lines #E2E8F0; the fuel chips
+# not chosen are glass (REQ-001) — the night's colours stay SPEC-0005's
+DAY_TEXT = "rgb(15, 23, 42)"
 BOTH = {"go": [YELLOW, INK], "chosen": [YELLOW, INK, True], "langOn": [YELLOW, INK, True], "star": [YELLOW, INK, "★"]}
 LOOKS = {
-    "light": BOTH | {"page": DAY_PAGE, "text": INK, "sheet": WHITE, "card": WHITE, "header": DAY_PAGE, "title": INK,
-                     "muted": "rgb(95, 95, 100)", "line": "rgb(229, 229, 234)", "other": [WHITE, INK, "solid", True],
-                     "langOff": [INK, True], "link": [INK, "underline"]},
+    "light": BOTH | {"page": DAY_PAGE, "text": DAY_TEXT, "sheet": WHITE, "card": WHITE, "header": DAY_PAGE,
+                     "title": DAY_TEXT, "muted": "rgb(71, 85, 105)", "line": "rgb(226, 232, 240)",
+                     "other": ["rgba(255, 255, 255, 0.55)", DAY_TEXT, "solid", True], "langOff": [DAY_TEXT, True],
+                     "link": [DAY_TEXT, "underline"]},
     "dark": BOTH | {"page": NIGHT_PAGE, "text": WHITE, "sheet": NIGHT_SURFACE, "card": NIGHT_SURFACE, "header": NIGHT_PAGE,
                     "title": WHITE, "muted": "rgb(161, 161, 166)", "line": "rgb(58, 58, 60)",
-                    "other": [NIGHT_SURFACE, WHITE, "solid", True], "langOff": [WHITE, True], "link": [WHITE, "underline"]},
+                    "other": ["rgba(28, 28, 30, 0.65)", WHITE, "solid", True], "langOff": [WHITE, True],
+                    "link": [WHITE, "underline"]},
 }
 
 
