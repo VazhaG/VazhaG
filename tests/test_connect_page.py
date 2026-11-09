@@ -20,7 +20,7 @@ from collections.abc import Callable
 import pytest
 from playwright.sync_api import Page, expect
 
-from support import Net, no_logos
+from support import ICON_EDGE, Net, no_logos
 
 TIME = "2026-10-31T12:00:00Z"
 HERE = (41.70, 44.80)
@@ -32,13 +32,6 @@ FIVE = [("socar", "SOCAR", "#e41e30", 4.90, 1.0), ("rompetrol", "Rompetrol", "#f
 LIGHT = {"rompetrol", "connect"}  # the companies whose letters are dark (SPEC-0002 REQ-007)
 DARK_INK, WHITE = (15, 23, 42), (255, 255, 255)
 NIGHT_PAGE = (28, 28, 30)  # #1C1C1E, the page at night (SPEC-0005 REQ-006) — the map's tiles are darkened to it
-BACKGROUND_JS = """(el) => {
-  for (; el; el = el.parentElement) {
-    const c = getComputedStyle(el).backgroundColor.match(/[\\d.]+/g).map(Number);
-    if (c.length < 4 || c[3] > 0) return 'rgb(' + c.slice(0, 3).join(', ') + ')';
-  }
-  return 'rgb(255, 255, 255)';
-}"""
 
 
 def north(km: float) -> float:
@@ -162,16 +155,18 @@ def test_connects_name_and_letter_read_well_on_and_off(page_at: Callable[[float,
     letter = page.locator(circle("connect"))
     expect(letter).to_have_text("C")
     assert ratio(style(page, circle("connect"), "color"), style(page, circle("connect"), "backgroundColor")) >= 4.5
-    # the row (SPEC-0005 REQ-001, REQ-002): its letter reads on its yellow; off, the letter fades on purpose (its
-    # name is the button's), and the circle's frame still stands out from the sheet
+    # the row (SPEC-0005 REQ-001, REQ-002; SPEC-0006 REQ-005): its letter reads on its yellow; off, the letter fades on
+    # purpose (its name is the button's), and the icon keeps its edge and shadow — the look's, unchanged
     on, row_letter = page.locator(badge("connect")), page.locator(f"{badge('connect')} .letter")
     expect(row_letter).to_have_text("C")
     assert ratio(style(page, f"{badge('connect')} .letter", "color"),
                  style(page, f"{badge('connect')} .letter", "backgroundColor")) >= 4.5
+    disc = page.locator(f"{badge('connect')} .disc")
+    edge = disc.evaluate("d => getComputedStyle(d).boxShadow")
+    assert edge == ICON_EDGE[scheme == "dark"], edge
     on.click()
     expect(on).to_have_attribute("aria-pressed", "false")
-    disc = page.locator(f"{badge('connect')} .disc")
-    assert ratio(rgb(disc.evaluate("d => getComputedStyle(d).outlineColor")), rgb(disc.evaluate(BACKGROUND_JS))) >= 3
+    assert disc.evaluate("d => getComputedStyle(d).boxShadow") == edge
 
 
 # T5 — the row of five (REQ-005; AC-006)

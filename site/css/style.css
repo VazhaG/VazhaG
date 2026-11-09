@@ -21,10 +21,10 @@
   --accent: #ffc529; /* the chosen fuel and language, Google Maps and Waze, the ★ — the same in both looks */
   --on-accent: #111111;
   --cheap: #fff3c4; /* the cheapest line's ground in the price list (SPEC-0005 REQ-005) */
-  /* SPEC-0005 REQ-001, REQ-007: a company circle and a map pin, in the look's colour — by day a white circle in a
-     #7C7C80 frame (3 : 1 on the page, the sheet, the cheapest line and the pin) and a white pin in a #111111 contour */
+  /* SPEC-0006 REQ-005: a company icon in the look's colour — white by day (black for a logo marked so) — set off,
+     iOS-like, by a faint edge and a soft shadow, not a frame; the map pin's body (SPEC-0005 REQ-007) until PLAN-0006 T3 */
   --disc-fill: #ffffff;
-  --disc-frame: #7c7c80;
+  --icon-edge: 0 0 0 0.5px rgb(0 0 0 / 0.18), 0 2px 8px rgb(15 23 42 / 0.16);
   --pin-body: #ffffff;
   --shadow: rgb(17 17 17 / 0.16);
   --header-h: 52px;
@@ -47,7 +47,7 @@
   --glass-shine: rgb(255 255 255 / 0.22);
   --glass-shadow: 0 8px 32px rgb(0 0 0 / 0.55);
   --disc-fill: #000000;
-  --disc-frame: #8e8e93;
+  --icon-edge: 0 0 0 1px rgb(255 255 255 / 0.28), 0 2px 8px rgb(0 0 0 / 0.5);
   --pin-body: #000000;
   --shadow: rgb(0 0 0 / 0.6);
   color-scheme: dark;
@@ -556,10 +556,9 @@ h1 {
   display: none;
 }
 
-/* SPEC-0005 REQ-001: a company's sign — one circle in the look's colour (white by day, black at night) in a neutral
-   frame (3 : 1 on the page, the sheet, the cheapest line and the pin in both looks), the
-   same wherever the company shows; each place gives it its size (--d). The frame is drawn inside the circle, so the
-   circle is its whole size; the logo's mark is set in shares of it (js/app.js). */
+/* SPEC-0006 REQ-005 (SPEC-0005 REQ-001): a company's sign — one iOS-like icon, a rounded square in the look's colour
+   (white by day, black at night), with no frame: a faint edge and a soft shadow set it off. The same wherever the
+   company shows; each place gives it its size (--d); the logo's mark is set in shares of it (js/app.js). */
 .disc {
   position: relative;
   display: grid;
@@ -568,10 +567,9 @@ h1 {
   width: var(--d, 48px);
   height: var(--d, 48px);
   overflow: hidden;
-  border-radius: 50%;
+  border-radius: 23%;
   background: var(--disc-fill);
-  outline: 2px solid var(--disc-frame);
-  outline-offset: -2px;
+  box-shadow: var(--icon-edge);
 }
 
 /* a mark that cannot be read on white keeps a black circle in the light look too (js/logos.js `black`: Connect) */
@@ -590,7 +588,7 @@ h1 {
   inset: 0;
   display: grid;
   place-items: center;
-  border-radius: 50%;
+  border-radius: 23%;
   font-size: calc(var(--d, 48px) * 0.42);
   font-weight: 800;
   line-height: 1;
@@ -616,7 +614,7 @@ h1 {
 }
 
 /* SPEC-0005 REQ-002: switched off, the mark only loses its colour and fades — no line, no crossed-out name; the
-   circle and its frame stay as they are */
+   icon, its edge and its shadow stay as they are (SPEC-0006 REQ-005) */
 .badge[aria-pressed="false"] .disc > * {
   filter: grayscale(1);
   opacity: 0.45;

@@ -32,7 +32,7 @@ from support import (
     ROOT,
     SITE,
     Net,
-    assert_disc,
+    assert_icon,
     assert_letter,
     assert_mark,
     logos_without,
@@ -131,7 +131,7 @@ def test_each_company_with_a_logo_shows_its_mark_in_a_black_circle_in_the_row(pa
     assert [d["id"] for d in discs] == [cid for cid, *_ in FIVE], discs  # one circle per company, in its badge
     for i, ((cid, name, _), d) in enumerate(zip(FIVE, discs, strict=True)):
         expect(badges.nth(i)).to_have_attribute("data-company", cid)
-        assert_disc(d, ROW_DISC)
+        assert_icon(d, ROW_DISC)
         assert_mark(d, logos[cid], ROW_DISC)
         box = badges.nth(i).bounding_box()
         assert box and box["width"] >= ROW_DISC and box["height"] >= ROW_DISC, (cid, box)  # a finger's size
@@ -149,7 +149,7 @@ def test_a_company_without_a_logo_is_the_same_circle_in_its_colour_with_its_firs
     discs = page.evaluate(DISCS_JS, ROW_DISCS)
     for (cid, name, color), d in zip(FIVE, discs, strict=True):
         assert d["id"] == cid, d
-        assert_disc(d, ROW_DISC)
+        assert_icon(d, ROW_DISC)
         assert_letter(d, ROW_DISC, name[0], rgb_of(color))
         expect(page.get_by_role("button", name=name, exact=True)).to_have_count(1)
 
@@ -194,7 +194,8 @@ MARK_CONTRAST_JS = """async () => {
 def test_a_circle_is_black_by_day_exactly_when_no_pixel_of_its_mark_reads_on_white(page: Page, net: Net) -> None:
     # SPEC-0005 REQ-001, AC-001: our logo list marks the black-circle exception beside the logo, and the files decide
     # it — black by day exactly when no opaque pixel of the mark reaches 3 : 1 on white (today only Connect, the
-    # owner's choice); every mark's most contrasting pixel then has 3 : 1 on its own circle
+    # owner's choice); every mark's most contrasting pixel then has 3 : 1 on its own icon by day — and at night, when
+    # every icon is black (SPEC-0006 REQ-005, AC-006), on black
     page.goto(net.base)
     got = {m["id"]: m for m in page.evaluate(MARK_CONTRAST_JS)}
     assert sorted(got) == sorted(LOGO_IDS), got
@@ -202,6 +203,7 @@ def test_a_circle_is_black_by_day_exactly_when_no_pixel_of_its_mark_reads_on_whi
         assert m["opaque"] > 0 and isinstance(m["black"], bool), m
         assert m["black"] == (m["onWhite"] < 3), m
         assert (m["onBlack"] if m["black"] else m["onWhite"]) >= 3, m
+        assert m["onBlack"] >= 3, m  # the dark look
     assert [cid for cid, m in got.items() if m["black"]] == ["connect"], got
 
 
@@ -229,7 +231,7 @@ OFF_JS = """(b) => {
     struck: parts.some((el) => getComputedStyle(el).textDecorationLine.includes('line-through')),
     faded: [Number(getComputedStyle(b).opacity), Number(s.opacity)], ground: s.backgroundColor,
     size: [r.width, r.height], frame: [s.outlineStyle, s.outlineWidth, s.outlineColor, s.borderTopStyle,
-                                       s.borderTopWidth, s.borderTopColor],
+                                       s.borderTopWidth, s.borderTopColor, s.boxShadow, s.borderRadius],
   };
 }"""
 BEHIND_JS = """(el) => {
@@ -369,7 +371,7 @@ def test_a_logo_that_does_not_load_leaves_a_letter_circle_and_is_not_asked_again
     expect(lukoil.locator("img")).to_have_count(0)
     expect(lukoil).to_have_attribute("aria-label", "Lukoil")
     (d,) = page.evaluate(DISCS_JS, '#companies [data-company="lukoil"] .disc')
-    assert_disc(d, ROW_DISC)
+    assert_icon(d, ROW_DISC)
     assert_letter(d, ROW_DISC, "L", "rgb(138, 21, 56)")  # its colour, #8a1538
     expect(page.locator("#companies img")).to_have_count(4)
     socar = page.locator('#companies [data-company="socar"]')
@@ -452,7 +454,7 @@ def test_from_the_city_view_each_station_is_a_pin_in_the_looks_colour_with_its_c
     for cid, name, color in SIX:
         p, d = pins[cid], discs[cid]
         assert (p["pins"], p["discs"], p["body"]) == (1, 1, PIN_LOOK[scheme][0]), p
-        assert_disc(d, PIN_DISC)
+        assert_icon(d, PIN_DISC)
         if cid in logos:
             assert_mark(d, logos[cid], PIN_DISC)
         else:
@@ -592,7 +594,7 @@ def test_two_companies_without_a_logo_are_letter_circles_in_all_five_places(
         got = places[place]
         assert "nova" in got and (place == "card" or "lukoil" in got), (place, sorted(got))
         for cid, d in got.items():
-            assert_disc(d, size)
+            assert_icon(d, size)
             if cid == "nova":
                 assert_letter(d, size, "N", "rgb(37, 99, 235)")  # #2563eb
             elif cid == "lukoil":

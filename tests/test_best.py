@@ -11,7 +11,7 @@ from datetime import UTC, datetime, timedelta
 
 from playwright.sync_api import Page, expect
 
-from support import DISCS_JS, POINT_JS, Net, assert_disc, assert_letter
+from support import DISCS_JS, POINT_JS, Net, assert_icon, assert_letter
 
 NOW = datetime(2026, 10, 30, 12, 0, tzinfo=UTC)
 HERE = (41.70, 44.80)
@@ -206,7 +206,7 @@ def test_the_card_is_compact_with_the_companys_circle(page_at: Callable[[float, 
     assert all(h >= 44 for h in got["tall"]), got  # compact, but still a finger's size (SPEC-0005 §6)
     expect(card).to_contain_text("1.2 კმ")
     (d,) = page.evaluate(DISCS_JS, "#best .disc")
-    assert_disc(d, 32)
+    assert_icon(d, 32)
     assert_letter(d, 32, "A", "rgb(18, 52, 86)")  # the company's colour, #123456
 
 

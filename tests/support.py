@@ -19,8 +19,11 @@ LOGOS_JS = SITE / "js" / "logos.js"
 LOGO_IDS = ("socar", "rompetrol", "lukoil", "wissol", "connect")  # the companies with a logo (SPEC-0004)
 # every picture the selector finds has its address and is drawn — a logo gets its address once its file has arrived
 DRAWN = "(sel) => [...document.querySelectorAll(sel)].every((i) => i.getAttribute('src') && i.naturalWidth > 0)"
-# a company circle's frame (SPEC-0005 REQ-001): #7C7C80 in the light look, #8E8E93 in the dark one
-FRAME = {False: "rgb(124, 124, 128)", True: "rgb(142, 142, 147)"}
+# SPEC-0006 REQ-005: a company icon's edge and shadow, as the browser writes them — by day a 0.5 px black edge at 0.18
+# and a soft slate shadow, at night a 1 px white edge at 0.28 and a black shadow (by the look: dark = True)
+ICON_EDGE = {False: "rgba(0, 0, 0, 0.18) 0px 0px 0px 0.5px, rgba(15, 23, 42, 0.16) 0px 2px 8px 0px",
+             True: "rgba(255, 255, 255, 0.28) 0px 0px 0px 1px, rgba(0, 0, 0, 0.5) 0px 2px 8px 0px"}
+ICON_ROUND = "23%"  # the corners: 23 % of the side, as an iOS app icon
 BLACK, WHITE_FILL = "rgb(0, 0, 0)", "rgb(255, 255, 255)"
 # where a station's mark stands on the map: a pin's tip from the city view on (SPEC-0005 REQ-007 — the lowest point of
 # its turned square), else the middle of its dot
@@ -28,9 +31,9 @@ POINT_JS = """(m) => {
   const pin = m.querySelector('.pin'), r = (pin || m).getBoundingClientRect();
   return [r.left + r.width / 2, pin ? r.bottom : r.top + r.height / 2];
 }"""
-# SPEC-0005 REQ-001: every company circle the selector finds, measured as drawn — its size, fill, frame and what is
-# behind it; a logo's picture and the part of it that shows (its mark, cut by clip-path from the file's own pixels);
-# a letter circle's fill and ink. The frame is the circle's border or, drawn inside it, its outline.
+# SPEC-0006 REQ-005 (SPEC-0005 REQ-001): every company icon the selector finds, measured as drawn — its size, fill,
+# corners, edge and shadow, and any frame left (a border or an outline); a logo's picture and the part of it that shows
+# (its mark, cut by clip-path from the file's own pixels); a letter icon's fill and ink.
 DISCS_JS = """async (sel) => {
   const { LOGOS } = await import('./js/logos.js');
   const byId = new Map(LOGOS.map((l) => [l.id, l]));
@@ -42,21 +45,6 @@ DISCS_JS = """async (sel) => {
     return 'rgb(255, 255, 255)';
   };
   const px = (v, total) => (v.endsWith('%') ? (parseFloat(v) / 100) * total : parseFloat(v));
-  // what a circle's frame must stand out from (REQ-001): the page, the cheapest line and a map pin's body, as drawn
-  const probe = (html, pick) => {
-    const box = document.createElement('div');
-    box.innerHTML = html;
-    document.body.append(box);
-    const c = getComputedStyle(box.querySelector(pick)).backgroundColor;
-    box.remove();
-    return c;
-  };
-  const surfaces = {
-    page: getComputedStyle(document.body).backgroundColor,
-    sheet: getComputedStyle(document.querySelector('.sheet')).backgroundColor,
-    cheap: probe('<ul class="price-list"><li class="cheap"></li></ul>', 'li'),
-    pin: probe('<div class="station near"><span class="pin"></span></div>', '.pin'),
-  };
   const dark = document.documentElement.dataset.theme === 'dark';
   return [...document.querySelectorAll(sel)].map((d) => {
     const r = d.getBoundingClientRect(), s = getComputedStyle(d);
@@ -64,12 +52,11 @@ DISCS_JS = """async (sel) => {
     // the badge, the line or the marker it is drawn in
     const id = d.closest('[data-company]')?.dataset.company;
     const out = {
-      id, size: [r.width, r.height], ground: s.backgroundColor, round: s.borderRadius, dark, surfaces,
+      id, size: [r.width, r.height], ground: s.backgroundColor, round: s.borderRadius, dark,
       black: byId.get(id)?.black === true,
-      opacity: Number(s.opacity), behind: behind(d), sheet: surfaces.sheet,
+      opacity: Number(s.opacity), behind: behind(d),
       imgs: d.querySelectorAll('img').length, text: d.textContent,
-      frame: border > 0 ? [s.borderTopStyle, border, s.borderTopColor, true]
-        : [s.outlineStyle, outline, s.outlineColor, parseFloat(s.outlineOffset) <= -outline + 0.01],
+      frame: [border, outline], edge: s.boxShadow,
     };
     const letter = d.querySelector('.letter');
     if (letter) {
@@ -178,19 +165,17 @@ def ratio(a: tuple[int, ...], b: tuple[int, ...]) -> float:
     return (hi + 0.05) / (lo + 0.05)
 
 
-# SPEC-0005 REQ-001, AC-001 — a company circle as DISCS_JS measured it, wherever it is drawn
-def assert_disc(d: dict, size: float) -> None:
-    """One circle of this size, round, in its frame. Its fill is the look's (REQ-001): black at night, white by day —
-    black by day too for a company our logo list marks so (Connect; test_logos checks that mark against the file). The
-    frame is the look's grey, and the frame itself is 3 : 1 on the page, the sheet, the cheapest line, a map pin's
-    body and whatever is behind this circle."""
-    assert all(abs(v - size) <= 0.5 for v in d["size"]) and d["round"] == "50%", d
+# SPEC-0006 REQ-005, AC-006 — a company icon as DISCS_JS measured it, wherever it is drawn
+def assert_icon(d: dict, size: float) -> None:
+    """One icon of this size: a rounded square (23 % corners) with no frame — no border, no outline. Its fill is the
+    look's: black at night, white by day — black by day too for a company our logo list marks so (Connect; test_logos
+    checks that mark against the file). Its edge and shadow are the look's (iOS-like: they, not a measured 3 : 1, set
+    it off — the owner's choice, 2026-11-09)."""
+    assert all(abs(v - size) <= 0.5 for v in d["size"]) and d["round"] == ICON_ROUND, d
     fill = BLACK if d["dark"] or d["black"] else WHITE_FILL
     assert d["ground"] == fill and d["opacity"] == 1, d
-    style, width, color, inside = d["frame"]
-    assert style == "solid" and width >= 1.5 and color == FRAME[d["dark"]] and inside, d
-    for ground in (*d["surfaces"].values(), d["behind"]):
-        assert ratio(rgb(color), rgb(ground)) >= 3, (ground, d)
+    assert d["frame"] == [0, 0], d  # no frame left
+    assert d["edge"] == ICON_EDGE[d["dark"]], d
 
 
 def assert_mark(d: dict, file: str, size: float) -> None:
@@ -204,8 +189,8 @@ def assert_mark(d: dict, file: str, size: float) -> None:
 
 
 def assert_letter(d: dict, size: float, letter: str, fill: str) -> None:
-    """A company without a logo — the same circle, all of it its colour, with its first letter."""
+    """A company without a logo — the same icon, all of it its colour, with its first letter."""
     assert d["imgs"] == 0 and d["text"] == letter, d
     got = d["letter"]
-    assert got["fill"] == fill and got["round"] == "50%" and all(abs(v - size) <= 0.5 for v in got["size"]), d
+    assert got["fill"] == fill and got["round"] == ICON_ROUND and all(abs(v - size) <= 0.5 for v in got["size"]), d
     assert ratio(rgb(got["ink"]), rgb(got["fill"])) >= 4.5 and got["font"] >= 0.35 * size, d

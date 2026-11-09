@@ -14,7 +14,7 @@ from datetime import UTC, datetime, timedelta
 import pytest
 from playwright.sync_api import Page, expect
 
-from support import DISCS_JS, DRAWN, Net, assert_disc, assert_mark
+from support import DISCS_JS, DRAWN, Net, assert_icon, assert_mark
 
 NOW = datetime(2026, 11, 2, 12, 0, tzinfo=UTC)
 ROWS = "#price-list li"
@@ -110,7 +110,7 @@ def test_each_line_has_its_companys_circle(page: Page, net: Net) -> None:
     discs = page.evaluate(DISCS_JS, "#price-list .disc")
     assert [d["id"] for d in discs] == ["lukoil", "connect", "socar", "wissol", "connect"], discs
     for d in discs:
-        assert_disc(d, LIST_DISC)
+        assert_icon(d, LIST_DISC)
         assert_mark(d, logos[d["id"]], LIST_DISC)
 
 
