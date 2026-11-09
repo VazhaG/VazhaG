@@ -51,3 +51,4 @@ status: living
 | 2026-11-02 09:29 +0000 | PLAN-0005 | draft → approved | docs/plans/PLAN-0005-look-from-reference-photo.md | — |
 | 2026-11-09 07:29 +0000 | ADR-0013 | proposed → accepted | docs/adr/ADR-0013-vector-map-openfreemap.md | — |
 | 2026-11-09 07:29 +0000 | ADR-0012 | accepted → superseded | docs/adr/ADR-0012-static-site-github-actions-pages.md | ჩაანაცვლა ADR-0013 |
+| 2026-11-09 07:33 +0000 | SPEC-0006 | review → approved | docs/specs/SPEC-0006-glass-look.md | — |

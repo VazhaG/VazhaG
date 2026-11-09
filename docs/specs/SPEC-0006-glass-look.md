@@ -2,7 +2,7 @@
 id: SPEC-0006
 type: spec
 title: iOS-ის სტილი — Liquid Glass-ის ღილაკები, ლოგოების ხატულები და Google-ის მსგავსი რუკა
-status: review
+status: approved
 created: 2026-11-02
 updated: 2026-11-09
 intent: "[[intent]]"
