@@ -50,7 +50,9 @@ function fallback(why) {
 
 // every address MapLibre is about to ask — the tile index, tiles, fonts, pictures, data — must be on OpenFreeMap's host:
 // the page's CSP does not reach MapLibre's worker, which fetches tiles and data itself (review S1, 2026-11-09); any
-// other address is refused here, on the page, before the request is made
+// other address is refused here, on the page, before the request is made. A redirect that OpenFreeMap's own server
+// sends is still followed in the worker — only that server could send one, and it sees the same request anyway
+// (review round 2, accepted)
 function onlyOpenFreeMap(url) {
   if (!url.startsWith(MAP_HOST)) throw new Error(`not OpenFreeMap's host: ${url}`);
   return { url };

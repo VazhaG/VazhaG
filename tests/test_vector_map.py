@@ -262,6 +262,69 @@ def test_a_style_on_its_way_is_asked_once_however_often_the_look_is_switched(pag
     assert styles_asked(net) == ["liberty", "dark"]
 
 
+def wait_stalled(page: Page, net: Net) -> None:
+    """Wait until a held OpenFreeMap request is waiting for its answer."""
+    for _ in range(100):
+        if net.stalled:
+            return
+        page.wait_for_timeout(50)
+    assert net.stalled
+
+
+def test_a_look_style_that_fails_after_the_look_was_switched_back_changes_nothing(page: Page, net: Net) -> None:
+    # review round 2: the look that wanted it is gone, so its missing style is no fallback cause
+    net.vector_held.add("styles/dark")
+    open_map(page, net, "light")
+    page.locator("#theme").click()
+    wait_stalled(page, net)
+    page.locator("#theme").click()
+    net.stalled.pop().fulfill(status=404, content_type="text/plain", body="")
+    page.wait_for_timeout(1000)
+    expect(page.locator("#map")).to_have_attribute("data-ground", "vector")
+    assert ground(page)["style"] == "liberty"
+
+
+def test_a_language_switch_while_a_style_is_on_its_way_shows_it_in_the_new_language(page: Page, net: Net) -> None:
+    # review round 2: when the style comes, what is wanted is read afresh — the look and the language
+    net.vector_held.add("styles/dark")
+    open_map(page, net, "light")
+    page.locator("#theme").click()
+    wait_stalled(page, net)
+    page.get_by_role("button", name=LANG_BUTTON["en"]).click()
+    net.vector_held.clear()
+    net.stalled.pop().fulfill(status=200, content_type="application/json", body=vector_answer("styles/dark")[2])
+    g = until(page, "style", "dark")
+    assert g["labels"] == {"place_label": LABELS["en"], "road_number": ROAD_NUMBER}, g
+
+
+def test_a_look_switch_while_the_library_loads_shows_the_new_looks_style(page: Page, net: Net) -> None:
+    # review round 2: the switch comes before the map exists to follow it — the map takes it once it starts
+    net.held.add(LIBRARY)
+    page.emulate_media(color_scheme="light")
+    page.goto(net.base)
+    for _ in range(100):
+        if LIBRARY in net.pending:
+            break
+        page.wait_for_timeout(50)
+    page.locator("#theme").click()
+    net.pending.pop(LIBRARY).continue_()
+    until(page, "style", "dark")
+    expect(page.locator("#map")).to_have_attribute("data-ground", "vector")
+
+
+def test_a_failing_tile_after_the_map_has_loaded_does_not_drop_it(page: Page, net: Net) -> None:
+    # review round 2: only a failure before the first `load` leaves the map empty — later, a failing tile is one gap
+    open_map(page, net)
+    net.vector_failing.add("planet/test/")
+    asked = len(net.requests)
+    for _ in range(2):
+        page.locator(".leaflet-control-zoom-in").click()
+        page.wait_for_timeout(600)
+    page.wait_for_load_state("networkidle")
+    assert [u for u in net.requests[asked:] if u.startswith(VECTOR_HOST + "planet/test/")]  # new tiles, all failing
+    expect(page.locator("#map")).to_have_attribute("data-ground", "vector")
+
+
 def test_a_failing_picture_source_does_not_drop_the_vector_map(page: Page, net: Net) -> None:
     # only a vector source that fails leaves the map empty: the natural-earth pictures under it are a decoration
     net.vector_failing.add("natural_earth/")

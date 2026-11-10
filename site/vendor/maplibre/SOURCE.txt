@@ -13,8 +13,8 @@ hasZeroWidthSpaces() in each .mjs file, text MapLibre compares map labels with; 
 engine's scanner knows. The worker carries one globalThis.eval, on the path that loads an extra script into the
 workers (importScriptInWorkers, the right-to-left text plugin); this site calls neither. The page's CSP does not reach
 inside the worker (a worker made from the site's own file takes its policy from that file's response, and the site
-sends none), so not calling those two is the guard; js/vectormap.js also keeps every address MapLibre asks on
-OpenFreeMap's host (transformRequest).
+sends none), so not calling those two is the guard; js/vectormap.js also keeps every address MapLibre names on
+OpenFreeMap's host (transformRequest) — a redirect sent by OpenFreeMap's own server is still followed in the worker.
 Copied from the archive unchanged, byte for byte: dist/maplibre-gl.mjs, dist/maplibre-gl-worker.mjs,
 dist/maplibre-gl.css, LICENSE.txt. Not copied: dist/maplibre-gl-shared.mjs (empty in this version), the -dev builds,
 the source maps and the type declarations.
