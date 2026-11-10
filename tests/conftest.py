@@ -31,8 +31,10 @@ def site_url() -> Iterator[str]:
 
 @pytest.fixture(scope="session")
 def browser() -> Iterator[Browser]:
+    # the vector map needs WebGL2 (SPEC-0006 REQ-007): on a machine without a graphics card, Chromium draws it in
+    # software (SwiftShader) only when allowed to — the test browser opens nothing but the local site
     with sync_playwright() as p:
-        b = p.chromium.launch()
+        b = p.chromium.launch(args=["--enable-unsafe-swiftshader"])
         yield b
         b.close()
 

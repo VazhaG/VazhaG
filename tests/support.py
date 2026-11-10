@@ -1,7 +1,8 @@
 """Shared test helpers: where the site lives and a stand-in for the network.
 
-The tests never reach the internet: map tiles get a blank picture, the data files get what the test chooses,
-and every other request outside the local server is refused and recorded (SPEC-0001 AC-010).
+The tests never reach the internet: map tiles get a blank picture, OpenFreeMap's vector map a small style of the
+tests' own (SPEC-0006 REQ-007), the data files get what the test chooses, and every other request outside the local
+server is refused and recorded (SPEC-0001 AC-010).
 """
 
 from __future__ import annotations
@@ -19,18 +20,22 @@ LOGOS_JS = SITE / "js" / "logos.js"
 LOGO_IDS = ("socar", "rompetrol", "lukoil", "wissol", "connect")  # the companies with a logo (SPEC-0004)
 # every picture the selector finds has its address and is drawn — a logo gets its address once its file has arrived
 DRAWN = "(sel) => [...document.querySelectorAll(sel)].every((i) => i.getAttribute('src') && i.naturalWidth > 0)"
-# a company circle's frame (SPEC-0005 REQ-001): #7C7C80 in the light look, #8E8E93 in the dark one
-FRAME = {False: "rgb(124, 124, 128)", True: "rgb(142, 142, 147)"}
+# SPEC-0006 REQ-005: a company icon's edge and shadow, as the browser writes them — by day a 0.5 px black edge at 0.18
+# and a soft slate shadow, at night a 1 px white edge at 0.28 and a black shadow (by the look: dark = True)
+ICON_EDGE = {False: "rgba(0, 0, 0, 0.18) 0px 0px 0px 0.5px, rgba(15, 23, 42, 0.16) 0px 2px 8px 0px",
+             True: "rgba(255, 255, 255, 0.28) 0px 0px 0px 1px, rgba(0, 0, 0, 0.5) 0px 2px 8px 0px"}
+ICON_ROUND = "23%"  # the corners: 23 % of the side, as an iOS app icon
 BLACK, WHITE_FILL = "rgb(0, 0, 0)", "rgb(255, 255, 255)"
-# where a station's mark stands on the map: a pin's tip from the city view on (SPEC-0005 REQ-007 — the lowest point of
-# its turned square), else the middle of its dot
+# where a station's mark stands on the map: the middle of its icon (from the city view on, SPEC-0006 REQ-005) or of
+# its dot — the marker is laid with its middle on the station's point either way
 POINT_JS = """(m) => {
-  const pin = m.querySelector('.pin'), r = (pin || m).getBoundingClientRect();
-  return [r.left + r.width / 2, pin ? r.bottom : r.top + r.height / 2];
+  const r = m.getBoundingClientRect();
+  return [r.left + r.width / 2, r.top + r.height / 2];
 }"""
-# SPEC-0005 REQ-001: every company circle the selector finds, measured as drawn — its size, fill, frame and what is
-# behind it; a logo's picture and the part of it that shows (its mark, cut by clip-path from the file's own pixels);
-# a letter circle's fill and ink. The frame is the circle's border or, drawn inside it, its outline.
+STAR_SHIFT = 20  # px: from the city view the ★'s middle is this far right of and above its icon's middle (REQ-006)
+# SPEC-0006 REQ-005 (SPEC-0005 REQ-001): every company icon the selector finds, measured as drawn — its size, fill,
+# corners, edge and shadow, and any frame left (a border or an outline); a logo's picture and the part of it that shows
+# (its mark, cut by clip-path from the file's own pixels); a letter icon's fill and ink.
 DISCS_JS = """async (sel) => {
   const { LOGOS } = await import('./js/logos.js');
   const byId = new Map(LOGOS.map((l) => [l.id, l]));
@@ -42,21 +47,6 @@ DISCS_JS = """async (sel) => {
     return 'rgb(255, 255, 255)';
   };
   const px = (v, total) => (v.endsWith('%') ? (parseFloat(v) / 100) * total : parseFloat(v));
-  // what a circle's frame must stand out from (REQ-001): the page, the cheapest line and a map pin's body, as drawn
-  const probe = (html, pick) => {
-    const box = document.createElement('div');
-    box.innerHTML = html;
-    document.body.append(box);
-    const c = getComputedStyle(box.querySelector(pick)).backgroundColor;
-    box.remove();
-    return c;
-  };
-  const surfaces = {
-    page: getComputedStyle(document.body).backgroundColor,
-    sheet: getComputedStyle(document.querySelector('.sheet')).backgroundColor,
-    cheap: probe('<ul class="price-list"><li class="cheap"></li></ul>', 'li'),
-    pin: probe('<div class="station near"><span class="pin"></span></div>', '.pin'),
-  };
   const dark = document.documentElement.dataset.theme === 'dark';
   return [...document.querySelectorAll(sel)].map((d) => {
     const r = d.getBoundingClientRect(), s = getComputedStyle(d);
@@ -64,12 +54,11 @@ DISCS_JS = """async (sel) => {
     // the badge, the line or the marker it is drawn in
     const id = d.closest('[data-company]')?.dataset.company;
     const out = {
-      id, size: [r.width, r.height], ground: s.backgroundColor, round: s.borderRadius, dark, surfaces,
+      id, size: [r.width, r.height], ground: s.backgroundColor, round: s.borderRadius, dark,
       black: byId.get(id)?.black === true,
-      opacity: Number(s.opacity), behind: behind(d), sheet: surfaces.sheet,
+      opacity: Number(s.opacity), behind: behind(d),
       imgs: d.querySelectorAll('img').length, text: d.textContent,
-      frame: border > 0 ? [s.borderTopStyle, border, s.borderTopColor, true]
-        : [s.outlineStyle, outline, s.outlineColor, parseFloat(s.outlineOffset) <= -outline + 0.01],
+      frame: [border, outline], edge: s.boxShadow,
     };
     const letter = d.querySelector('.letter');
     if (letter) {
@@ -102,6 +91,95 @@ BLANK_PNG = base64.b64decode(
     "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII="
 )
 PHONE = {"width": 375, "height": 812}
+# the site's security rule, exactly as ADR-0013 §1 writes it: blob: pictures, OpenFreeMap's host and our own worker
+# file added to ADR-0012's (data: is Leaflet's own empty picture, set on a tile it no longer needs)
+CSP = ("default-src 'none'; script-src 'self'; style-src 'self'; "
+       "img-src 'self' data: blob: https://tile.openstreetmap.org; connect-src 'self' https://tiles.openfreemap.org; "
+       "worker-src 'self'; base-uri 'none'; form-action 'none'")
+# SPEC-0006 REQ-007, ADR-0013: the vector map's host. The tests never reach it: in its place they serve a small style
+# of their own in OpenFreeMap's shape (vector_style) — the same kinds of request the real style makes (the style, the
+# tile index and its tiles, the natural-earth pictures, the sprite and the fonts), so the page's CSP meets each one.
+VECTOR_HOST = "https://tiles.openfreemap.org/"
+STYLES = {"light": "liberty", "dark": "dark"}  # the look's style (ADR-0013)
+GROUNDS = {"liberty": "#f8f4f0", "dark": "#0e0e0e"}  # the small styles' ground colours
+# OpenFreeMap's credit, as its tile index gives it (https://tiles.openfreemap.org/planet, read 2026-11-09)
+OPENFREEMAP_CREDIT = ('<a href="https://openfreemap.org" target="_blank">OpenFreeMap</a> '
+                      '<a href="https://www.openmaptiles.org/" target="_blank">&copy; OpenMapTiles</a> Data from '
+                      '<a href="https://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap</a>')
+# the label text OpenFreeMap's styles write — the Latin name and the local one (liberty and dark, read 2026-11-09)
+STYLE_LABEL = ["case", ["has", "name:nonlatin"], ["concat", ["get", "name:latin"], "\n", ["get", "name:nonlatin"]],
+               ["coalesce", ["get", "name_en"], ["get", "name"]]]
+ROAD_NUMBER = ["to-string", ["get", "ref"]]  # a road's number: no name, so no language
+# MapLibre's own map, read through the page's module (js/vectormap.js): what the ground is, its style and label texts,
+# whether its canvas covers the map, and any colour filter on that canvas or on what holds it
+GROUND_JS = """async () => {
+  const { ground } = await import('./js/vectormap.js');
+  const g = ground(), gl = g.map, style = gl && gl.getStyle();
+  const canvas = document.querySelector('.leaflet-tile-pane .leaflet-gl-layer canvas');
+  const filters = [];
+  for (let el = canvas; el; el = el.parentElement) {
+    const f = getComputedStyle(el).filter;
+    if (f !== 'none') filters.push(`${el.tagName.toLowerCase()}.${el.className}: ${f}`);
+  }
+  const c = canvas && canvas.getBoundingClientRect(), m = document.getElementById('map').getBoundingClientRect();
+  return {
+    kind: g.kind, style: style ? style.name : null,
+    labels: style ? Object.fromEntries(style.layers.filter((l) => l.layout && l.layout['text-field'] !== undefined)
+                                                   .map((l) => [l.id, l.layout['text-field']])) : {},
+    covers: Boolean(c) && c.left <= m.left && c.top <= m.top && c.right >= m.right && c.bottom >= m.bottom,
+    filters,
+  };
+}"""
+
+
+def vector_style(name: str) -> dict:
+    """A small style in OpenFreeMap's shape: its name, its ground colour, a picture source, a vector source with its
+    tile index, Tbilisi's name as one labelled place, and a road-number label."""
+    tbilisi = {"type": "Feature", "geometry": {"type": "Point", "coordinates": [44.80, 41.72]},
+               "properties": {"name": "თბილისი", "name:ka": "თბილისი", "name:latin": "Tbilisi", "name:en": "Tbilisi",
+                              "name:nonlatin": "თბილისი"}}
+    font = ["Noto Sans Regular"]
+    return {
+        "version": 8,
+        "name": name,
+        "sprite": VECTOR_HOST + "sprites/ofm_f384/ofm",
+        "glyphs": VECTOR_HOST + "fonts/{fontstack}/{range}.pbf",
+        "sources": {
+            "ne2_shaded": {"type": "raster", "tileSize": 256, "maxzoom": 6,
+                           "tiles": [VECTOR_HOST + "natural_earth/ne2sr/{z}/{x}/{y}.png"]},
+            "openmaptiles": {"type": "vector", "url": VECTOR_HOST + "planet"},
+            "places": {"type": "geojson", "data": {"type": "FeatureCollection", "features": [tbilisi]}},
+        },
+        "layers": [
+            {"id": "background", "type": "background", "paint": {"background-color": GROUNDS[name]}},
+            {"id": "natural_earth", "type": "raster", "source": "ne2_shaded", "maxzoom": 7},
+            {"id": "water", "type": "fill", "source": "openmaptiles", "source-layer": "water",
+             "paint": {"fill-color": "#9ec7f3"}},
+            {"id": "place_label", "type": "symbol", "source": "places",
+             "layout": {"text-field": STYLE_LABEL, "text-font": font}},
+            {"id": "road_number", "type": "symbol", "source": "openmaptiles", "source-layer": "transportation_name",
+             "layout": {"text-field": ROAD_NUMBER, "text-font": font}},
+        ],
+    }
+
+
+def vector_answer(path: str) -> tuple[int, str, str | bytes]:
+    """What the stand-in for OpenFreeMap answers: the small styles, the tile index with OpenFreeMap's credit, an empty
+    tile or font range, a blank picture, an empty sprite index; anything else is not there."""
+    name = path.removeprefix("styles/")
+    if path.startswith("styles/") and name in GROUNDS:
+        return 200, "application/json", json.dumps(vector_style(name), ensure_ascii=False)
+    if path == "planet":
+        index = {"tilejson": "3.0.0", "minzoom": 0, "maxzoom": 14, "attribution": OPENFREEMAP_CREDIT,
+                 "tiles": [VECTOR_HOST + "planet/test/{z}/{x}/{y}.pbf"]}
+        return 200, "application/json", json.dumps(index)
+    if path.endswith(".pbf"):
+        return 200, "application/x-protobuf", b""
+    if path.endswith(".png"):
+        return 200, "image/png", BLANK_PNG
+    if path.endswith(".json"):
+        return 200, "application/json", "{}"
+    return 404, "text/plain", ""
 
 
 @dataclass
@@ -117,6 +195,11 @@ class Net:
     files: dict[str, tuple[int, str, str | bytes]] = field(default_factory=dict)  # a site file as the test serves it
     held: set[str] = field(default_factory=set)  # site files left unanswered, as on a stalled network
     pending: dict[str, Route] = field(default_factory=dict)  # a held file's open request — a test may answer it late
+    vector: dict[str, tuple[int, str, str | bytes]] = field(default_factory=dict)  # an OpenFreeMap path as the test
+    # serves it, in place of vector_answer's
+    vector_held: set[str] = field(default_factory=set)  # OpenFreeMap paths starting so are left unanswered
+    stalled: list[Route] = field(default_factory=list)  # their open requests, kept until the page closes
+    vector_failing: set[str] = field(default_factory=set)  # OpenFreeMap paths starting so answer 503 at once
 
     def handle(self, route: Route) -> None:
         url = route.request.url
@@ -129,6 +212,14 @@ class Net:
             return
         if url.startswith(TILE_HOST):
             route.fulfill(status=200, content_type="image/png", body=BLANK_PNG)
+        elif url.startswith(VECTOR_HOST):
+            path = url[len(VECTOR_HOST):].split("?", 1)[0]
+            if path.startswith(tuple(self.vector_held)):
+                self.stalled.append(route)
+                return
+            failing = path.startswith(tuple(self.vector_failing))
+            status, content_type, body = (503, "text/plain", "") if failing else self.vector.get(path) or vector_answer(path)
+            route.fulfill(status=status, content_type=content_type, body=body)
         elif url.startswith(self.base):
             path = url[len(self.base):].split("?", 1)[0]
             if path in self.files:
@@ -178,19 +269,17 @@ def ratio(a: tuple[int, ...], b: tuple[int, ...]) -> float:
     return (hi + 0.05) / (lo + 0.05)
 
 
-# SPEC-0005 REQ-001, AC-001 — a company circle as DISCS_JS measured it, wherever it is drawn
-def assert_disc(d: dict, size: float) -> None:
-    """One circle of this size, round, in its frame. Its fill is the look's (REQ-001): black at night, white by day —
-    black by day too for a company our logo list marks so (Connect; test_logos checks that mark against the file). The
-    frame is the look's grey, and the frame itself is 3 : 1 on the page, the sheet, the cheapest line, a map pin's
-    body and whatever is behind this circle."""
-    assert all(abs(v - size) <= 0.5 for v in d["size"]) and d["round"] == "50%", d
+# SPEC-0006 REQ-005, AC-006 — a company icon as DISCS_JS measured it, wherever it is drawn
+def assert_icon(d: dict, size: float) -> None:
+    """One icon of this size: a rounded square (23 % corners) with no frame — no border, no outline. Its fill is the
+    look's: black at night, white by day — black by day too for a company our logo list marks so (Connect; test_logos
+    checks that mark against the file). Its edge and shadow are the look's (iOS-like: they, not a measured 3 : 1, set
+    it off — the owner's choice, 2026-11-09)."""
+    assert all(abs(v - size) <= 0.5 for v in d["size"]) and d["round"] == ICON_ROUND, d
     fill = BLACK if d["dark"] or d["black"] else WHITE_FILL
     assert d["ground"] == fill and d["opacity"] == 1, d
-    style, width, color, inside = d["frame"]
-    assert style == "solid" and width >= 1.5 and color == FRAME[d["dark"]] and inside, d
-    for ground in (*d["surfaces"].values(), d["behind"]):
-        assert ratio(rgb(color), rgb(ground)) >= 3, (ground, d)
+    assert d["frame"] == [0, 0], d  # no frame left
+    assert d["edge"] == ICON_EDGE[d["dark"]], d
 
 
 def assert_mark(d: dict, file: str, size: float) -> None:
@@ -204,8 +293,8 @@ def assert_mark(d: dict, file: str, size: float) -> None:
 
 
 def assert_letter(d: dict, size: float, letter: str, fill: str) -> None:
-    """A company without a logo — the same circle, all of it its colour, with its first letter."""
+    """A company without a logo — the same icon, all of it its colour, with its first letter."""
     assert d["imgs"] == 0 and d["text"] == letter, d
     got = d["letter"]
-    assert got["fill"] == fill and got["round"] == "50%" and all(abs(v - size) <= 0.5 for v in got["size"]), d
+    assert got["fill"] == fill and got["round"] == ICON_ROUND and all(abs(v - size) <= 0.5 for v in got["size"]), d
     assert ratio(rgb(got["ink"]), rgb(got["fill"])) >= 4.5 and got["font"] >= 0.35 * size, d

@@ -16,7 +16,7 @@ from collections.abc import Callable
 import pytest
 from playwright.sync_api import Page, expect
 
-from support import DISCS_JS, DRAWN, Net, assert_disc, assert_mark
+from support import DISCS_JS, DRAWN, Net, assert_icon, assert_mark
 
 TIME = "2026-11-02T12:00:00Z"
 HERE = (41.70, 44.80)
@@ -104,7 +104,7 @@ def test_the_company_panel_holds_each_company_with_its_circle_and_name(page_at: 
     discs = page.evaluate(DISCS_JS, f"{COMPANY_PANEL} .disc")
     assert [d["id"] for d in discs] == [cid for cid, *_ in FIVE], discs  # one circle on each company's line
     for d in discs:
-        assert_disc(d, 32)
+        assert_icon(d, 32)
         assert_mark(d, logos[d["id"]], 32)
     panel_box, card = panel.bounding_box(), page.locator("#best").bounding_box()
     sheet = page.locator(".sheet").bounding_box()

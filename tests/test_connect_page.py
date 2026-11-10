@@ -20,7 +20,7 @@ from collections.abc import Callable
 import pytest
 from playwright.sync_api import Page, expect
 
-from support import Net, no_logos
+from support import ICON_EDGE, Net, no_logos
 
 TIME = "2026-10-31T12:00:00Z"
 HERE = (41.70, 44.80)
@@ -32,13 +32,6 @@ FIVE = [("socar", "SOCAR", "#e41e30", 4.90, 1.0), ("rompetrol", "Rompetrol", "#f
 LIGHT = {"rompetrol", "connect"}  # the companies whose letters are dark (SPEC-0002 REQ-007)
 DARK_INK, WHITE = (15, 23, 42), (255, 255, 255)
 NIGHT_PAGE = (28, 28, 30)  # #1C1C1E, the page at night (SPEC-0005 REQ-006) — the map's tiles are darkened to it
-BACKGROUND_JS = """(el) => {
-  for (; el; el = el.parentElement) {
-    const c = getComputedStyle(el).backgroundColor.match(/[\\d.]+/g).map(Number);
-    if (c.length < 4 || c[3] > 0) return 'rgb(' + c.slice(0, 3).join(', ') + ')';
-  }
-  return 'rgb(255, 255, 255)';
-}"""
 
 
 def north(km: float) -> float:
@@ -111,34 +104,28 @@ def badge(cid: str) -> str:
 
 
 def circle(cid: str) -> str:
-    """A company's letter circle on the map, from the city view — in its black pin (SPEC-0005 REQ-007)."""
+    """A company's letter icon on the map, from the city view (SPEC-0006 REQ-005)."""
     return f'.station[data-company="{cid}"] .letter'
 
 
-def pin(cid: str) -> str:
-    return f'.station[data-company="{cid}"] .pin'
-
-
 def mark(cid: str) -> str:
-    """A company's station on the map — a dot, or from the city view its pin."""
+    """A company's station on the map — a dot, or from the city view its icon."""
     return f'.station[data-company="{cid}"]'
 
 
-@pytest.mark.parametrize(("scheme", "ground"), [("light", WHITE), ("dark", NIGHT_PAGE)])
-def test_every_companys_pin_stands_out_from_the_map_whatever_its_colour(
-        page_at: Callable[[float, float], Page], net: Net, scheme: str, ground: tuple[int, ...]) -> None:
-    # AC-007 by SPEC-0005 REQ-007 (PLAN-0005 T8): from the city view a light colour's letter (Connect's yellow,
-    # Rompetrol's orange) sits in a pin like every other — white with a #111111 contour by day, black with a white one
-    # at night; the contour stands out from the map (3 : 1)
+@pytest.mark.parametrize("scheme", ["light", "dark"])
+def test_every_companys_letter_icon_keeps_its_colour_on_the_map(page_at: Callable[[float, float], Page], net: Net,
+                                                                scheme: str) -> None:
+    # AC-007 by SPEC-0006 REQ-005 (PLAN-0006 T3): from the city view a light colour's letter (Connect's yellow,
+    # Rompetrol's orange) is an icon like every other — all of it its colour, no pin round it; the look's faint edge and
+    # soft shadow set it off from the map (iOS-like — the owner's choice, 2026-11-09)
     no_logos(net)
     page = open_five(page_at, net, scheme)
-    body_of, ink = (WHITE, (17, 17, 17)) if scheme == "light" else ((0, 0, 0), WHITE)
     for cid, _, color, *_ in FIVE:
         assert style(page, circle(cid), "backgroundColor") == hex_rgb(color), cid  # the letter keeps its colour
-        assert style(page, pin(cid), "backgroundColor") == body_of, cid
-        contour = page.locator(pin(cid)).evaluate("(p) => getComputedStyle(p).boxShadow")
-        assert contour.startswith(f"rgb({ink[0]}, {ink[1]}, {ink[2]}) 0px 0px 0px 2px"), (cid, contour)
-        assert ratio(ink, ground) >= 3
+        expect(page.locator(f'{mark(cid)} .pin')).to_have_count(0)
+        edge = page.locator(f'{mark(cid)} .disc').evaluate("(d) => getComputedStyle(d).boxShadow")
+        assert edge == ICON_EDGE[scheme == "dark"], (cid, edge)
 
 
 @pytest.mark.parametrize(("scheme", "ground"), [("light", WHITE), ("dark", NIGHT_PAGE)])
@@ -162,16 +149,18 @@ def test_connects_name_and_letter_read_well_on_and_off(page_at: Callable[[float,
     letter = page.locator(circle("connect"))
     expect(letter).to_have_text("C")
     assert ratio(style(page, circle("connect"), "color"), style(page, circle("connect"), "backgroundColor")) >= 4.5
-    # the row (SPEC-0005 REQ-001, REQ-002): its letter reads on its yellow; off, the letter fades on purpose (its
-    # name is the button's), and the circle's frame still stands out from the sheet
+    # the row (SPEC-0005 REQ-001, REQ-002; SPEC-0006 REQ-005): its letter reads on its yellow; off, the letter fades on
+    # purpose (its name is the button's), and the icon keeps its edge and shadow — the look's, unchanged
     on, row_letter = page.locator(badge("connect")), page.locator(f"{badge('connect')} .letter")
     expect(row_letter).to_have_text("C")
     assert ratio(style(page, f"{badge('connect')} .letter", "color"),
                  style(page, f"{badge('connect')} .letter", "backgroundColor")) >= 4.5
+    disc = page.locator(f"{badge('connect')} .disc")
+    edge = disc.evaluate("d => getComputedStyle(d).boxShadow")
+    assert edge == ICON_EDGE[scheme == "dark"], edge
     on.click()
     expect(on).to_have_attribute("aria-pressed", "false")
-    disc = page.locator(f"{badge('connect')} .disc")
-    assert ratio(rgb(disc.evaluate("d => getComputedStyle(d).outlineColor")), rgb(disc.evaluate(BACKGROUND_JS))) >= 3
+    assert disc.evaluate("d => getComputedStyle(d).boxShadow") == edge
 
 
 # T5 — the row of five (REQ-005; AC-006)

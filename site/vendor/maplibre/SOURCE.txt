@@ -1,0 +1,30 @@
+MapLibre GL JS 6.16.0 — https://maplibre.org/ — BSD-3-Clause (see LICENSE.txt in this folder)
+
+Package: maplibre-gl@6.16.0
+Source: https://registry.npmjs.org/maplibre-gl/-/maplibre-gl-6.16.0.tgz
+Integrity: sha512-gApO66EMtoDZuio680RUBvskR7ahFd/NNhLN4tBAs+Y7FeT4gQV8zVFgYVMRmFxQznOEzecW19w6xOd9XjZjiA==
+Published: 2026-10-25
+Added: 2026-11-09
+
+The archive's sha512 matched the registry's "dist.integrity" for maplibre-gl@6.16.0. It was unpacked into an empty
+folder of its own and read before anything was copied: no bidi controls and no Unicode tags (the engine's
+hidden-character check), and one invisible character only — a U+200B (zero-width space) inside the string literal of
+hasZeroWidthSpaces() in each .mjs file, text MapLibre compares map labels with; LF line endings; no credential the
+engine's scanner knows. The worker carries one globalThis.eval, on the path that loads an extra script into the
+workers (importScriptInWorkers, the right-to-left text plugin); this site calls neither. The page's CSP does not reach
+inside the worker (a worker made from the site's own file takes its policy from that file's response, and the site
+sends none), so not calling those two is the guard; js/vectormap.js also keeps every address MapLibre names on
+OpenFreeMap's host (transformRequest) — a redirect sent by OpenFreeMap's own server is still followed in the worker.
+Copied from the archive unchanged, byte for byte: dist/maplibre-gl.mjs, dist/maplibre-gl-worker.mjs,
+dist/maplibre-gl.css, LICENSE.txt. Not copied: dist/maplibre-gl-shared.mjs (empty in this version), the -dev builds,
+the source maps and the type declarations.
+Version 6 is an ES module only; site/js/vectormap.js gives it the global name the Leaflet bridge expects (maplibregl)
+and points it at its worker file (setWorkerUrl) — ADR-0013 §1.
+Kept in the site itself (ADR-0013), so a visitor's browser asks no third party for it.
+tests/test_vendor.py compares every file below with its SHA-256.
+
+SHA-256 (sha256sum format, paths relative to this folder):
+ee5fc05a0677eaf69601d2c7db0d9ecd6cc27c3abc1d0733bc9ed34707cf8ef2  LICENSE.txt
+0bf06492bdb7ba3d4132b78e435621bfba60d5250967991c02b1a73affea8cd5  maplibre-gl-worker.mjs
+a90798a1953017790e590f7e1bd35ff103a8a4263972cb47290b78adf86f8c20  maplibre-gl.css
+fbbdf8ddd9a48e49059a4be6795a4f214a711314bb5809f72d3730b48e7897e3  maplibre-gl.mjs

@@ -1,8 +1,25 @@
 Leaflet 1.9.4 — https://leafletjs.com — BSD-2-Clause (see LICENSE in this folder)
 
-Source: https://registry.npmjs.org/leaflet/-/leaflet-1.9.4.tgz, downloaded 2026-10-30.
-The archive's sha512 matched the registry's "dist.integrity" for leaflet@1.9.4.
+Package: leaflet@1.9.4
+Source: https://registry.npmjs.org/leaflet/-/leaflet-1.9.4.tgz
+Integrity: sha512-nxS1ynzJOmOlHp+iL3FyWqK89GtNL8U8rvlMOsQdTTssxZwCXh8N2NB3GDQOL+YR3XnWyZAxwQixURb+FA74PA==
+Published: 2023-05-18
+Added: 2026-10-30
+
+The archive's sha512 matched the registry's "dist.integrity" for leaflet@1.9.4 (downloaded 2026-10-30; downloaded and
+compared again 2026-11-09, when the SHA-256 lines below were added — PLAN-0006 T5).
 Copied from the archive: dist/leaflet.js, dist/leaflet.css, dist/images/*.png, LICENSE.
 One change: leaflet.css and LICENSE were converted from CRLF to LF line endings (the project's eol gate);
 their content is otherwise byte-for-byte the published files.
-Kept in the site itself (ADR-0012), so a visitor's browser asks no third party for it.
+Kept in the site itself (ADR-0012, ADR-0013), so a visitor's browser asks no third party for it.
+tests/test_vendor.py compares every file below with its SHA-256.
+
+SHA-256 (sha256sum format, paths relative to this folder):
+bbc959aaef7488b38942e7f05cfd1244351f8bce54261951ea17dd7cf60f894b  LICENSE
+066daca850d8ffbef007af00b06eac0015728dee279c51f3cb6c716df7c42edf  images/layers-2x.png
+1dbbe9d028e292f36fcba8f8b3a28d5e8932754fc2215b9ac69e4cdecf5107c6  images/layers.png
+00179c4c1ee830d3a108412ae0d294f55776cfeb085c60129a39aa6fc4ae2528  images/marker-icon-2x.png
+574c3a5cca85f4114085b6841596d62f00d7c892c7b03f28cbfa301deb1dc437  images/marker-icon.png
+264f5c640339f042dd729062cfc04c17f8ea0f29882b538e3848ed8f10edb4da  images/marker-shadow.png
+337bfca5cabd03b39815b2700febe2b3b7edf55921c59cd49f88ecb328212303  leaflet.css
+db49d009c841f5ca34a888c96511ae936fd9f5533e90d8b2c4d57596f4e5641a  leaflet.js

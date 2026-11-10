@@ -40,8 +40,8 @@ export const TEXT = {
     'note.source': 'ფასები მოდის კომპანიების ოფიციალური საიტებიდან და სადგურზე შეიძლება განსხვავდებოდეს.',
     'note.standard': 'ფასი სტანდარტულია; თვითმომსახურებისა და ბარათის ფასი შეიძლება დაბალი იყოს.',
     'note.tiles':
-      'რუკის სურათები OpenStreetMap-ის სერვერიდან იტვირთება იმ არეალისთვის, რომელსაც ეკრანი აჩვენებს; '
-      + 'შენი ზუსტი მდებარეობა არსად იგზავნება.',
+      'რუკა OpenFreeMap-ის სერვერიდან იტვირთება (თუ ის არ მუშაობს — OpenStreetMap-ის სერვერიდან) იმ არეალისთვის, '
+      + 'რომელსაც ეკრანი აჩვენებს; შენი ზუსტი მდებარეობა არსად იგზავნება.',
     'note.storage': 'ენა, კომპანიების არჩევანი და ნათელი თუ მუქი რეჟიმი მხოლოდ შენს ტელეფონში ინახება.',
     'note.cities': 'ქალაქების კოორდინატები:',
     'lang.group': 'ენა',
@@ -83,7 +83,8 @@ export const TEXT = {
     'note.source': "Prices come from the companies' official websites and may differ at the station.",
     'note.standard': 'Standard prices; self-service and card prices may be lower.',
     'note.tiles':
-      'Map images load from the OpenStreetMap server for the area on the screen; your exact location is never sent.',
+      'The map loads from the OpenFreeMap server (or, if it does not work, from the OpenStreetMap server) for the area '
+      + 'on the screen; your exact location is never sent.',
     'note.storage': 'The language, your choice of companies and the light or dark mode are kept only on your phone.',
     'note.cities': 'City coordinates:',
     'lang.group': 'Language',

@@ -1,0 +1,20 @@
+@maplibre/maplibre-gl-leaflet 0.1.4 — https://github.com/maplibre/maplibre-gl-leaflet — ISC (see LICENSE in this folder)
+
+Package: @maplibre/maplibre-gl-leaflet@0.1.4
+Source: https://registry.npmjs.org/@maplibre/maplibre-gl-leaflet/-/maplibre-gl-leaflet-0.1.4.tgz
+Integrity: sha512-k57wcndZIvq3m08g2je4pjUPGr43ffNW3j+gXbymt8Vi2l1lUERUi1UmdTZcTPN8LuDDYOMWRNBaSLwpAu02ew==
+Published: 2026-08-16
+Added: 2026-11-09
+
+The archive's sha512 matched the registry's "dist.integrity" for @maplibre/maplibre-gl-leaflet@0.1.4. It was unpacked
+into an empty folder of its own and read before anything was copied: no eval, no hidden characters, LF line endings,
+no credential the engine's scanner knows.
+Copied from the archive unchanged, byte for byte: leaflet-maplibre-gl.js (the same bytes as
+dist/leaflet-maplibre-gl.js), LICENSE.
+It is a plain script (UMD): it reads the global maplibregl and adds L.maplibreGL to Leaflet — ADR-0013 §1.
+Kept in the site itself (ADR-0013), so a visitor's browser asks no third party for it.
+tests/test_vendor.py compares every file below with its SHA-256.
+
+SHA-256 (sha256sum format, paths relative to this folder):
+eaa721ba158cbeff47ad53b1035dfc26ff744df66662c93ff715c9885197ebf3  LICENSE
+1e6cf8cb3eb5fd909879aa1bf36a383fb506c9a5b2dbbfababce65a294dd1fcb  leaflet-maplibre-gl.js

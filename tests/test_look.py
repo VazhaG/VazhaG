@@ -24,7 +24,7 @@ from datetime import datetime
 import pytest
 from playwright.sync_api import Page, expect
 
-from support import DISCS_JS, DRAWN, SITE, Net, assert_disc, assert_mark
+from support import DISCS_JS, DRAWN, GROUND_JS, SITE, STYLES, VECTOR_HOST, Net, assert_icon, assert_mark
 
 TBILISI = (41.7151, 44.8271)
 ROLES_JS = """() => {
@@ -47,14 +47,19 @@ ROLES_JS = """() => {
 }"""
 WHITE, INK, YELLOW = "rgb(255, 255, 255)", "rgb(17, 17, 17)", "rgb(255, 197, 41)"  # #FFFFFF, #111111, #FFC529
 DAY_PAGE, NIGHT_PAGE, NIGHT_SURFACE = "rgb(242, 242, 247)", "rgb(28, 28, 30)", "rgb(44, 44, 46)"
+# SPEC-0006 REQ-003 (PLAN-0006 T1): by day the text #0F172A, the muted text #475569, the lines #E2E8F0; the fuel chips
+# not chosen are glass (REQ-001) — the night's colours stay SPEC-0005's
+DAY_TEXT = "rgb(15, 23, 42)"
 BOTH = {"go": [YELLOW, INK], "chosen": [YELLOW, INK, True], "langOn": [YELLOW, INK, True], "star": [YELLOW, INK, "★"]}
 LOOKS = {
-    "light": BOTH | {"page": DAY_PAGE, "text": INK, "sheet": WHITE, "card": WHITE, "header": DAY_PAGE, "title": INK,
-                     "muted": "rgb(95, 95, 100)", "line": "rgb(229, 229, 234)", "other": [WHITE, INK, "solid", True],
-                     "langOff": [INK, True], "link": [INK, "underline"]},
+    "light": BOTH | {"page": DAY_PAGE, "text": DAY_TEXT, "sheet": WHITE, "card": WHITE, "header": DAY_PAGE,
+                     "title": DAY_TEXT, "muted": "rgb(71, 85, 105)", "line": "rgb(226, 232, 240)",
+                     "other": ["rgba(255, 255, 255, 0.55)", DAY_TEXT, "solid", True], "langOff": [DAY_TEXT, True],
+                     "link": [DAY_TEXT, "underline"]},
     "dark": BOTH | {"page": NIGHT_PAGE, "text": WHITE, "sheet": NIGHT_SURFACE, "card": NIGHT_SURFACE, "header": NIGHT_PAGE,
                     "title": WHITE, "muted": "rgb(161, 161, 166)", "line": "rgb(58, 58, 60)",
-                    "other": [NIGHT_SURFACE, WHITE, "solid", True], "langOff": [WHITE, True], "link": [WHITE, "underline"]},
+                    "other": ["rgba(28, 28, 30, 0.65)", WHITE, "solid", True], "langOff": [WHITE, True],
+                    "link": [WHITE, "underline"]},
 }
 
 
@@ -87,19 +92,21 @@ def test_the_star_card_shows_the_cheapest_companys_mark_in_its_circle(page_at: C
     logos = dict(page.evaluate("() => import('./js/logos.js').then((m) => m.LOGOS.map((l) => [l.id, l.file]))"))
     page.wait_for_function(DRAWN, arg="#best .disc img")
     (d,) = page.evaluate(DISCS_JS, "#best .disc")
-    assert_disc(d, 32)
+    assert_icon(d, 32)
     assert_mark(d, logos[d["id"]], 32)
     box = page.locator("#best").bounding_box()
     assert box and box["height"] <= 240, box
 
 
 @pytest.mark.parametrize("scheme", ["light", "dark"])
-def test_the_map_is_darkened_only_in_the_dark_look(page_at: Callable[[float, float], Page], net: Net,
-                                                    scheme: str) -> None:
-    # AC-008: the map's own pictures are darkened at night, never by day
+def test_the_map_is_dark_at_night_by_its_own_style_never_by_a_filter(page_at: Callable[[float, float], Page],
+                                                                     net: Net, scheme: str) -> None:
+    # AC-008, as SPEC-0006 REQ-007 has it now: the vector map's own style follows the look — "dark" at night, "liberty"
+    # by day — and no colour filter darkens it (that filter belongs to the fallback tiles alone)
     page = open_look(page_at, net, scheme)
-    tiles = page.locator(".leaflet-tile-pane").evaluate("(el) => getComputedStyle(el).filter")
-    assert ("invert" in tiles) == (scheme == "dark"), tiles
+    expect(page.locator("#map")).to_have_attribute("data-ground", "vector")
+    g = page.evaluate(GROUND_JS)
+    assert g["style"] == STYLES[scheme] and g["filters"] == [], g
 
 
 # T5 — the switch between the light and the dark look (REQ-005, REQ-006; AC-007, AC-008)
@@ -158,10 +165,12 @@ def test_the_choice_is_kept_on_the_phone_and_wins_over_its_setting(page: Page, n
     page.reload()
     expect(page.locator(THEME)).to_have_attribute("aria-pressed", "true" if choice == "dark" else "false")
     assert page.evaluate(LOOK) == choice
-    tiles = page.locator(".leaflet-tile-pane").evaluate("(el) => getComputedStyle(el).filter")
-    assert ("invert" in tiles) == (choice == "dark"), tiles  # AC-008: the map follows the site's look
+    expect(page.locator("#map")).to_have_attribute("data-ground", "vector")
+    assert page.evaluate(GROUND_JS)["style"] == STYLES[choice]  # AC-008: the map follows the site's look
     assert set(page.evaluate("Object.keys(localStorage)")) == {"fuel-map.theme"}
-    assert net.bodies == [] and not [u for u in net.requests if "dark" in u or "light" in u]  # sent nowhere
+    # sent nowhere: only the map's own style for that look is asked of OpenFreeMap (ADR-0013)
+    assert net.bodies == [] and not [u for u in net.requests
+                                     if ("dark" in u or "light" in u) and not u.startswith(VECTOR_HOST + "styles/")]
 
 
 @pytest.mark.parametrize(("phone", "choice", "edge"), [("dark", "light", "rgb(15, 23, 42)"),

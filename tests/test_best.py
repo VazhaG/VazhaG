@@ -9,9 +9,10 @@ from __future__ import annotations
 from collections.abc import Callable
 from datetime import UTC, datetime, timedelta
 
+import pytest
 from playwright.sync_api import Page, expect
 
-from support import DISCS_JS, POINT_JS, Net, assert_disc, assert_letter
+from support import DISCS_JS, POINT_JS, STAR_SHIFT, Net, assert_icon, assert_letter
 
 NOW = datetime(2026, 10, 30, 12, 0, tzinfo=UTC)
 HERE = (41.70, 44.80)
@@ -157,9 +158,9 @@ def test_the_cheapest_station_is_marked_with_a_star_on_the_map(page_at: Callable
         assert box
         return box["x"] + box["width"] / 2, box["y"] + box["height"] / 2
 
-    # the ★ over the second station's place: its dot's middle, or its pin's tip (SPEC-0005 REQ-007)
+    # the ★ on the second station's icon's corner, from the city view (SPEC-0006 REQ-006)
     (px, py), (sx, sy) = centre(pin.bounding_box()), page.locator(".station").nth(1).evaluate(POINT_JS)
-    assert abs(px - sx) < 3 and abs(py - sy) < 3
+    assert abs(px - (sx + STAR_SHIFT)) < 3 and abs(py - (sy - STAR_SHIFT)) < 3
     pin.dispatch_event("click")
     expect(page.locator(".leaflet-popup-content")).to_contain_text("ვაკე")
     page.get_by_text("ბუნებრივი აირი", exact=True).first.click()  # no station is known to sell it
@@ -190,6 +191,42 @@ CARD_JS = """(card) => ({
 })"""
 
 
+# SPEC-0006 REQ-004, AC-005 (PLAN-0006 T4): the sheet, the ★ card, its two buttons and the price list's lines in their
+# iOS-like shapes — the sheet's top 32 px round with a light line along its edge (the glass's shine); the card with no
+# frame, 24 px round, lifted by a soft shadow; Google Maps and Waze yellow capsules; the list's lines 22 px round
+SHAPES_JS = """() => {
+  const css = (sel) => getComputedStyle(document.querySelector(sel));
+  const sheet = css('.sheet'), card = css('#best'), go = css('.go a'), line = css('#price-list > li');
+  return { sheet: [sheet.borderTopLeftRadius, sheet.borderTopRightRadius, sheet.boxShadow],
+           card: [card.borderTopWidth, card.borderTopLeftRadius, card.boxShadow],
+           go: go.borderTopLeftRadius, line: line.borderTopLeftRadius };
+}"""
+SHAPES = {
+    "light": {"shine": "rgba(255, 255, 255, 0.85) 0px 1px 0px 0px inset",
+              "card": ["0px", "24px", "rgba(15, 23, 42, 0.08) 0px 6px 24px 0px"]},
+    "dark": {"shine": "rgba(255, 255, 255, 0.22) 0px 1px 0px 0px inset",
+             "card": ["0px", "24px", "rgba(0, 0, 0, 0.5) 0px 6px 24px 0px"]},
+}
+
+
+@pytest.mark.parametrize("scheme", ["light", "dark"])
+def test_the_sheet_card_buttons_and_lines_have_their_ios_shapes(page_at: Callable[[float, float], Page], net: Net,
+                                                                scheme: str) -> None:
+    net.data["prices.json"] = {"generated": stamp(1), "companies": [prices_of("a", [("ევრო დიზელი", "diesel", 4.97)])]}
+    net.data["stations.json"] = {"generated": stamp(1), "companies": [stations_of("a", [at_km(1.2)])]}
+    page = page_at(*HERE)
+    page.emulate_media(color_scheme=scheme)
+    page.clock.set_fixed_time(NOW)
+    page.goto(net.base)
+    page.get_by_text("დიზელი", exact=True).first.click()
+    expect(page.locator("#best a.go-google")).to_be_visible()
+    expect(page.locator("#price-list > li")).to_have_count(1)
+    got = page.evaluate(SHAPES_JS)
+    assert got["sheet"][:2] == ["32px", "32px"] and SHAPES[scheme]["shine"] in got["sheet"][2], got
+    assert got["card"] == SHAPES[scheme]["card"], got
+    assert (got["go"], got["line"]) == ("999px", "22px"), got
+
+
 def test_the_card_is_compact_with_the_companys_circle(page_at: Callable[[float, float], Page], net: Net) -> None:
     # SPEC-0005 REQ-004, AC-001's card: the company's 32 px circle — here a company without a logo, so its colour and
     # letter — the company, the fuel, the station, the price, the distance, both buttons and "all prices"; 240 px high
@@ -206,7 +243,7 @@ def test_the_card_is_compact_with_the_companys_circle(page_at: Callable[[float, 
     assert all(h >= 44 for h in got["tall"]), got  # compact, but still a finger's size (SPEC-0005 §6)
     expect(card).to_contain_text("1.2 კმ")
     (d,) = page.evaluate(DISCS_JS, "#best .disc")
-    assert_disc(d, 32)
+    assert_icon(d, 32)
     assert_letter(d, 32, "A", "rgb(18, 52, 86)")  # the company's colour, #123456
 
 

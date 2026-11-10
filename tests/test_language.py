@@ -61,5 +61,6 @@ def test_the_switch_turns_the_whole_page_english_and_back(page: Page, net: Net) 
 
 def test_the_page_says_how_the_map_tiles_are_loaded(page: Page, net: Net) -> None:
     page.goto(net.base)
-    expect(page.locator("footer")).to_contain_text("რუკის სურათები")
+    # SPEC-0006 REQ-007: the map comes from OpenFreeMap now, OpenStreetMap's tiles only when it does not work
+    expect(page.locator("footer")).to_contain_text("რუკა OpenFreeMap-ის სერვერიდან იტვირთება")
     expect(page.locator("footer")).to_contain_text("შენი ზუსტი მდებარეობა არსად იგზავნება")

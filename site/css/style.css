@@ -7,17 +7,24 @@
   --page: #f2f2f7; /* the page and the header bar */
   --surface: #ffffff; /* the sheet, the cards, the filters and the fuel chips */
   --raised: #e5e5ea; /* the map's ground before its pictures come */
-  --text: #111111;
-  --muted: #5f5f64;
-  --line: #e5e5ea;
+  /* SPEC-0006 REQ-003: by day the text, the muted text and the lines in the design system's slate */
+  --text: #0f172a;
+  --muted: #475569;
+  --line: #e2e8f0;
+  /* SPEC-0006 REQ-001: the iOS "Liquid Glass" controls — the glass, its light edge, the light line along its top and
+     its shadow; only full-strength text sits on it, so 0.55 (0.65 at night) keeps 4.5 : 1 whatever is under it */
+  --glass: rgb(255 255 255 / 0.55);
+  --glass-edge: rgb(255 255 255 / 0.65);
+  --glass-shine: rgb(255 255 255 / 0.85);
+  --glass-shadow: 0 8px 32px rgb(15 23 42 / 0.16);
+  --card-shadow: 0 6px 24px rgb(15 23 42 / 0.08); /* SPEC-0006 REQ-004: the ★ card's, in place of its frame */
   --accent: #ffc529; /* the chosen fuel and language, Google Maps and Waze, the ★ — the same in both looks */
   --on-accent: #111111;
   --cheap: #fff3c4; /* the cheapest line's ground in the price list (SPEC-0005 REQ-005) */
-  /* SPEC-0005 REQ-001, REQ-007: a company circle and a map pin, in the look's colour — by day a white circle in a
-     #7C7C80 frame (3 : 1 on the page, the sheet, the cheapest line and the pin) and a white pin in a #111111 contour */
+  /* SPEC-0006 REQ-005: a company icon in the look's colour — white by day (black for a logo marked so) — set off,
+     iOS-like, by a faint edge and a soft shadow, not a frame */
   --disc-fill: #ffffff;
-  --disc-frame: #7c7c80;
-  --pin-body: #ffffff;
+  --icon-edge: 0 0 0 0.5px rgb(0 0 0 / 0.18), 0 2px 8px rgb(15 23 42 / 0.16);
   --shadow: rgb(17 17 17 / 0.16);
   --header-h: 52px;
   --overlap: 24px; /* how far the sheet rises over the map */
@@ -34,9 +41,13 @@
   --muted: #a1a1a6;
   --line: #3a3a3c;
   --cheap: #3a3018;
+  --glass: rgb(28 28 30 / 0.65);
+  --glass-edge: rgb(255 255 255 / 0.16);
+  --glass-shine: rgb(255 255 255 / 0.22);
+  --glass-shadow: 0 8px 32px rgb(0 0 0 / 0.55);
+  --card-shadow: 0 6px 24px rgb(0 0 0 / 0.5);
   --disc-fill: #000000;
-  --disc-frame: #8e8e93;
-  --pin-body: #000000;
+  --icon-edge: 0 0 0 1px rgb(255 255 255 / 0.28), 0 2px 8px rgb(0 0 0 / 0.5);
   --shadow: rgb(0 0 0 / 0.6);
   color-scheme: dark;
 }
@@ -125,12 +136,13 @@ h1 {
   border: 1px solid var(--line);
   border-radius: 999px;
   overflow: hidden;
+  background: var(--surface); /* the switch's own ground — glass where the browser can blur (SPEC-0006 REQ-001) */
 }
 
 .lang button {
   padding: 6px 12px;
   border: 0;
-  background: var(--surface);
+  background: transparent;
   color: var(--text);
   font: inherit;
   font-size: 0.85rem;
@@ -196,9 +208,9 @@ h1 {
   gap: 6px;
   min-width: 0;
   min-height: 44px;
-  padding: 8px 14px;
+  padding: 8px 18px;
   border: 1px solid var(--line);
-  border-radius: 16px;
+  border-radius: 26px; /* SPEC-0006 REQ-001: a capsule */
   background: var(--surface);
   color: var(--text);
   box-shadow: 0 2px 10px var(--shadow);
@@ -213,7 +225,7 @@ h1 {
 .filter-button::after {
   content: "▾" / "";
   margin-left: auto;
-  color: var(--muted);
+  color: var(--text); /* SPEC-0006 REQ-001: on the glass only full-strength ink */
 }
 
 .filter-button[aria-expanded="true"]::after {
@@ -228,9 +240,11 @@ h1 {
   line-height: 1.2;
 }
 
+/* SPEC-0006 REQ-001: the filter's name is small and bold, in the full-strength ink — it sits on the glass */
 .filter-name {
-  color: var(--muted);
+  color: var(--text);
   font-size: 0.75rem;
+  font-weight: 600;
 }
 
 .filter-value {
@@ -256,7 +270,7 @@ h1 {
   overflow-y: auto;
   padding: 4px 6px;
   border: 1px solid var(--line);
-  border-radius: 16px;
+  border-radius: 26px;
   background: var(--surface);
   color: var(--text);
   box-shadow: 0 6px 20px var(--shadow);
@@ -369,6 +383,67 @@ h1 {
   bottom: var(--overlap); /* above the part of the map the sheet covers */
 }
 
+/* SPEC-0006 REQ-001: the map's + / − — two 40 px circles apart, solid here; glass where the browser can blur (below) */
+.leaflet-container .leaflet-control-zoom.leaflet-bar {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+/* as specific as Leaflet's own corner rules (.leaflet-touch .leaflet-bar a:first-child), and after them */
+.leaflet-container .leaflet-control-zoom.leaflet-bar a,
+.leaflet-container .leaflet-control-zoom.leaflet-bar a:hover,
+.leaflet-container .leaflet-control-zoom.leaflet-bar a:focus {
+  width: 40px;
+  height: 40px;
+  margin-top: 8px;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  background: var(--surface);
+  color: var(--text);
+  font-size: 22px;
+  line-height: 38px;
+}
+
+/* SPEC-0006 REQ-001, REQ-002: the iOS "Liquid Glass" controls — the filters, the fuel chips not chosen, the open panel,
+   the + / − and the look and language switches. They are solid above; this one condition — a browser that can blur, by
+   either name — makes them glass, so a browser that cannot blur keeps the solid surface. What is under the glass is
+   blurred 24 px and its colours made stronger; a 1 px light edge, a light line along the top, a soft shadow. */
+@supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
+  .filter-button,
+  .chip input:not(:checked) + span,
+  .panel,
+  .leaflet-container .leaflet-control-zoom.leaflet-bar a,
+  .leaflet-container .leaflet-control-zoom.leaflet-bar a:hover,
+  .leaflet-container .leaflet-control-zoom.leaflet-bar a:focus,
+  .theme,
+  .lang {
+    border: 1px solid var(--glass-edge);
+    background: var(--glass);
+    box-shadow: inset 0 1px 0 var(--glass-shine), var(--glass-shadow);
+    -webkit-backdrop-filter: blur(24px) saturate(180%);
+    backdrop-filter: blur(24px) saturate(180%);
+  }
+}
+
+/* SPEC-0006 REQ-002: a visitor whose phone asks for less transparency gets the solid surface (where the browser
+   passes that setting on — a hypothesis; on the glass the text has 4.5 : 1 anyway) */
+@media (prefers-reduced-transparency: reduce) {
+  .filter-button,
+  .chip input:not(:checked) + span,
+  .panel,
+  .leaflet-container .leaflet-control-zoom.leaflet-bar a,
+  .leaflet-container .leaflet-control-zoom.leaflet-bar a:hover,
+  .leaflet-container .leaflet-control-zoom.leaflet-bar a:focus,
+  .theme,
+  .lang {
+    background: var(--surface);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+}
+
 /* SPEC-0002 REQ-002: from farther away a station is a small dot in its company's colour */
 .station:not(.near) > span {
   display: block;
@@ -379,36 +454,15 @@ h1 {
   box-shadow: 0 1px 3px rgb(15 23 42 / 0.4);
 }
 
-/* SPEC-0005 REQ-007: from the city view a station is a teardrop pin — a square turned 45° with three round corners,
-   its sharp corner the tip on the station's point (js/app.js anchors the marker there) — with the company's 30 px
-   circle upright in its head. Its body is the look's (white by day, black at night) and its 2 px contour the text's
-   colour: the two are opposites, so on any map colour one of them stands out (docs/domain/map-tile-colours.md) */
-.station .pin {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 36px;
-  height: 36px;
-  border-radius: 50% 50% 50% 0;
-  background: var(--pin-body);
-  box-shadow: 0 0 0 2px var(--text), 0 1px 4px rgb(15 23 42 / 0.45);
-  transform: rotate(-45deg);
+/* SPEC-0006 REQ-005: from the city view a station is its company's icon (.disc, below) — no pin, no frame; js/app.js
+   lays it with its middle on the station's point */
+.station.near .disc {
+  --d: 34px;
 }
 
-.station .pin .disc {
-  --d: 30px;
-  position: absolute;
-  top: 3px;
-  left: 3px;
-  transform: rotate(45deg);
-}
-
-:root[data-theme="dark"] .station .pin {
-  box-shadow: 0 0 0 2px var(--white);
-}
-
-/* SPEC-0005 REQ-007: the ★ stays round in the station's middle — yellow with a black ★, in a #111111 frame that shows
-   on the light map too */
+/* SPEC-0006 REQ-006: the ★ is a 22 px yellow badge with a black ★ — its #111111 frame 2 px, as before, so on any map
+   colour its yellow or its frame stands out — with a white ring round it, like a badge on an iPhone icon; from the city
+   view js/app.js sets it on the cheapest icon's top-right corner */
 .best-pin {
   display: grid;
   place-items: center;
@@ -416,8 +470,8 @@ h1 {
   border-radius: 50%;
   background: var(--accent);
   color: var(--on-accent);
-  box-shadow: 0 2px 8px rgb(15 23 42 / 0.35);
-  font-size: 16px;
+  box-shadow: 0 0 0 1.5px var(--white), 0 2px 8px rgb(15 23 42 / 0.35);
+  font-size: 11px;
   line-height: 1;
 }
 
@@ -427,9 +481,9 @@ h1 {
   z-index: 1;
   margin-top: calc(-1 * var(--overlap));
   padding: 4px 16px 8px;
-  border-radius: 20px 20px 0 0;
+  border-radius: 32px 32px 0 0; /* SPEC-0006 REQ-004: iOS-like, with the glass's light line along its top edge */
   background: var(--surface);
-  box-shadow: 0 -4px 18px var(--shadow);
+  box-shadow: inset 0 1px 0 var(--glass-shine), 0 -4px 18px var(--shadow);
 }
 
 .sheet::before {
@@ -480,10 +534,9 @@ h1 {
   display: none;
 }
 
-/* SPEC-0005 REQ-001: a company's sign — one circle in the look's colour (white by day, black at night) in a neutral
-   frame (3 : 1 on the page, the sheet, the cheapest line and the pin in both looks), the
-   same wherever the company shows; each place gives it its size (--d). The frame is drawn inside the circle, so the
-   circle is its whole size; the logo's mark is set in shares of it (js/app.js). */
+/* SPEC-0006 REQ-005 (SPEC-0005 REQ-001): a company's sign — one iOS-like icon, a rounded square in the look's colour
+   (white by day, black at night), with no frame: a faint edge and a soft shadow set it off. The same wherever the
+   company shows; each place gives it its size (--d); the logo's mark is set in shares of it (js/app.js). */
 .disc {
   position: relative;
   display: grid;
@@ -492,10 +545,9 @@ h1 {
   width: var(--d, 48px);
   height: var(--d, 48px);
   overflow: hidden;
-  border-radius: 50%;
+  border-radius: 23%;
   background: var(--disc-fill);
-  outline: 2px solid var(--disc-frame);
-  outline-offset: -2px;
+  box-shadow: var(--icon-edge);
 }
 
 /* a mark that cannot be read on white keeps a black circle in the light look too (js/logos.js `black`: Connect) */
@@ -514,7 +566,7 @@ h1 {
   inset: 0;
   display: grid;
   place-items: center;
-  border-radius: 50%;
+  border-radius: 23%;
   font-size: calc(var(--d, 48px) * 0.42);
   font-weight: 800;
   line-height: 1;
@@ -540,7 +592,7 @@ h1 {
 }
 
 /* SPEC-0005 REQ-002: switched off, the mark only loses its colour and fades — no line, no crossed-out name; the
-   circle and its frame stay as they are */
+   icon, its edge and its shadow stay as they are (SPEC-0006 REQ-005) */
 .badge[aria-pressed="false"] .disc > * {
   filter: grayscale(1);
   opacity: 0.45;
@@ -554,11 +606,13 @@ h1 {
 /* SPEC-0005 REQ-004, REQ-006: the ★ card, compact, on the surface colour and set off from the sheet by a line — its
    title with "all prices" beside it; the company's circle, who and where, the price and the distance on one line; the
    two buttons: 240 px high at most on a phone, so the list's first line is on the first screen too (AC-008) */
+/* SPEC-0006 REQ-004: no frame — a soft shadow lifts the card off the sheet */
 .best {
   padding: 4px 14px 8px;
-  border: 1px solid var(--line);
-  border-radius: 18px;
+  border: 0;
+  border-radius: 24px;
   background: var(--surface);
+  box-shadow: var(--card-shadow);
 }
 
 .best[hidden] {
@@ -632,7 +686,7 @@ h1 {
   justify-content: center;
   min-height: 44px;
   padding: 8px 12px;
-  border-radius: 14px;
+  border-radius: 999px; /* SPEC-0006 REQ-004: a yellow capsule */
   background: var(--accent);
   color: var(--on-accent);
   font-weight: 600;
@@ -741,7 +795,7 @@ h2 {
   margin: 6px 0;
   padding: 6px 12px;
   border: 1px solid var(--line);
-  border-radius: 16px;
+  border-radius: 22px; /* SPEC-0006 REQ-004 */
   background: var(--surface);
 }
 
@@ -838,15 +892,10 @@ h2 {
   border-color: var(--white);
 }
 
-:root[data-theme="dark"] .leaflet-tile-pane {
+/* SPEC-0006 REQ-007: OpenStreetMap's tiles — the fallback map — are darkened at night, as before; the vector map has a
+   dark style of its own and no filter */
+:root[data-theme="dark"] .osm-tiles {
   filter: invert(1) hue-rotate(180deg) brightness(0.9) contrast(0.9);
-}
-
-:root[data-theme="dark"] .leaflet-bar a,
-:root[data-theme="dark"] .leaflet-bar a:hover {
-  border-bottom-color: var(--line);
-  background: var(--raised);
-  color: var(--text);
 }
 
 :root[data-theme="dark"] .leaflet-container .leaflet-control-attribution {

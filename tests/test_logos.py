@@ -13,11 +13,16 @@ row, AC-002, AC-006's row). T3 — on the map, from the city view, a station is 
 30 px circle in its head and its tip on the station's point; the ★ round and yellow in a #111111 frame (REQ-007;
 AC-001's map, AC-009, AC-010). T8 — the light look: white circles in a #7C7C80 frame, Connect's black in both looks
 (marked in our logo list and checked against its file), white pins in a 2 px #111111 contour; the dark look as it was.
+
+SPEC-0006 (PLAN-0006): T2 — every company sign is a frameless iOS-like icon (23 % corners, the look's edge and shadow);
+T3 — on the map the pin goes: a station is its company's 34 px icon, its middle on the point, and the ★ a 22 px badge on
+the cheapest icon's corner (REQ-005, REQ-006; AC-006, AC-007).
 """
 
 from __future__ import annotations
 
 import hashlib
+import math
 import re
 from collections.abc import Callable
 from xml.etree import ElementTree
@@ -29,10 +34,12 @@ from support import (
     DISCS_JS,
     DRAWN,
     LOGO_IDS,
+    POINT_JS,
     ROOT,
     SITE,
+    STAR_SHIFT,
     Net,
-    assert_disc,
+    assert_icon,
     assert_letter,
     assert_mark,
     logos_without,
@@ -131,7 +138,7 @@ def test_each_company_with_a_logo_shows_its_mark_in_a_black_circle_in_the_row(pa
     assert [d["id"] for d in discs] == [cid for cid, *_ in FIVE], discs  # one circle per company, in its badge
     for i, ((cid, name, _), d) in enumerate(zip(FIVE, discs, strict=True)):
         expect(badges.nth(i)).to_have_attribute("data-company", cid)
-        assert_disc(d, ROW_DISC)
+        assert_icon(d, ROW_DISC)
         assert_mark(d, logos[cid], ROW_DISC)
         box = badges.nth(i).bounding_box()
         assert box and box["width"] >= ROW_DISC and box["height"] >= ROW_DISC, (cid, box)  # a finger's size
@@ -149,7 +156,7 @@ def test_a_company_without_a_logo_is_the_same_circle_in_its_colour_with_its_firs
     discs = page.evaluate(DISCS_JS, ROW_DISCS)
     for (cid, name, color), d in zip(FIVE, discs, strict=True):
         assert d["id"] == cid, d
-        assert_disc(d, ROW_DISC)
+        assert_icon(d, ROW_DISC)
         assert_letter(d, ROW_DISC, name[0], rgb_of(color))
         expect(page.get_by_role("button", name=name, exact=True)).to_have_count(1)
 
@@ -194,7 +201,8 @@ MARK_CONTRAST_JS = """async () => {
 def test_a_circle_is_black_by_day_exactly_when_no_pixel_of_its_mark_reads_on_white(page: Page, net: Net) -> None:
     # SPEC-0005 REQ-001, AC-001: our logo list marks the black-circle exception beside the logo, and the files decide
     # it — black by day exactly when no opaque pixel of the mark reaches 3 : 1 on white (today only Connect, the
-    # owner's choice); every mark's most contrasting pixel then has 3 : 1 on its own circle
+    # owner's choice); every mark's most contrasting pixel then has 3 : 1 on its own icon by day — and at night, when
+    # every icon is black (SPEC-0006 REQ-005, AC-006), on black
     page.goto(net.base)
     got = {m["id"]: m for m in page.evaluate(MARK_CONTRAST_JS)}
     assert sorted(got) == sorted(LOGO_IDS), got
@@ -202,6 +210,7 @@ def test_a_circle_is_black_by_day_exactly_when_no_pixel_of_its_mark_reads_on_whi
         assert m["opaque"] > 0 and isinstance(m["black"], bool), m
         assert m["black"] == (m["onWhite"] < 3), m
         assert (m["onBlack"] if m["black"] else m["onWhite"]) >= 3, m
+        assert m["onBlack"] >= 3, m  # the dark look
     assert [cid for cid, m in got.items() if m["black"]] == ["connect"], got
 
 
@@ -229,7 +238,7 @@ OFF_JS = """(b) => {
     struck: parts.some((el) => getComputedStyle(el).textDecorationLine.includes('line-through')),
     faded: [Number(getComputedStyle(b).opacity), Number(s.opacity)], ground: s.backgroundColor,
     size: [r.width, r.height], frame: [s.outlineStyle, s.outlineWidth, s.outlineColor, s.borderTopStyle,
-                                       s.borderTopWidth, s.borderTopColor],
+                                       s.borderTopWidth, s.borderTopColor, s.boxShadow, s.borderRadius],
   };
 }"""
 BEHIND_JS = """(el) => {
@@ -352,7 +361,7 @@ def test_only_an_exact_code_in_our_list_gets_a_picture_and_a_name_stays_text(pag
     page.wait_for_load_state("networkidle")
     assert page.evaluate("window.__pwned") is None
     allowed = {"", "css/style.css", "js/theme.js", "js/app.js", "js/i18n.js", "js/logic.js", "js/logos.js",
-               "logos/socar.svg",
+               "js/vectormap.js", "logos/socar.svg",
                "data/prices.json", "data/stations.json", "data/cities.json"}
     asked = {u[len(net.base):].split("?")[0] for u in net.requests if u.startswith(net.base)}
     assert {a for a in asked if not a.startswith("vendor/")} <= allowed, asked
@@ -369,7 +378,7 @@ def test_a_logo_that_does_not_load_leaves_a_letter_circle_and_is_not_asked_again
     expect(lukoil.locator("img")).to_have_count(0)
     expect(lukoil).to_have_attribute("aria-label", "Lukoil")
     (d,) = page.evaluate(DISCS_JS, '#companies [data-company="lukoil"] .disc')
-    assert_disc(d, ROW_DISC)
+    assert_icon(d, ROW_DISC)
     assert_letter(d, ROW_DISC, "L", "rgb(138, 21, 56)")  # its colour, #8a1538
     expect(page.locator("#companies img")).to_have_count(4)
     socar = page.locator('#companies [data-company="socar"]')
@@ -379,40 +388,22 @@ def test_a_logo_that_does_not_load_leaves_a_letter_circle_and_is_not_asked_again
     assert [u for u in net.requests if u.endswith("/logos/lukoil.png")] == [f"{net.base}logos/lukoil.png"]
 
 
-# T3 — the companies' marks on the map (REQ-002, REQ-003, REQ-004; AC-003, AC-004, AC-005). SPEC-0005 (PLAN-0005 T3):
-# from the city view a station is a black teardrop pin with the company's 30 px circle in its head and its tip on the
-# station's point, with a white contour at night; the ★ is round and yellow in a #111111 frame (REQ-007; AC-001's map,
-# AC-009, AC-010)
+# T3 — the companies' marks on the map (REQ-002, REQ-003, REQ-004; AC-003, AC-004, AC-005). SPEC-0006 (PLAN-0006 T3):
+# from the city view a station is its company's 34 px icon — no pin, no frame —, its middle on the station's point, the
+# icon itself what a finger presses; the ★ a 22 px yellow badge on the cheapest station's icon's top-right corner, above
+# every icon and clear of the logo (REQ-005, REQ-006; AC-006's map, AC-007)
 FAR_JS = """() => [...document.querySelectorAll('.station')].map((m) => ({
   id: m.dataset.company, near: m.classList.contains('near'), text: m.textContent,
   imgs: m.querySelectorAll('img').length, ground: getComputedStyle(m.firstElementChild).backgroundColor,
 }))"""
-PINS_JS = """() => [...document.querySelectorAll('.station.near')].map((m) => {
-  const pin = m.querySelector('.pin'), disc = m.querySelector('.disc');
-  const p = pin.getBoundingClientRect(), d = disc.getBoundingClientRect(), s = getComputedStyle(pin);
+ICONS_JS = """() => [...document.querySelectorAll('.station.near')].map((m) => {
+  const disc = m.querySelector('.disc'), b = m.getBoundingClientRect(), d = disc.getBoundingClientRect();
   return { id: m.dataset.company, pins: m.querySelectorAll('.pin').length, discs: m.querySelectorAll('.disc').length,
-           body: s.backgroundColor, contour: s.boxShadow, size: [p.width, p.height],
-           tip: [p.left + p.width / 2, p.bottom], disc: [d.left, d.top, d.width, d.height] };
+           box: [b.left, b.top, b.width, b.height], middle: [d.left + d.width / 2, d.top + d.height / 2],
+           z: Number(getComputedStyle(m).zIndex) };
 })"""
-PIN_DISC = 30  # px — a company circle in a map pin (SPEC-0005 REQ-001)
-# SPEC-0005 REQ-007: a pin's body and its 2 px contour, the look's text colour — white body, #111111 contour by day;
-# black body, white contour at night
-PIN_LOOK = {"light": ("rgb(255, 255, 255)", (17, 17, 17)), "dark": ("rgb(0, 0, 0)", (255, 255, 255))}
-CONTOUR = re.compile(r"^rgb\((\d+), (\d+), (\d+)\) 0px 0px 0px (\d+(?:\.\d+)?)px")
-# the map's measured colours (docs/domain/map-tile-colours.md, Tbilisi, levels 11–13): by day each level's darkest,
-# at night each level's lightest
-MAP_EXTREMES = {"light": ["#d09056", "#888887", "#727272"], "dark": ["#8b5728", "#6d6d6c", "#7f7f7f"]}
-
-
-def hex_rgb(code: str) -> tuple[int, ...]:
-    return tuple(int(code[i:i + 2], 16) for i in (1, 3, 5))
-
-
-def contour_of(shadow: str) -> tuple[tuple[int, ...], float]:
-    """The pin's contour — its box-shadow's first ring, drawn with no blur: its colour and width."""
-    m = CONTOUR.match(shadow)
-    assert m, shadow
-    return tuple(int(v) for v in m.groups()[:3]), float(m.group(4))
+MAP_ICON = 34  # px — a company icon on the map (SPEC-0006 REQ-005)
+STAR = 22  # px — the ★ badge (SPEC-0006 REQ-006)
 
 
 def open_near(page_at: Callable[[float, float], Page], net: Net, companies: list[tuple[str, str, str]],
@@ -436,35 +427,34 @@ def zoom(page: Page, button: str, times: int) -> None:
 
 
 @pytest.mark.parametrize("scheme", ["light", "dark"])
-def test_from_the_city_view_each_station_is_a_pin_in_the_looks_colour_with_its_companys_circle(
-        page_at: Callable[[float, float], Page], net: Net, scheme: str) -> None:
-    # SPEC-0005 REQ-007, AC-001's map, AC-010: a teardrop pin — white by day, black at night —, every one the same
-    # size, with its company's 30 px
-    # circle in its head — a logo's mark cut from our file, or the colour and letter of a company without a logo
-    # (Nova) — and its tip straight under the circle
+def test_from_the_city_view_each_station_is_its_companys_icon(page_at: Callable[[float, float], Page], net: Net,
+                                                              scheme: str) -> None:
+    # SPEC-0006 REQ-005, AC-006's map: no pin and no frame — the station is its company's 34 px icon (the look's ground,
+    # a logo's mark cut from our file, or a company without a logo — Nova — its colour and letter), and the icon itself
+    # is the marker a finger presses: 34 × 34, its middle where the marker stands
     page = open_near(page_at, net, SIX, scheme)
     logos = dict(page.evaluate(LIST_JS))
     page.wait_for_function(DRAWN, arg=".station img")
-    pins = {p["id"]: p for p in page.evaluate(PINS_JS)}
+    icons = {i["id"]: i for i in page.evaluate(ICONS_JS)}
     discs = {d["id"]: d for d in page.evaluate(DISCS_JS, ".station .disc")}
-    assert sorted(pins) == sorted(discs) == sorted(cid for cid, *_ in SIX), (pins, discs)
-    assert len({tuple(round(v, 1) for v in p["size"]) for p in pins.values()}) == 1, pins  # all one size
+    assert sorted(icons) == sorted(discs) == sorted(cid for cid, *_ in SIX), (icons, discs)
     for cid, name, color in SIX:
-        p, d = pins[cid], discs[cid]
-        assert (p["pins"], p["discs"], p["body"]) == (1, 1, PIN_LOOK[scheme][0]), p
-        assert_disc(d, PIN_DISC)
+        i, d = icons[cid], discs[cid]
+        assert (i["pins"], i["discs"]) == (0, 1), i
+        assert_icon(d, MAP_ICON)
         if cid in logos:
-            assert_mark(d, logos[cid], PIN_DISC)
+            assert_mark(d, logos[cid], MAP_ICON)
         else:
-            assert_letter(d, PIN_DISC, name[0], rgb_of(color))
-        x, y, w, h = p["disc"]
-        assert abs(p["tip"][0] - (x + w / 2)) <= 0.5 and p["tip"][1] >= y + h + 4, p  # the tip under the circle
+            assert_letter(d, MAP_ICON, name[0], rgb_of(color))
+        x, y, w, h = i["box"]
+        assert all(abs(v - MAP_ICON) <= 0.5 for v in (w, h)), i  # the icon is all there is to press
+        assert abs(x + w / 2 - i["middle"][0]) <= 0.5 and abs(y + h / 2 - i["middle"][1]) <= 0.5, i
     page.locator('.station[data-company="lukoil"]').dispatch_event("click")
     expect(page.locator(".leaflet-popup-content")).to_contain_text("Lukoil")  # the window names the company
 
 
-def test_a_pins_tip_stands_on_its_stations_point(page_at: Callable[[float, float], Page], net: Net) -> None:
-    # SPEC-0005 AC-010: the tip on the station's place (±1 px) — here the visitor's own place, as the map draws it
+def test_an_icons_middle_stands_on_its_stations_point(page_at: Callable[[float, float], Page], net: Net) -> None:
+    # SPEC-0006 AC-006: the icon's middle on the station's place (±1 px) — here the visitor's own place, as drawn
     serve(net, [("socar", "SOCAR", "#e41e30")])
     net.data["stations.json"]["companies"][0]["stations"][0].update(lat=HERE[0], lng=HERE[1])  # type: ignore[index]
     page = page_at(*HERE)
@@ -473,56 +463,98 @@ def test_a_pins_tip_stands_on_its_stations_point(page_at: Callable[[float, float
     page.get_by_text("დიზელი", exact=True).first.click()
     expect(page.locator(".station.near")).to_have_count(1)
     you = page.locator("path.you").bounding_box()
-    (pin,) = page.evaluate(PINS_JS)
+    (icon,) = page.evaluate(ICONS_JS)
     assert you, you
     centre = (you["x"] + you["width"] / 2, you["y"] + you["height"] / 2)
-    assert abs(pin["tip"][0] - centre[0]) <= 1 and abs(pin["tip"][1] - centre[1]) <= 1, (pin, centre)
+    assert abs(icon["middle"][0] - centre[0]) <= 1 and abs(icon["middle"][1] - centre[1]) <= 1, (icon, centre)
 
 
-@pytest.mark.parametrize("scheme", ["light", "dark"])
-def test_a_pin_stands_out_from_the_map_by_its_contour_in_the_looks_text_colour(
-        page_at: Callable[[float, float], Page], net: Net, scheme: str) -> None:
-    # SPEC-0005 REQ-007, AC-009, AC-010: the body the look's (white by day, black at night), a 2 px contour in the
-    # look's text colour (#111111 by day, white at night); the contour 3 : 1 on the map's measured colours — by day
-    # each level's darkest, at night each level's lightest — and on any grey from 0 to 255 the body or the contour
-    # stands out, the ★ pin's yellow body or its #111111 frame too
-    page = open_near(page_at, net, FIVE, scheme)
-    body, ink = PIN_LOOK[scheme]
-    for p in page.evaluate(PINS_JS):
-        colour, width = contour_of(p["contour"])
-        assert (p["body"], colour) == (body, ink) and width == 2, p
-        for extreme in MAP_EXTREMES[scheme]:
-            assert ratio(colour, hex_rgb(extreme)) >= 3, (p, extreme)
-        for v in range(256):
-            assert max(ratio(rgb(p["body"]), (v, v, v)), ratio(colour, (v, v, v))) >= 3, (p, v)
-    star = page.locator(".best-pin").evaluate(STAR_JS)
-    for v in range(256):
-        assert max(ratio(rgb(star["ground"]), (v, v, v)), ratio(rgb(star["frame"][2]), (v, v, v))) >= 3, (star, v)
+def test_a_press_on_the_visible_part_of_a_covered_icon_opens_its_own_station(page_at: Callable[[float, float], Page],
+                                                                            net: Net) -> None:
+    # SPEC-0006 REQ-005, AC-006: two icons half over each other — Leaflet lays the southern one on top. A press on the
+    # part of the northern icon that still shows opens the northern station's window, not its neighbour's
+    serve(net, [("socar", "SOCAR", "#e41e30"), ("lukoil", "Lukoil", "#8a1538")])
+    spots = net.data["stations.json"]["companies"]  # type: ignore[index]
+    # at the city view's zoom (12) a pixel is some 28 m here: Lukoil some 15 px south-east of SOCAR, so they overlap
+    spots[0]["stations"][0].update(lat=HERE[0] + 0.010, lng=HERE[1])  # SOCAR — north
+    spots[1]["stations"][0].update(lat=HERE[0] + 0.0061, lng=HERE[1] + 0.0052)  # Lukoil — south-east, drawn on top
+    page = page_at(*HERE)
+    page.clock.set_fixed_time(TIME)
+    page.goto(net.base)
+    page.get_by_text("დიზელი", exact=True).first.click()
+    expect(page.locator(".station.near")).to_have_count(2)
+    icons = {i["id"]: i for i in page.evaluate(ICONS_JS)}
+    (sx, sy, sw, sh), (lx, ly, _, _) = icons["socar"]["box"], icons["lukoil"]["box"]
+    assert icons["lukoil"]["z"] > icons["socar"]["z"], icons  # Lukoil is drawn over SOCAR
+    assert sx + 8 <= lx < sx + sw and sy + 8 <= ly < sy + sh, icons  # they cover each other, SOCAR still shows
+    page.mouse.click(sx + (lx - sx) / 2, sy + (ly - sy) / 2)  # on SOCAR's part that Lukoil leaves free
+    expect(page.locator(".leaflet-popup-content")).to_contain_text("SOCAR")
+    expect(page.locator(".leaflet-popup-content")).not_to_contain_text("Lukoil")
 
 
 STAR_JS = """(s) => {
   const c = getComputedStyle(s), r = s.getBoundingClientRect();
   return { round: c.borderRadius, ground: c.backgroundColor, ink: c.color, text: s.textContent,
-           frame: [c.borderTopStyle, parseFloat(c.borderTopWidth), c.borderTopColor],
-           size: [r.width, r.height], centre: [r.left + r.width / 2, r.top + r.height / 2] };
+           frame: [c.borderTopStyle, parseFloat(c.borderTopWidth), c.borderTopColor], ring: c.boxShadow,
+           size: [r.width, r.height], centre: [r.left + r.width / 2, r.top + r.height / 2],
+           z: Number(c.zIndex) };
 }"""
+TOP_JS = "([x, y]) => !!document.elementFromPoint(x, y)?.closest('.best-pin')"
 
 
 @pytest.mark.parametrize("scheme", ["light", "dark"])
-def test_the_star_is_round_and_yellow_in_a_dark_frame_over_its_stations_point(
-        page_at: Callable[[float, float], Page], net: Net, scheme: str) -> None:
-    # SPEC-0005 REQ-007, AC-010: the ★ in the middle of the cheapest station's place — SOCAR's here, over its pin's tip
+def test_the_star_is_a_yellow_badge_on_the_cheapest_icons_corner(page_at: Callable[[float, float], Page], net: Net,
+                                                                 scheme: str) -> None:
+    # SPEC-0006 REQ-006, AC-007: a 22 px round yellow badge with a black ★, its #111111 frame 2 px as before and a
+    # 1.5 px white ring round it; its middle 20 px right of and above the middle of SOCAR's icon (the cheapest here) —
+    # on the icon's corner, clear of the logo's cut; above every icon; on any grey its yellow or its frame stands out
     page = open_near(page_at, net, FIVE, scheme)
     expect(page.locator("#best")).to_contain_text("SOCAR")
+    page.wait_for_function(DRAWN, arg=".station img")
     star = page.locator(".best-pin")
     expect(star).to_have_count(1)
     got = star.evaluate(STAR_JS)
     assert (got["round"], got["ground"], got["ink"], got["text"]) == ("50%", "rgb(255, 197, 41)", "rgb(17, 17, 17)",
                                                                      "★"), got
-    assert got["frame"][0] == "solid" and got["frame"][1] >= 1.5 and got["frame"][2] == "rgb(17, 17, 17)", got
-    assert abs(got["size"][0] - got["size"][1]) <= 0.5, got
-    tip = {p["id"]: p["tip"] for p in page.evaluate(PINS_JS)}["socar"]
-    assert abs(got["centre"][0] - tip[0]) <= 1 and abs(got["centre"][1] - tip[1]) <= 1, (got, tip)
+    assert got["frame"] == ["solid", 2, "rgb(17, 17, 17)"], got
+    assert got["ring"].startswith("rgb(255, 255, 255) 0px 0px 0px 1.5px"), got
+    assert all(abs(v - STAR) <= 0.5 for v in got["size"]), got
+    icons = {i["id"]: i for i in page.evaluate(ICONS_JS)}
+    mx, my = icons["socar"]["middle"]
+    assert abs(got["centre"][0] - (mx + STAR_SHIFT)) <= 1 and abs(got["centre"][1] - (my - STAR_SHIFT)) <= 1, got
+    (socar,) = page.evaluate(DISCS_JS, '.station[data-company="socar"] .disc')
+    x, y, w, h = socar["at"]  # the logo's cut, as drawn
+    gap = math.dist(got["centre"], (min(max(got["centre"][0], x), x + w), min(max(got["centre"][1], y), y + h)))
+    assert gap >= STAR / 2 + 1.5, (gap, got, socar["at"])  # the badge and its ring clear of the logo
+    assert got["z"] > max(i["z"] for i in icons.values()), (got, icons)
+    assert page.evaluate(TOP_JS, got["centre"]), got  # nothing lies over it
+    for v in range(256):
+        assert max(ratio(rgb(got["ground"]), (v, v, v)), ratio(rgb(got["frame"][2]), (v, v, v))) >= 3, (got, v)
+
+
+def test_from_far_the_star_stands_on_its_stations_dot_and_comes_back_to_the_corner(
+        page_at: Callable[[float, float], Page], net: Net) -> None:
+    # SPEC-0006 REQ-006 (SPEC-0005 REQ-007 from farther away): when the city view is left the icons become dots and the
+    # ★ moves onto the middle of its station's dot; back in the city view it is on the icon's corner again
+    page = open_near(page_at, net, FIVE)
+    expect(page.locator("#best")).to_contain_text("SOCAR")
+    socar, star = page.locator('.station[data-company="socar"]'), page.locator(".best-pin")
+
+    def offset() -> tuple[float, float]:
+        sx, sy = socar.evaluate(POINT_JS)
+        got = star.evaluate(STAR_JS)["centre"]
+        return got[0] - sx, got[1] - sy
+
+    dx, dy = offset()
+    assert abs(dx - STAR_SHIFT) <= 1 and abs(dy + STAR_SHIFT) <= 1, (dx, dy)
+    zoom(page, "out", 2)  # zoom 12 → 10: from farther away
+    expect(page.locator(".station.near")).to_have_count(0)
+    dx, dy = offset()
+    assert abs(dx) <= 1 and abs(dy) <= 1, (dx, dy)
+    zoom(page, "in", 2)
+    expect(page.locator(".station.near")).to_have_count(len(FIVE))
+    dx, dy = offset()
+    assert abs(dx - STAR_SHIFT) <= 1 and abs(dy + STAR_SHIFT) <= 1, (dx, dy)
 
 
 def test_from_far_a_station_is_still_its_companys_small_dot(page: Page, net: Net) -> None:
@@ -570,7 +602,7 @@ def five_places(page: Page) -> dict[str, dict[str, dict]]:
     return {place: {d["id"]: d for d in page.evaluate(DISCS_JS, sel)} for place, sel in places.items()}
 
 
-SIZES = {"row": 48, "list": 40, "filter": 32, "card": 32, "map": 30}  # px — a circle in each place (REQ-001)
+SIZES = {"row": 48, "list": 40, "filter": 32, "card": 32, "map": MAP_ICON}  # px — an icon in each place (REQ-005)
 
 
 def test_two_companies_without_a_logo_are_letter_circles_in_all_five_places(
@@ -592,7 +624,7 @@ def test_two_companies_without_a_logo_are_letter_circles_in_all_five_places(
         got = places[place]
         assert "nova" in got and (place == "card" or "lukoil" in got), (place, sorted(got))
         for cid, d in got.items():
-            assert_disc(d, size)
+            assert_icon(d, size)
             if cid == "nova":
                 assert_letter(d, size, "N", "rgb(37, 99, 235)")  # #2563eb
             elif cid == "lukoil":
