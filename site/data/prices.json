@@ -1,12 +1,12 @@
 {
-  "generated": "2026-11-06T16:48:19Z",
+  "generated": "2026-11-10T09:26:25Z",
   "companies": [
     {
       "id": "socar",
       "name": "SOCAR",
       "color": "#e41e30",
       "source": "https://www.sgp.ge/ge/",
-      "time": "2026-11-06T16:48:19Z",
+      "time": "2026-11-10T09:26:25Z",
       "basis": "read",
       "prices": [
         {
@@ -51,7 +51,7 @@
       "name": "Rompetrol",
       "color": "#f39200",
       "source": "https://www.rompetrol.ge/",
-      "time": "2026-11-06T16:48:19Z",
+      "time": "2026-11-10T09:26:25Z",
       "basis": "read",
       "prices": [
         {
@@ -86,7 +86,7 @@
       "name": "Lukoil",
       "color": "#8a1538",
       "source": "https://www.lukoil.ge/",
-      "time": "2026-11-06T16:48:19Z",
+      "time": "2026-11-10T09:26:25Z",
       "basis": "read",
       "prices": [
         {
@@ -116,7 +116,7 @@
       "name": "Wissol",
       "color": "#00843d",
       "source": "https://wissol.ge/ka/fuel-prices",
-      "time": "2026-11-06T16:48:19Z",
+      "time": "2026-11-10T09:26:25Z",
       "basis": "read",
       "prices": [
         {
@@ -166,19 +166,9 @@
       "name": "Connect",
       "color": "#ffe900",
       "source": "https://connect.com.ge/",
-      "time": "2026-11-06T16:48:19Z",
+      "time": "2026-11-10T09:26:25Z",
       "basis": "read",
       "prices": [
-        {
-          "grade": "სუპერი RON 98",
-          "fuel": "super",
-          "price": 4.35
-        },
-        {
-          "grade": "პრემიუმი RON 96",
-          "fuel": "premium",
-          "price": 4.15
-        },
         {
           "grade": "რეგულარი RON 93",
           "fuel": "regular",
@@ -186,11 +176,6 @@
         },
         {
           "grade": "ევრო დიზელი 10PPM",
-          "fuel": "diesel",
-          "price": 4.9
-        },
-        {
-          "grade": "დიზელი 10PPM",
           "fuel": "diesel",
           "price": 4.8
         }
