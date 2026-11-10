@@ -1,12 +1,12 @@
 {
-  "generated": "2026-11-10T09:26:25Z",
+  "generated": "2026-11-10T21:20:06Z",
   "companies": [
     {
       "id": "socar",
       "name": "SOCAR",
       "color": "#e41e30",
       "source": "https://www.sgp.ge/ge/",
-      "time": "2026-11-10T09:26:25Z",
+      "time": "2026-11-10T21:20:06Z",
       "basis": "read",
       "prices": [
         {
@@ -51,7 +51,7 @@
       "name": "Rompetrol",
       "color": "#f39200",
       "source": "https://www.rompetrol.ge/",
-      "time": "2026-11-10T09:26:25Z",
+      "time": "2026-11-10T21:20:06Z",
       "basis": "read",
       "prices": [
         {
@@ -86,7 +86,7 @@
       "name": "Lukoil",
       "color": "#8a1538",
       "source": "https://www.lukoil.ge/",
-      "time": "2026-11-10T09:26:25Z",
+      "time": "2026-11-10T21:20:06Z",
       "basis": "read",
       "prices": [
         {
@@ -116,7 +116,7 @@
       "name": "Wissol",
       "color": "#00843d",
       "source": "https://wissol.ge/ka/fuel-prices",
-      "time": "2026-11-10T09:26:25Z",
+      "time": "2026-11-10T21:20:06Z",
       "basis": "read",
       "prices": [
         {
@@ -142,17 +142,17 @@
         {
           "grade": "ეკო დიზელი",
           "fuel": "diesel",
-          "price": 5.07
+          "price": 4.99
         },
         {
           "grade": "ევრო დიზელი",
           "fuel": "diesel",
-          "price": 4.98
+          "price": 4.94
         },
         {
           "grade": "დიზელ ენერჯი",
           "fuel": "diesel",
-          "price": 4.93
+          "price": 4.91
         },
         {
           "grade": "ვისოლ გაზი",
@@ -166,7 +166,7 @@
       "name": "Connect",
       "color": "#ffe900",
       "source": "https://connect.com.ge/",
-      "time": "2026-11-10T09:26:25Z",
+      "time": "2026-11-10T21:20:06Z",
       "basis": "read",
       "prices": [
         {
