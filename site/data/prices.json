@@ -1,12 +1,12 @@
 {
-  "generated": "2026-11-10T21:20:06Z",
+  "generated": "2026-11-11T06:35:09Z",
   "companies": [
     {
       "id": "socar",
       "name": "SOCAR",
       "color": "#e41e30",
       "source": "https://www.sgp.ge/ge/",
-      "time": "2026-11-10T21:20:06Z",
+      "time": "2026-11-11T06:35:09Z",
       "basis": "read",
       "prices": [
         {
@@ -51,33 +51,33 @@
       "name": "Rompetrol",
       "color": "#f39200",
       "source": "https://www.rompetrol.ge/",
-      "time": "2026-11-10T21:20:06Z",
+      "time": "2026-11-11T06:35:09Z",
       "basis": "read",
       "prices": [
         {
           "grade": "efix სუპერი",
           "fuel": "super",
-          "price": 4.68
+          "price": 4.65
         },
         {
           "grade": "efix ევრო პრემიუმი",
           "fuel": "premium",
-          "price": 4.38
+          "price": 4.35
         },
         {
           "grade": "efix ევრო რეგულარი",
           "fuel": "regular",
-          "price": 4.08
+          "price": 4.04
         },
         {
           "grade": "efix ევრო დიზელი",
           "fuel": "diesel",
-          "price": 5.04
+          "price": 4.99
         },
         {
           "grade": "ევრო დიზელი",
           "fuel": "diesel",
-          "price": 4.97
+          "price": 4.94
         }
       ]
     },
@@ -86,7 +86,7 @@
       "name": "Lukoil",
       "color": "#8a1538",
       "source": "https://www.lukoil.ge/",
-      "time": "2026-11-10T21:20:06Z",
+      "time": "2026-11-11T06:35:09Z",
       "basis": "read",
       "prices": [
         {
@@ -116,7 +116,7 @@
       "name": "Wissol",
       "color": "#00843d",
       "source": "https://wissol.ge/ka/fuel-prices",
-      "time": "2026-11-10T21:20:06Z",
+      "time": "2026-11-11T06:35:09Z",
       "basis": "read",
       "prices": [
         {
@@ -166,7 +166,7 @@
       "name": "Connect",
       "color": "#ffe900",
       "source": "https://connect.com.ge/",
-      "time": "2026-11-10T21:20:06Z",
+      "time": "2026-11-11T06:35:09Z",
       "basis": "read",
       "prices": [
         {
