@@ -1,12 +1,12 @@
 {
-  "generated": "2026-11-16T06:39:38Z",
+  "generated": "2026-11-24T23:55:39Z",
   "companies": [
     {
       "id": "socar",
       "name": "SOCAR",
       "color": "#e41e30",
       "source": "https://www.sgp.ge/ge/",
-      "time": "2026-11-16T06:39:38Z",
+      "time": "2026-11-24T23:55:39Z",
       "basis": "read",
       "prices": [
         {
@@ -51,7 +51,7 @@
       "name": "Rompetrol",
       "color": "#f39200",
       "source": "https://www.rompetrol.ge/",
-      "time": "2026-11-16T06:39:38Z",
+      "time": "2026-11-24T23:55:39Z",
       "basis": "read",
       "prices": [
         {
@@ -86,7 +86,7 @@
       "name": "Lukoil",
       "color": "#8a1538",
       "source": "https://www.lukoil.ge/",
-      "time": "2026-11-16T06:39:38Z",
+      "time": "2026-11-24T23:55:39Z",
       "basis": "read",
       "prices": [
         {
@@ -116,43 +116,43 @@
       "name": "Wissol",
       "color": "#00843d",
       "source": "https://wissol.ge/ka/fuel-prices",
-      "time": "2026-11-16T06:39:38Z",
+      "time": "2026-11-24T23:55:39Z",
       "basis": "read",
       "prices": [
         {
           "grade": "A1 სუპერი 100",
           "fuel": "super",
-          "price": 4.83
+          "price": 4.77
         },
         {
           "grade": "ეკო სუპერი",
           "fuel": "super",
-          "price": 4.68
+          "price": 4.62
         },
         {
           "grade": "ეკო პრემიუმი",
           "fuel": "premium",
-          "price": 4.39
+          "price": 4.32
         },
         {
           "grade": "ევრო რეგულარი",
           "fuel": "regular",
-          "price": 4.08
+          "price": 4.02
         },
         {
           "grade": "ეკო დიზელი",
           "fuel": "diesel",
-          "price": 4.99
+          "price": 4.95
         },
         {
           "grade": "ევრო დიზელი",
           "fuel": "diesel",
-          "price": 4.94
+          "price": 4.9
         },
         {
           "grade": "დიზელ ენერჯი",
           "fuel": "diesel",
-          "price": 4.91
+          "price": 4.87
         },
         {
           "grade": "ვისოლ გაზი",
@@ -166,7 +166,7 @@
       "name": "Connect",
       "color": "#ffe900",
       "source": "https://connect.com.ge/",
-      "time": "2026-11-16T06:39:38Z",
+      "time": "2026-11-24T23:55:39Z",
       "basis": "read",
       "prices": [
         {
